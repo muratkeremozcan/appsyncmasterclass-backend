@@ -1,0 +1,23 @@
+{
+  "name": "appsyncmasterclass-backend",
+  "version": "1.0.0",
+  "description": "Backend for the AppSync Masterclass demo app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muratkeremozcan/appsyncmasterclass-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/muratkeremozcan/appsyncmasterclass-backend/issues"
+  },
+  "homepage": "https://github.com/muratkeremozcan/appsyncmasterclass-backend#readme",
+  "devDependencies": {
+    "serverless": "^2.4.0"
+  }
+}

@@ -4,7 +4,8 @@
   "description": "Backend for the AppSync Masterclass demo app",
   "main": "index.js",
   "scripts": {
-    "sls": "sls"
+    "sls": "sls",
+    "deploy": "sls -- deploy"
   },
   "repository": {
     "type": "git",

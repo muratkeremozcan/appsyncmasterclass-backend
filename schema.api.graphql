@@ -1,7 +1,12 @@
+# every GraphQL function starts with query and mutation
 schema {
   query: Query
   mutation: Mutation
 }
+
+# [4.2] identify and implement the Queries and Mutations of your system
+# variable! means a non-nullable value
+# ID, AWSUrl, AWSDate, AWSDateTime are GraphQL built-in types
 
 type Query {
   getImageUploadUrl(extension: String, contentType: String): AWSURL!
@@ -51,6 +56,7 @@ input ProfileInput {
   birthdate: AWSDate
 }
 
+# use interface to solidify the common properties between types (MyProfile vs OtherProfile)
 interface IProfile {
   id: ID!
   name: String!

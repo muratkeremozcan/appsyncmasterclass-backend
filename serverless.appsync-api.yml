@@ -1,7 +1,8 @@
 name: appsyncmasterclass
-schema: schema.api.graphql
+schema: schema.api.graphql # name of the graphql schema file [4.2]
+# (4.3.2) after configuring the Cognito User Pool, we need to configure the AppSync API to use it.
 authenticationType: AMAZON_COGNITO_USER_POOLS
 userPoolConfig:
-  awsRegion: eu-west-1
+  awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool

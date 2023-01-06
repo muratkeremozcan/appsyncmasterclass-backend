@@ -221,7 +221,7 @@ _(4.4.5)_ Now we add the lambda function
 
 ## 4.5 Testing overview
 
-With serverless apps unit tests do not give enough confidence for the cost. Same cost & little value vs integration tests. Apply the test honeycomb, prefer integration tests over unit tests, and some e2e. All because many things can go wrong, none of which are related to our lambda code.
+With serverless apps, unit tests do not give enough confidence for the cost. Same cost & little value vs integration tests. Apply the test honeycomb, prefer integration tests over unit tests, and some e2e. All because many things can go wrong, none of which are related to our lambda code.
 
 Unit test covers the business logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
 
@@ -242,7 +242,7 @@ Prop-tips from Yan:
 Use the `serverless-export-env` plugin to create a `.env` file with our env vars `provider:environment:` in `serverless.yml`.
 
 ```bash
-npm i -D jest @types/jest dotenv
+npm i -D jest @types/jest
 
 # add it as a plugin to serverless.yml
 npm i -D serverless-export-env@v1.4.0 # later version does not download COGNITO_USER_POOL_ID USERS_TABLE 

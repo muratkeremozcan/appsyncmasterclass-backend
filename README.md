@@ -298,3 +298,6 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-****
 * As a result we should see a DynamoDB table entry, confirm it.
 
 Take a look at [functions/confirm-user-signup.test.js](./functions/confirm-user-signup.test.js).
+
+## 4.7 E2e test 
+

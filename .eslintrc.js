@@ -5,6 +5,7 @@ module.exports = {
     es6: true,
     amd: true,
     node: true,
+    jest: true,
   },
   parserOptions: {
     parser: '@babel/eslint-parser',

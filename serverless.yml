@@ -7,6 +7,7 @@ frameworkVersion: '2'
 plugins:
   - serverless-appsync-plugin
   - serverless-iam-roles-per-function
+  - serverless-export-env # (4.6) integration test
 
 provider:
   name: aws

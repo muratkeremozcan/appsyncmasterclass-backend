@@ -218,3 +218,34 @@ UserPoolInvokeConfirmUserSignupLambdaPermission:
 
 _(4.4.5)_ Now we add the lambda function
 [./functions/confirm-user-signup.js](./functions/confirm-user-signup.js)
+
+## 4.5 Testing overview
+
+With serverless apps unit tests do not give enough confidence for the cost. Same cost & little value vs integration tests. Apply the test honeycomb, prefer integration tests over unit tests, and some e2e. All because many things can go wrong, none of which are related to our lambda code.
+
+Unit test covers the business logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
+
+Integration is the same cost, and more value than unit. Covers the business logic + DynamoDB interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)There are things integration tests cannot cover, but they are good bang for the buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
+
+E2e can cover everything, highest confidence but also costly. We need some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
+
+![e2e](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qjra5fzp7yr31r06dfzd.png)
+
+Prop-tips from Yan:
+
+* Avoid local simulation (e.g. LocalStack), they’re more work than is worth it, and hides common failure modes such as misconfigured permissions and resource policies.
+* In integration tests, only use mocks for AWS services to simulate hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You can mock your internal services/APIs.
+* Use temporary stacks for feature branches to avoid destabilizing shared environments, and during CI/CD pipeline to run end-to-end tests to remove the overhead of cleaning up test data. https://theburningmonk.com/2019/09/why-you-should-use-temporary-stacks-when-you-do-serverless/
+
+## 4.6 Integration testing
+
+Use the `serverless-export-env` plugin to create a `.env` file with our env vars `provider:environment:` in `serverless.yml`.
+
+```bash
+npm i -D jest @types/jest dotenv
+
+# add it as a plugin to serverless.yml
+npm i -D serverless-export-env@v1.4.0 # later version does not download COGNITO_USER_POOL_ID USERS_TABLE 
+npm run sls -- export-env
+```
+

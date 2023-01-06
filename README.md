@@ -242,7 +242,7 @@ Prop-tips from Yan:
 Use the `serverless-export-env` plugin to create a `.env` file with our env vars `provider:environment:` in `serverless.yml`.
 
 ```bash
-npm i -D jest @types/jest
+npm i -D jest @types/jest dotenv
 
 # add it as a plugin to serverless.yml
 npm i -D serverless-export-env@v1.4.0 # later version does not download COGNITO_USER_POOL_ID USERS_TABLE 

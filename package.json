@@ -6,8 +6,10 @@
   "scripts": {
     "sls": "sls",
     "deploy": "sls -- deploy",
+    "invoke:local": "sls -- invoke local",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|json|css|md|mdx|html)\"",
-    "lint": "eslint . --cache-location node_modules/.cache/eslint"
+    "lint": "eslint . --cache-location node_modules/.cache/eslint",
+    "test": "jest"
   },
   "repository": {
     "type": "git",

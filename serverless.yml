@@ -25,11 +25,12 @@ package:
     - package.json
 
 custom:
+  # (4.6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
+  region: ${opt:region, self:provider.region}
   # (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
   # [4.1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration. 
-  appSync:
-    - ${file(serverless.appsync-api.yml)}
+  appSync: ${file(serverless.appsync-api.yml)}
 
 # (4.4.1) Add a functions block for the lambda trigger function
 functions:
@@ -131,3 +132,7 @@ resources:
     # We get that value with !Ref
     CognitoUserPoolId:
       Value: !Ref CognitoUserPool
+    # (4.6) add AWS_REGION as an env var
+    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls. 
+    AwsRegion:
+      Value: ${self:custom.region}

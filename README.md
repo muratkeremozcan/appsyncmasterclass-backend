@@ -239,13 +239,62 @@ Prop-tips from Yan:
 
 ## 4.6 Integration testing
 
-Use the `serverless-export-env` plugin to create a `.env` file with our env vars `provider:environment:` in `serverless.yml`.
+Use the `serverless-export-env` plugin to create a `.env` file with our env vars. It picks up a few values from `serverless.yml`.
 
 ```bash
 npm i -D jest @types/jest dotenv
 
 # add it as a plugin to serverless.yml
-npm i -D serverless-export-env@v1.4.0 # later version does not download COGNITO_USER_POOL_ID USERS_TABLE 
+# later version does not download COGNITO_USER_POOL_ID USERS_TABLE 
+npm i -D serverless-export-env@v1.4.0 
 npm run sls -- export-env
 ```
 
+Add AWS_REGION and USER_POOL_ID to Outputs, so that they can also be acquired via the plugin. Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls. 
+
+```yml
+# serverless.yml
+provider:
+  environment:
+    STAGE: # picks up
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: # picks up
+    
+custom:
+  # (4.6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
+  region: ${opt:region, self:provider.region}
+  stage: ${opt:stage, self:provider.stage}
+  appSync: ${file(serverless.appsync-api.yml)}
+    
+functions:
+  confirmUserSignup:
+    handler: #
+    environment:
+      USERS_TABLE: # picks up
+      
+  Outputs:
+    CognitoUserPoolId: # picks it up as an env var too
+      Value: !Ref CognitoUserPool 
+    # add AWS_REGION as an env var   
+    AwsRegion:
+      Value: ${self:custom.region}
+      
+```
+
+After the `serversless.yml` change, we have to deploy and run `npm run sls -- export-env` again. Finally, we have an `.env` file with 5 values:
+
+```dotenv
+# .env
+STAGE=dev
+AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
+COGNITO_USER_POOL_ID=eu-west-1_***
+AWS_REGION=eu-west-1
+USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-****
+```
+
+ In the test there are 3 main things we do:
+
+* Create an event: an object which includes user info.
+* Feed the event to the handler
+* As a result we should see a DynamoDB table entry, confirm it.
+
+Take a look at [functions/confirm-user-signup.test.js](./functions/confirm-user-signup.test.js).

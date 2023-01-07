@@ -7,3 +7,18 @@ userPoolConfig:
   awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
+# [4.8] Implement getMyProfile query
+# (4.8.1) tell the serverless AppSync plugin where the Appsync templates are going to be,
+# and how to map them to the graphQL query
+mappingTemplatesLocation: mapping-templates
+mappingTemplates:
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable # we defined dataSources for this-
+dataSources:
+  - type: NONE
+    name: none
+  - type: AMAZON_DYNAMODB
+    name: usersTable
+    config: 
+      tableNam: !Ref UsersTable

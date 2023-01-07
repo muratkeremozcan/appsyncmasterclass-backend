@@ -297,7 +297,7 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 * Feed the event to the handler
 * As a result we should see a DynamoDB table entry, confirm it.
 
-Take a look at [functions/confirm-user-signup.test.js](./functions/confirm-user-signup.test.js).
+Take a look at [./__tests__/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
 
 ## 4.7 E2e test 
 
@@ -330,3 +330,21 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 * We create a user from scratch using `AWS.CognitoIdentityServiceProvider`  (cognito).
 * We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
 * As a result we should see a DynamoDB table entry, confirm it.
+
+Take a look at [./__tests__/confirm-user-signup-e2e.test.js](./__tests__/confirm-user-signup-e2e.test.js).
+
+## 4.8 Implement `getMyProfile` query
+
+After the user is signed up and confirmed, we can get the data from DynamoDB, similar to what we did in the integration and e2e tests.
+
+*(4.8.1)* Tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query.
+
+```yml
+# serverless.appsync-api.yml
+mappingTemplatesLocation: mapping-templates
+mappingTemplates:
+  - dataSource: DynamoDB
+    type: Query
+    field: getMyProfile
+```
+

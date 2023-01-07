@@ -132,6 +132,13 @@ resources:
     # We get that value with !Ref
     CognitoUserPoolId:
       Value: !Ref CognitoUserPool
+
+    # (4.7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id. 
+    # We capture that as an output in the `serverless.yml` Outputs section, 
+    # similar to what we did to acquire COGNITO_USER_POOL_ID (4.3.1)
+    WebCognitoUserPoolClientId:
+      Value: !Ref WebUserPoolClient
+
     # (4.6) add AWS_REGION as an env var
     # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls. 
     AwsRegion:

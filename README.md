@@ -225,7 +225,7 @@ With serverless apps, unit tests do not give enough confidence for the cost. Sam
 
 Unit test covers the business logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
 
-Integration is the same cost, and more value than unit. Covers the business logic + DynamoDB interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)There are things integration tests cannot cover, but they are good bang for the buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
+Integration is the same cost, and more value than unit. Covers the business logic + DynamoDB interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)There are things integration tests cannot cover, but they are a good bang for the buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
 
 E2e can cover everything, highest confidence but also costly. We need some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
 
@@ -288,7 +288,7 @@ STAGE=dev
 AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
 COGNITO_USER_POOL_ID=eu-west-1_***
 AWS_REGION=eu-west-1
-USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-****
+USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 ```
 
  In the test there are 3 main things we do:
@@ -301,3 +301,32 @@ Take a look at [functions/confirm-user-signup.test.js](./functions/confirm-user-
 
 ## 4.7 E2e test 
 
+In order to work with cognito and simulate a user signup, we need `WebUserPoolClient` id. We capture that as an output in the `serverless.yml ` `Outputs` section, similar to what we did to acquire *COGNITO_USER_POOL_ID (4.3.1)*.
+
+```yml
+Outputs:
+	# lets us use process.env.COGNITO_USER_POOL_ID 
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+  # lets us use process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
+  WebUserPoolClientId:
+    Value: !Ref WebUserPoolClient
+```
+
+After the `serversless.yml` change, we have to deploy `npm run deploy` and export environment `npm run export:env`. Finally, we have an `.env` file with 6 values:
+
+```dotenv
+# .env
+STAGE=dev
+AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
+COGNITO_USER_POOL_ID=eu-west-1_***
+WEB_COGNITO_USER_POOL_CLIENT_ID=******
+AWS_REGION=eu-west-1
+USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
+```
+
+ In the test there are 3 main things we do:
+
+* We create a user from scratch using `AWS.CognitoIdentityServiceProvider`  (cognito).
+* We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
+* As a result we should see a DynamoDB table entry, confirm it.

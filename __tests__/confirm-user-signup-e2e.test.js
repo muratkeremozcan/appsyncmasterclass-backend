@@ -78,6 +78,7 @@ describe('When a user signs up', () => {
       },
     }).promise()
 
+    // with e2e, we also have to clean up the Cognito user
     await cognito
       .adminDeleteUser({
         UserPoolId: userPoolId,

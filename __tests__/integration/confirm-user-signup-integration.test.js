@@ -1,7 +1,7 @@
 // [4.6] integration test for user-signup
 require('dotenv').config()
 const handler = require('../../functions/confirm-user-signup').handler
-const {generateUser, generateEvent} = require('../helpers')
+const {generateUser, generateEvent} = require('../../test-helpers/helpers')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
 

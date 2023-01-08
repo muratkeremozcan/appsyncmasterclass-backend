@@ -1,7 +1,6 @@
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
-const velocityUtil = require('amplify-appsync-simulator/lib/velocity/util')
 
 /**
  * Generates a random user with name, email and password
@@ -71,13 +70,14 @@ const signUpUser = async () => {
 }
 
 /**
- * Signs up a user and returns yields an authenticated user
+ * Signs up a user, signs in that user and returns an authenticated user
  * @returns {Object} - {username, name, email, idToken, accessToken}
  */
-const generateAuthUser = async () => {
-  const {name, email, password, username, cognito, clientId} =
+const signInUser = async () => {
+  const {name, email, password, username, cognito, clientId, userPoolId} =
     await signUpUser()
 
+  // sign in a user with username and password
   const auth = await cognito
     .initiateAuth({
       AuthFlow: 'USER_PASSWORD_AUTH',
@@ -93,9 +93,28 @@ const generateAuthUser = async () => {
     username,
     name,
     email,
+    userPoolId,
+    cognito,
     idToken: auth.AuthenticationResult.IdToken,
     accessToken: auth.AuthenticationResult.AccessToken,
   }
+}
+
+const cleanUpUser = async (username, cognito, userPoolId) => {
+  const DynamoDB = new AWS.DynamoDB.DocumentClient()
+  await DynamoDB.delete({
+    TableName: process.env.USERS_TABLE,
+    Key: {
+      id: username,
+    },
+  }).promise()
+
+  await cognito
+    .adminDeleteUser({
+      UserPoolId: userPoolId,
+      Username: username,
+    })
+    .promise()
 }
 
 /**
@@ -128,7 +147,9 @@ const generateEvent = (userName, name, email) => {
 }
 
 module.exports = {
+  generateEvent,
   generateUser,
   signUpUser,
-  generateEvent,
+  signInUser,
+  cleanUpUser,
 }

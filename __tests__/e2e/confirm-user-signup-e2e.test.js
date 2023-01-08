@@ -1,6 +1,6 @@
 // [4.7] end-to-end test for user-signup
 require('dotenv').config()
-const {signUpUser} = require('../helpers')
+const {signUpUser} = require('../../test-helpers/helpers')
 const AWS = require('aws-sdk')
 
 describe('When a user signs up', () => {

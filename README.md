@@ -407,3 +407,24 @@ Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
 
 ## 4.9 E2e test `getMyProfile` query
 
+As a signed in user, make a graphQL request with the query `getMyProfile`.
+
+* Sign in
+* Make a graphQL request with the query (copy from AppSync console)
+* Confirm that the returned profile should be in the shape of the query.
+
+Check out `__tests__/e2e/user-profile.test.js`.
+
+> To get the GraphQLApiUrl, for now use `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs  for now
+
+```
+STAGE=dev
+AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
+COGNITO_USER_POOL_ID=eu-west-1_***
+API_URL=******
+WEB_COGNITO_USER_POOL_CLIENT_ID=******
+AWS_REGION=eu-west-1
+USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
+```
+
+> Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the test.

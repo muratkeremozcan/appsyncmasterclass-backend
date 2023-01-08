@@ -25,7 +25,7 @@ const generateUser = () => {
 
 /**
  * Generates a random user with name, email and password and signs up the user.
- * It also returns the cognito instance and userPoolId
+ * It also returns the cognito instance, userPoolId, clientId
  * @returns {Object} - {name, email, password, username, cognito}
  */
 const signUpUser = async () => {
@@ -66,9 +66,45 @@ const signUpUser = async () => {
     password,
     cognito,
     userPoolId,
+    clientId,
   }
 }
 
+/**
+ * Signs up a user and returns yields an authenticated user
+ * @returns {Object} - {username, name, email, idToken, accessToken}
+ */
+const generateAuthUser = async () => {
+  const {name, email, password, username, cognito, clientId} =
+    await signUpUser()
+
+  const auth = await cognito
+    .initiateAuth({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: clientId,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password,
+      },
+    })
+    .promise()
+
+  return {
+    username,
+    name,
+    email,
+    idToken: auth.AuthenticationResult.IdToken,
+    accessToken: auth.AuthenticationResult.AccessToken,
+  }
+}
+
+/**
+ * Generates an event object that can be used to test the lambda function
+ * @param {*} userName
+ * @param {*} name
+ * @param {*} email
+ * @returns
+ */
 const generateEvent = (userName, name, email) => {
   // got this object from Lumigo
   return {

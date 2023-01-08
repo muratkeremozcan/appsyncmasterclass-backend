@@ -392,3 +392,18 @@ Once the command goes through, we should have an unconfirmed user in the Cognito
 Try asking for the tweets field. There is no resolver associated with it, so AppSync will return a null. 
 
 ## 4.8 Unit test `getMyProfile` query
+
+We are going to test that `Query.getMyProfile.request.vtl` executes the template with `$context.identity.username` and turn it into a DDB json structure.
+
+* Create an AppSync context that contains the username (for `$context.identity.username`).
+* Get the template (file `Query.getMyProfile.request.vtl`).
+* Render the template (using the utility npm packages).
+
+`npm i -D amplify-velocity-template amplify-appsync-simulator` will help with generating the AppSync context and rendering the `.vtl`  template.
+
+Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
+
+> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)). Therefore , instead of unit, he recommends to focus on testing e2e.
+
+## 4.9 E2e test `getMyProfile` query
+

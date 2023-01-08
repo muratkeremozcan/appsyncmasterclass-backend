@@ -333,9 +333,11 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 
 Take a look at [./__tests__/confirm-user-signup-e2e.test.js](./__tests__/confirm-user-signup-e2e.test.js).
 
-## 4.8 Implement `getMyProfile` query
+## 4.8 Implement `getMyProfile` query (setup an AppSync resolver and have it get an item from DDB)
 
 After the user is signed up and confirmed, we can get the data from DynamoDB, similar to what we did in the integration and e2e tests.
+
+We need to setup an AppSync resolver and have it get an item from DDB.
 
 *(4.8.1)* Tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query.
 
@@ -343,8 +345,50 @@ After the user is signed up and confirmed, we can get the data from DynamoDB, si
 # serverless.appsync-api.yml
 mappingTemplatesLocation: mapping-templates
 mappingTemplates:
-  - dataSource: DynamoDB
-    type: Query
+  - type: Query
     field: getMyProfile
+    dataSource: usersTable # we define dataSources below for this
+dataSources:
+  - type: NONE
+    name: none
+  - type: AMAZON_DYNAMODB
+    name: usersTable
+    config: 
+      tableName: !Ref UsersTable
 ```
 
+*(4.8.2)* Per convention, add two files at the folder `./mapping-templates`, `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+
+* Take the identity of the user (available in `$context.identity`), take the username and turn it into a DDB structure.
+
+```vtl
+// mapping-templates/Query.getMyProfile.request.vtl
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.identity.username)
+  }
+}
+```
+
+* For the response, turn it into json. The response is captured by AppSync into `$context.result`
+
+```vtl
+// mapping-templates/Query.getMyProfile.response.vtl
+$util.toJson($context.result)
+```
+
+Deploy with `npm run deploy`. Verify that changes worked by looking for the string `GraphQlResolverQuerygetMyProfile` under the templates in `.serverless` folder
+
+*(4.8.3)* To test at the AWS console, we need a new Cognito user similar to the ones created in the integration and e2e tests before. We do not have access to those, so we use AWS CLI to create a cognito user.
+
+`aws cognito-idp --region eu-west-1 sign-up --client-id <yourEnvVarForWebCognitoUserPoolClientId> --username <yourEmail> --password <yourPw> --user-attributes Name=name,Value=<yourName>`
+
+Once the command goes through, we should have an unconfirmed user in the Cognito console. Confirm the user here. Go to AppSync and sign in with the user. Create a query for `getMyProfile` and we should see results.
+
+![AppSyncQuery](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7qxfzx1880j0670i33j5.png)
+
+Try asking for the tweets field. There is no resolver associated with it, so AppSync will return a null. 
+
+## 4.8 Unit test `getMyProfile` query

@@ -77,5 +77,12 @@ describe('When a user signs up', () => {
         id: userName,
       },
     }).promise()
+
+    await cognito
+      .adminDeleteUser({
+        UserPoolId: userPoolId,
+        Username: userName,
+      })
+      .promise()
   })
 })

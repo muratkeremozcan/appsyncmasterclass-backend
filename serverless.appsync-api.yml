@@ -3,10 +3,12 @@ name: appsyncmasterclass
 schema: schema.api.graphql # name of the graphql schema file [4.2]
 # (4.3.2) after configuring the Cognito User Pool, we need to configure the AppSync API to use it.
 authenticationType: AMAZON_COGNITO_USER_POOLS
+
 userPoolConfig:
   awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
+
 # [4.8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
 # (4.8.1) tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query
 mappingTemplatesLocation: mapping-templates
@@ -17,6 +19,13 @@ mappingTemplates:
     # (4.8.2) Per convention, add two files at the folder `./mapping-templates`, `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl`
     # Realize how it matches `mappingTemplates:type&field`
     # The convention Handles request:<fileName> and response:<fileName> that would be right here otherwise
+  
+  # [4.11] Implement editMyProfile query
+  # (4.11.0) add an entry to the mappingTemplates 
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable 
+
 dataSources:
   - type: NONE
     name: none

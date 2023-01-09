@@ -385,7 +385,7 @@ Deploy with `npm run deploy`. Verify that changes worked by looking for the stri
 
 `aws cognito-idp --region eu-west-1 sign-up --client-id <yourEnvVarForWebCognitoUserPoolClientId> --username <yourEmail> --password <yourPw> --user-attributes Name=name,Value=<yourName>`
 
-Once the command goes through, we should have an unconfirmed user in the Cognito console. Confirm the user here. Go to AppSync and sign in with the user. Create a query for `getMyProfile` and we should see results.
+Once the command goes through, we should have an unconfirmed user in the Cognito console. Confirm the user here, it will populate in DDB - make sure you never delete it or you have to do the steps again. Go to AppSync and sign in with the user. Create a query for `getMyProfile` and we should see results.
 
 ![AppSyncQuery](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7qxfzx1880j0670i33j5.png)
 
@@ -522,73 +522,5 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 API_URL=******
 ```
 
-> Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test.
-
-## 4.11 Implement `editMyProfile` query
-
-*(4.11.0)* Add an entry to the mapping templates
-
-```yml
-# ./serverless.appsync-api.yml
-mappingTemplates:
-  - type: Query
-    field: getMyProfile
-    dataSource: usersTable 
-
-  - type: Mutation
-    field: editMyProfile
-    dataSource: usersTable 
-```
-
-*(4.11.1)* We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder `Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not use [dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`. Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`.  Add a `condition`  `"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
-
-```graphql
-# ./schema.api.graphql
-input ProfileInput {
-  name: String!
-  imageUrl: AWSURL
-  backgroundImageUrl: AWSURL
-  bio: String
-  location: String
-  website: AWSURL
-  birthdate: AWSDate
-}
-```
-
-```
-# mapping-templates/Mutation.editMyProfile.request.vtl
-{
-  "version" : "2018-05-29",
-  "operation" : "UpdateItem",
-  "key": {
-    "id" : $util.dynamodb.toDynamoDBJson($context.identity.username)
-  },
-  "update" : {
-    "expression" : "set #name = :name, imageUrl = :imageUrl, backgroundImageUrl = :backgroundImageUrl, bio = :bio, #location = :location, website = :website, birthdate = :birthdate",
-    "expressionNames" : {
-      "#name" : "name",
-      "#location" : "location"
-    },
-    "expressionValues" : {
-      ":name" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.name),
-      ":imageUrl" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.imageUrl),
-      ":backgroundImageUrl" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.backgroundImageUrl),
-      ":bio" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.bio),
-      ":location" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.location),
-      ":website" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.website),
-      ":birthdate" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.birthdate)
-    }
-  },
-  "condition" : {
-    "expression" : "attribute_exists(id)"
-  }
-}
-```
-
-`editMyProfile.response` is the same as `getMyProfile.response`
-
-```
-# ./mapping-templates/Mutation.editMyProfile.response.vtl
-$util.toJson($context.result)
-```
+> Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test, do not delete your `protonmail` user which is used in AppSync console tests.
 

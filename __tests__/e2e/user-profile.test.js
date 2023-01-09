@@ -2,6 +2,7 @@ require('dotenv').config()
 const {signInUser} = require('../../test-helpers/helpers')
 const {axiosGraphQLQuery} = require('../../test-helpers/graphql')
 const AWS = require('aws-sdk')
+const chance = require('chance').Chance()
 
 describe('Given an authenticated user', () => {
   let signedInUser
@@ -59,6 +60,43 @@ describe('Given an authenticated user', () => {
     const [firstName, lastName] = profile.name.split(' ')
     expect(profile.screenName).toContain(firstName)
     expect(profile.screenName).toContain(lastName)
+  })
+
+  it('The user can edit their profile with editMyProfile', async () => {
+    // as the signed in user, make a request
+    // we can copy the query from the AppSync console
+    const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
+      editMyProfile(newProfile: $input) {
+        backgroundImageUrl
+        bio
+        birthdate
+        createdAt
+        followersCount
+        followingCount
+        id
+        imageUrl
+        likesCounts
+        location
+        name
+        screenName
+        tweetsCount
+        website
+      }
+    }`
+
+    const newName = chance.first()
+    const data = await axiosGraphQLQuery(
+      process.env.API_URL,
+      editMyProfile,
+      {input: {name: newName}},
+      signedInUser.accessToken,
+    )
+    const profile = data.editMyProfile
+
+    expect(profile).toMatchObject({
+      ...profile,
+      name: newName,
+    })
   })
 
   afterAll(async () => {

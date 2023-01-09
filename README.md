@@ -405,7 +405,7 @@ Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
 
 > Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)). Therefore , instead of unit, he recommends to focus on testing e2e.
 
-## 4.9 E2e test `getMyProfile` query
+## 4.9 & 4.10 E2e test `getMyProfile` query
 
 As a signed in user, make a graphQL request with the query `getMyProfile`.
 
@@ -524,3 +524,132 @@ API_URL=******
 
 > Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test, do not delete your `protonmail` user which is used in AppSync console tests.
 
+## 4.11 Implement `editMyProfile` query
+
+*(4.11.0)* Add an entry to the mapping templates
+
+```yml
+# ./serverless.appsync-api.yml
+mappingTemplates:
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable 
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable 
+```
+
+*(4.11.1)* We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder `Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not  touse [dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`. Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`.  Add a `condition`  `"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
+
+```graphql
+# ./schema.api.graphql
+input ProfileInput {
+  name: String!
+  imageUrl: AWSURL
+  backgroundImageUrl: AWSURL
+  bio: String
+  location: String
+  website: AWSURL
+  birthdate: AWSDate
+}
+```
+
+```
+# mapping-templates/Mutation.editMyProfile.request.vtl
+{
+  "version" : "2018-05-29",
+  "operation" : "UpdateItem",
+  "key": {
+    "id" : $util.dynamodb.toDynamoDBJson($context.identity.username)
+  },
+  "update" : {
+    "expression" : "set #name = :name, imageUrl = :imageUrl, backgroundImageUrl = :backgroundImageUrl, bio = :bio, #location = :location, website = :website, birthdate = :birthdate",
+    "expressionNames" : {
+      "#name" : "name",
+      "#location" : "location"
+    },
+    "expressionValues" : {
+      ":name" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.name),
+      ":imageUrl" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.imageUrl),
+      ":backgroundImageUrl" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.backgroundImageUrl),
+      ":bio" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.bio),
+      ":location" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.location),
+      ":website" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.website),
+      ":birthdate" : $util.dynamodb.toDynamoDBJson($context.arguments.newProfile.birthdate)
+    }
+  },
+  "condition" : {
+    "expression" : "attribute_exists(id)"
+  }
+}
+```
+
+`editMyProfile.response` is the same as `getMyProfile.response`
+
+```
+# ./mapping-templates/Mutation.editMyProfile.response.vtl
+$util.toJson($context.result)
+```
+
+Deploy and test at AppSync web console. If getQuery is broken, you may have moved `chance` package to devDependencies. If Put is broken, you may have deleted the used from DDB, and you have to re-create it as in section 4.7.
+
+![UpdateItem](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mp550m5vmaatz9mk0t0h.png)
+
+## 4.12 Unit & e2e test `editMyProfile` 
+
+### Unit
+
+We are going to test that `Mutation.editMyProfile.request.vtl` executes the template with `$context.identity.username` and turn it into a DDB json structure.
+
+* Create an AppSync context that contains the username (for `$context.identity.username`). KEY: when generating the context we need to give it an argument (compared to getMyProfile).
+* Get the template (file `Mutation.editMyProfile.request.vtl`).
+* Render the template (using the utility npm packages).
+
+Check out `__tests__/unit/Mutation.editMyProfile.request.test.js`.
+
+> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)). Therefore , instead of unit, he recommends to focus on testing e2e.
+
+### E2e 
+
+As a signed in user, make a graphQL request with the query `editMyProfile`.
+
+* Sign in
+* Make a graphQL request with the query (copy from AppSync console)
+* Confirm that the returned profile has been edited
+
+Check out `__tests__/e2e/user-profile.test.js`.
+
+For the types, there are 3 key pieces of info:
+
+* `editMyProfile` takes `newProfile` as an argument
+
+```
+# schema.api.graphql
+type Mutation {
+  editMyProfile(newProfile: ProfileInput!): MyProfile!
+```
+
+* At the AppSync web console we build an example
+
+```
+mutation MyMutation {
+  editMyProfile(newProfile: {name: "Murat Ozcan"}) {
+    id
+    name
+    screenName
+    birthdate
+    createdAt
+    backgroundImageUrl
+    bio
+  }
+}
+```
+
+* In the test, we can take an input as a parameter
+
+```javascript
+const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
+	editMyProfile(newProfile: $input) {	
+```
+
+And the input can be just `{ input: {name: newName} }`

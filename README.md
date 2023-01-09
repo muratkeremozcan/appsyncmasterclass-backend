@@ -415,16 +415,112 @@ As a signed in user, make a graphQL request with the query `getMyProfile`.
 
 Check out `__tests__/e2e/user-profile.test.js`.
 
-> To get the GraphQLApiUrl, for now use `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs  for now
+### Getting the GraphQL API_URL
+
+A crude way to get the GraphQLApiUrl is through the web console: `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
+
+`serverless-export-env` looks at the `Outputs` property, it cannot acquire `.Arn` (comes as [Object object])
+
+```yml
+  Outputs:
+		ConitoUserPoolArn:
+		  # Getting the .Arn will not work
+		  Value : !Ref CognitoUserPool.Arn
+
+    CognitoUserPoolId:
+      Value: !Ref CognitoUserPool
+
+    WebCognitoUserPoolClientId:
+      Value: !Ref WebUserPoolClient
+
+    AwsRegion:
+      Value: ${self:custom.region}
+```
+
+[4.10]  To get the GraphQL API_URL from `CognitoUserPoolArn` we can use `npm i -D serverless-manifest-plugin`. Run the command `npm run sls -- manifest`. As opposed to looking at `serverless.yml`'s `Output` , it looks at the CloudFormation stack that has been deployed. It outputs a succinct json at `./.serverless/manifest.json`. We could also get the value from there, but that's not automated. 
+
+Under `serverless.yml / custom` create a manifest section:
+
+```yml
+custom:
+  ##
+  manifest: 
+    postProcess: ./processManifest.js
+    disablePostDeployGeneration: true
+    disableOutput: true
+    silent: true
+```
+
+Create the file `./processManifest.js`. This script is analyzing the `manifest.json` file, looks for `outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
+
+```js
+const _ = require('lodash')
+const dotenv = require('dotenv')
+const fs = require('fs')
+const path = require('path')
+const { promisify } = require('util')
+
+module.exports = async function processManifest(manifestData) {
+  const stageName = Object.keys(manifestData)
+  const { outputs } = manifestData[stageName]
+
+  const getOutputValue = (key) => {
+    console.log(`loading output value for [${key}]`)
+    const output = _.find(outputs, x => x.OutputKey === key)
+    if (!output) {
+      throw new Error(`No output found for ${key}`)
+    }
+    return output.OutputValue
+  }
+
+  const dotEnvFile = path.resolve('.env')
+  await updateDotEnv(dotEnvFile, {
+    API_URL: getOutputValue('GraphQlApiUrl'),
+  })
+}
+
+/* Utils, typically this would be a package includes from NPM */
+async function updateDotEnv(filePath, env) {
+  // Merge with existing values
+  try {
+    const existing = dotenv.parse(await promisify(fs.readFile)(filePath, 'utf-8'))
+    env = Object.assign(existing, env)
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err
+    }
+  }
+
+  const contents = Object.keys(env).map(key => format(key, env[key])).join('\n')
+  await promisify(fs.writeFile)(filePath, contents)
+
+  return env
+}
+
+function escapeNewlines (str) {
+  return str.replace(/\n/g, '\\n')
+}
+
+function format (key, value) {
+  return `${key}=${escapeNewlines(value)}`
+}
+```
+
+Modify the `package.json` script to also include `sls manifest`
+
+` export:env": "sls export-env && sls manifest",`
+
+Run the command `npm run export:env`. `API_URL=******` should get generated
 
 ```
 STAGE=dev
 AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
 COGNITO_USER_POOL_ID=eu-west-1_***
-API_URL=******
 WEB_COGNITO_USER_POOL_CLIENT_ID=******
 AWS_REGION=eu-west-1
 USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
+API_URL=******
 ```
 
-> Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the test.
+> Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test.
+

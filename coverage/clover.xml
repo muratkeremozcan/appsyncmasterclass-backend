@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1673191508497" clover="3.2.0">
-  <project timestamp="1673191508497" name="All files">
+<coverage generated="1673268263215" clover="3.2.0">
+  <project timestamp="1673268263216" name="All files">
     <metrics statements="15" coveredstatements="14" conditionals="2" coveredconditionals="1" methods="1" coveredmethods="1" elements="18" coveredelements="16" complexity="0" loc="15" ncloc="15" packages="1" files="1" classes="1"/>
     <file name="confirm-user-signup.js" path="/Users/murat/burning-monk/appsyncmasterclass-backend/functions/confirm-user-signup.js">
       <metrics statements="15" coveredstatements="14" conditionals="2" coveredconditionals="1" methods="1" coveredmethods="1"/>

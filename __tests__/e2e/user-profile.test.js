@@ -1,3 +1,4 @@
+// [4.9] e2e test getMyProfile [4.12] editMyProfile
 require('dotenv').config()
 const {signInUser} = require('../../test-helpers/helpers')
 const {axiosGraphQLQuery} = require('../../test-helpers/graphql')
@@ -9,6 +10,7 @@ describe('Given an authenticated user', () => {
   beforeAll(async () => {
     signedInUser = await signInUser()
   })
+
   it('The user can fetch his profile with getMyProfile', async () => {
     // as the signed in user, make a request
     // we can copy the query from the AppSync console
@@ -32,9 +34,8 @@ describe('Given an authenticated user', () => {
 		}`
     const data = await axiosGraphQLQuery(
       process.env.API_URL,
-      getMyProfile,
-      {},
       signedInUser.accessToken,
+      getMyProfile,
     )
     const profile = data.getMyProfile
 
@@ -65,6 +66,8 @@ describe('Given an authenticated user', () => {
   it('The user can edit their profile with editMyProfile', async () => {
     // as the signed in user, make a request
     // we can copy the query from the AppSync console
+    // here we are taking an input as a parameter, mirroring the type at schema.api.graphql
+    // editMyProfile(newProfile: ProfileInput!): MyProfile!
     const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
       editMyProfile(newProfile: $input) {
         backgroundImageUrl
@@ -87,9 +90,9 @@ describe('Given an authenticated user', () => {
     const newName = chance.first()
     const data = await axiosGraphQLQuery(
       process.env.API_URL,
+      signedInUser.accessToken,
       editMyProfile,
       {input: {name: newName}},
-      signedInUser.accessToken,
     )
     const profile = data.editMyProfile
 

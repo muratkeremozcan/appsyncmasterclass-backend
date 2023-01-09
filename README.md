@@ -419,7 +419,7 @@ Check out `__tests__/e2e/user-profile.test.js`.
 
 A crude way to get the GraphQLApiUrl is through the web console: `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
 
-`serverless-export-env` looks at the `Outputs` property, it cannot acquire `.Arn` (comes as [Object object])
+`serverless-export-env` looks at the `Outputs` property of the `serverless.yml`, it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
 
 ```yml
   Outputs:
@@ -451,7 +451,7 @@ custom:
     silent: true
 ```
 
-Create the file `./processManifest.js`. This script is analyzing the `manifest.json` file, looks for `outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
+Create the file `./processManifest.js`. This script is analyzes the `manifest.json` file, looks for `outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
 
 ```js
 const _ = require('lodash')
@@ -539,10 +539,15 @@ mappingTemplates:
     dataSource: usersTable 
 ```
 
-*(4.11.1)* We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder `Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not  touse [dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`. Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`.  Add a `condition`  `"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
+*(4.11.1)* We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder `Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not to use [dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`. Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`, they will all be `$context.arguments.newProfile` because of our GraphQL schema that was defined.  Add a `condition`  `"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
 
 ```graphql
 # ./schema.api.graphql
+type Mutation {
+  editMyProfile(newProfile: ProfileInput!): MyProfile!
+  ...
+} 
+
 input ProfileInput {
   name: String!
   imageUrl: AWSURL
@@ -591,7 +596,7 @@ input ProfileInput {
 $util.toJson($context.result)
 ```
 
-Deploy and test at AppSync web console. If getQuery is broken, you may have moved `chance` package to devDependencies. If Put is broken, you may have deleted the used from DDB, and you have to re-create it as in section 4.7.
+Deploy and test at AppSync web console. If getQuery is broken, you may have moved `chance` package to devDependencies. If Put is broken, you may have deleted the user from DDB, and you have to re-create it as in section 4.8 using `aws cognito-idp `.
 
 ![UpdateItem](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mp550m5vmaatz9mk0t0h.png)
 
@@ -599,7 +604,7 @@ Deploy and test at AppSync web console. If getQuery is broken, you may have move
 
 ### Unit
 
-We are going to test that `Mutation.editMyProfile.request.vtl` executes the template with `$context.identity.username` and turn it into a DDB json structure.
+We are going to test that `Mutation.editMyProfile.request.vtl` executes the template with `$context.identity.username` and turns it into a DDB json structure.
 
 * Create an AppSync context that contains the username (for `$context.identity.username`). KEY: when generating the context we need to give it an argument (compared to getMyProfile).
 * Get the template (file `Mutation.editMyProfile.request.vtl`).
@@ -652,4 +657,4 @@ const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
 	editMyProfile(newProfile: $input) {	
 ```
 
-And the input can be just `{ input: {name: newName} }`
+And the input can be just `input: {name: newName}`.

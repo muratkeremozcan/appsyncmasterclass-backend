@@ -15,7 +15,7 @@ error: ${JSON.stringify(errors, null, 2)}
   }
 }
 
-const axiosGraphQLQuery = async (url, query, variables = {}, auth) => {
+const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
   const headers = {}
   if (auth) {
     headers.Authorization = auth

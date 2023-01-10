@@ -661,7 +661,7 @@ And the input can be just `input: {name: newName}`.
 
 ## 4.13 Implement getImageUploadUrl query (*use a lambda to upload a file to S3*)
 
-*(4.13.0)* Add an entry to the mapping templates, and a dataSource. For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template. Set request and response to false and `serverless-appsync-plugin` takes care of it. 
+*(4.13.0)* Add an entry to the mapping templates, and a dataSource. For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template. Set request and response to false and `serverless-appsync-plugin` takes care of it. When dealing with DDB, we could leave them out because we specified the vtl files under `./mapping-templates` and the plugin took care of it.
 
 ```yml
 # ./serverless.appsync-api.yml
@@ -692,11 +692,11 @@ mappingTemplates:
 dataSources:
   - type: NONE
     name: none
-  - type: AMAZON_DYNAMODB # (4.8.1)
+  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0)
     name: usersTable
     config: 
       tableName: !Ref UsersTable
-  - type: AWS_LAMBDA # (4.11.0)
+  - type: AWS_LAMBDA # (4.13.0)
     name: getImageUploadUrlFunction
     config:
       functionName: getImageUploadUrl
@@ -726,7 +726,7 @@ For S3 `putObject` we need `key`, `contentType` and the bucket env var.
 
 ![construct-s3-key](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/v9m1cqkpuwuo9gck2u55.png)
 
-*(4.13.2.2)* To get the `contentType` we use `*event*.arguments.contentType `
+*(4.13.2.2)* To get the `contentType` we use `event.arguments.contentType `.
 
 *(4.13.2.3)* create the S3 bucket env var, to help make the s3 putObject request.
 
@@ -745,7 +745,8 @@ functions:
       - Effect: Allow
         Action:
           - s3:PutObject # the lambda needs the S3 putObject permission
-          # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
+          # it also needs ACL permission because we set it in the params 
+          # get-upload-url.js/s3.getSignedUrl('putObject', params)
           - s3:PutObjectAcl 
         # allow the function to interact with any object in the bucket  
         Resource: !Sub ${AssetsBucket.Arn}/*    
@@ -782,12 +783,10 @@ Other notes:
 * `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids. Problem with `chance` is the random ids are not sortable, ulid generates sortable keys.
 * If we need to customize the file upload (ex: file size limit) we can use `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles' post on S3 presigned URLs vs presigned POSTs [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932), and the [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html) on creating POST policies (including a list of conditions you can apply).
 
-
-
 ```js
 // ./functions/get-upload-url.js
-
 // (4.13.2) Implement the lambda function. We need t o make a `putObject` request to S3.
+
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
@@ -819,7 +818,7 @@ const handler = async event => {
     throw new Error('contentType must start be an image')
   }
 
-  // use S3 to get a signed url, we are uploading an image so the operation is `putObject`
+  // [4.13.2] use S3 to upload an image to S3. The operation is `putObject`
   const params = {
     Bucket: process.env.BUCKET_NAME,
     Key: key,

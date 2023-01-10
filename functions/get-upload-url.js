@@ -1,4 +1,4 @@
-// (4.13.2) Implement the lambda function. We need t o make a `putObject` request to S3.
+// (4.13.2) Implement the lambda function. We need to make a `putObject` request to S3.
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
@@ -30,7 +30,7 @@ const handler = async event => {
     throw new Error('contentType must start be an image')
   }
 
-  // use S3 to get a signed url, we are uploading an image so the operation is `putObject`
+  // [4.13.2] use S3 to upload an image to S3. The operation is `putObject`
   const params = {
     Bucket: BUCKET_NAME,
     Key: key,
@@ -38,9 +38,7 @@ const handler = async event => {
     ContentType: contentType,
   }
   // note that s3.getSignedUrl is completely local, does not make a request to S3 (no need for a promise)
-  const signedUrl = s3.getSignedUrl('putObject', params)
-
-  return signedUrl
+  return s3.getSignedUrl('putObject', params)
 }
 
 module.exports = {

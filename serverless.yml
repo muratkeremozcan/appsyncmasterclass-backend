@@ -17,8 +17,8 @@ provider:
   # any env var defined here applies to all the functions
   environment:
     # (4.4.2) when using aws nodeJs SDK, always enable HTTP keep-alive
-    STAGE: ${self:custom.stage}   # stage: dev # if not specified, defaults to dev
-    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+    STAGE: ${self:custom.stage} # stage: dev # if not specified, defaults to dev
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
 
 package:
   exclude:
@@ -30,10 +30,10 @@ custom:
   region: ${opt:region, self:provider.region}
   # (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
-  # [4.1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration. 
+  # [4.1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
   # (4.10) get API_URL from CognitoUserPoolArn
-  manifest: 
+  manifest:
     postProcess: ./processManifest.js
     disablePostDeployGeneration: true
     disableOutput: true
@@ -54,6 +54,19 @@ functions:
       - Effect: Allow
         Action: dynamodb:PutItem
         Resource: !GetAtt UsersTable.Arn
+
+  # (4.13.1) add the lambda function that will do the work (getImageUploadUrl)
+  getImageUploadUrl:
+    handler: functions/get-upload-url.handler
+    # (4.13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    environment:
+      BUCKET_NAME: !Ref AssetsBucket
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject # the lambda needs the S3 putObject permission
+          - s3:PutObjectAcl # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
+        Resource: !Sub ${AssetsBucket.Arn}/* # allow the function to interact with any object in the bucket
 
 resources:
   Resources:
@@ -76,7 +89,7 @@ resources:
             # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: users-table
-  
+
     # [4.3] Configure Cognito User Pool
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
@@ -90,11 +103,11 @@ resources:
             RequireNumbers: false
             RequireUppercase: false
             RequireSymbols: false
-        # (4.3.0) allows login via email    
+        # (4.3.0) allows login via email
         UsernameAttributes:
           - email
         # (4.3.0) we need to know the name and associate it with cognito user pool
-        # with this setting we can configure a name attribute  
+        # with this setting we can configure a name attribute
         Schema:
           - AttributeDataType: String
             Name: name
@@ -105,8 +118,8 @@ resources:
         # instead we figure out the logical id sls generates for the lambda function, by using npm run sls -- package
         # which generates cloudformation template under .serverless folder. There look for ConfirmUserSignupLambdaFunction
         LambdaConfig:
-          PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction.Arn 
-    
+          PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction.Arn
+
     # (4.4.4) We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any
     # grants CognitoUserPool the lambda:invokeFunction permission for ConfirmUserSignupLambdaFunction
     UserPoolInvokeConfirmUserSignupLambdaPermission:
@@ -117,10 +130,10 @@ resources:
         Principal: cognito-idp.amazonaws.com
         SourceArn: !GetAtt CognitoUserPool.Arn
 
-    # (4.3.5) We need to be logged in with Cognito to test AppSync queries. 
+    # (4.3.5) We need to be logged in with Cognito to test AppSync queries.
     # Create a cognito user by hand at *CognitoUserPool / Users and Groups*. (I used my email).
-    # We also need to configure a application client at *CognitoUserPool / App clients* 
-    # to be able to interact with the Cognito User Pool. 
+    # We also need to configure a application client at *CognitoUserPool / App clients*
+    # to be able to interact with the Cognito User Pool.
     # We do this by adding a resource here
     WebUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
@@ -131,22 +144,38 @@ resources:
           - ALLOW_USER_SRP_AUTH
           - ALLOW_USER_PASSWORD_AUTH
           - ALLOW_REFRESH_TOKEN_AUTH
-        # with this we get a "wrong pw" in case a user doesn't exist, makes it harder for attackers to find out if the user exists  
+        # with this we get a "wrong pw" in case a user doesn't exis dt, makes it harder for attackers to find out if the user exists
         PreventUserExistenceErrors: ENABLED
 
+    # (4.13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    AssetsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccelerateConfiguration:
+          AccelerationStatus: Enabled # because we used: const s3 = new S3({useAccelerateEndpoint: true})
+        CorsConfiguration: # because the UI client needs to make a request
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+
   Outputs:
-    # (4.3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output, 
+    # (4.3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
     # We get that value with !Ref
     CognitoUserPoolId:
       Value: !Ref CognitoUserPool
 
-    # (4.7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id. 
-    # We capture that as an output in the `serverless.yml` Outputs section, 
+    # (4.7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id.
+    # We capture that as an output in the `serverless.yml` Outputs section,
     # similar to what we did to acquire COGNITO_USER_POOL_ID (4.3.1)
     WebCognitoUserPoolClientId:
       Value: !Ref WebUserPoolClient
 
     # (4.6) add AWS_REGION as an env var
-    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls. 
+    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
     AwsRegion:
       Value: ${self:custom.region}

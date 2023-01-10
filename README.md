@@ -333,7 +333,7 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 
 Take a look at [./__tests__/confirm-user-signup-e2e.test.js](./__tests__/confirm-user-signup-e2e.test.js).
 
-## 4.8 Implement `getMyProfile` query (setup an AppSync resolver and have it get an item from DDB)
+## 4.8 Implement `getMyProfile` query (*setup an AppSync resolver and have it get an item from DDB*)
 
 After the user is signed up and confirmed, we can get the data from DynamoDB, similar to what we did in the integration and e2e tests.
 
@@ -524,7 +524,7 @@ API_URL=******
 
 > Make sure to clean up [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test, do not delete your `protonmail` user which is used in AppSync console tests.
 
-## 4.11 Implement `editMyProfile` query
+## 4.11 Implement `editMyProfile` query (*setup an AppSync resolver and have it edit an item at DDB.*)
 
 *(4.11.0)* Add an entry to the mapping templates
 
@@ -658,3 +658,186 @@ const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
 ```
 
 And the input can be just `input: {name: newName}`.
+
+## 4.13 Implement getImageUploadUrl query (*use a lambda to upload a file to S3*)
+
+*(4.13.0)* Add an entry to the mapping templates, and a dataSource. For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template. Set request and response to false and `serverless-appsync-plugin` takes care of it. 
+
+```yml
+# ./serverless.appsync-api.yml
+
+mappingTemplates:
+	# [4.8] Implement getMyProfile query. 
+	# We need to setup an AppSync resolver and have it get an item from DDB.
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable 
+    
+  # [4.11] Implement editMyProfile query. 
+  # We need to setup an AppSync resolver and have it edit an item at DDB.
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable 
+  
+  # [4.13] Implement getImageUploadUrl query (use a lambda to upload a file to S3)
+  - type: Query
+    field: getImageUploadUrl
+    dataSource: getImageUploadUrlFunction  # we define dataSources below for this
+    # For lambda functions, Appsync has a direct resolver integration, 
+    # so we do not need a custom request & response vtl template.
+    # this is how we configure it, and serverless-appsync-plugin takes care of it
+    request: false
+    response: false
+    
+dataSources:
+  - type: NONE
+    name: none
+  - type: AMAZON_DYNAMODB # (4.8.1)
+    name: usersTable
+    config: 
+      tableName: !Ref UsersTable
+  - type: AWS_LAMBDA # (4.11.0)
+    name: getImageUploadUrlFunction
+    config:
+      functionName: getImageUploadUrl
+```
+
+*(4.13.1)* add the lambda function that will do the work (getImageUploadUrl)
+
+```yml
+# ./serverless.yml
+
+functions:
+  confirmUserSignup: ##
+  
+  getImageUploadUrl:
+    handler: functions/get-upload-url.handler   
+```
+
+Run `npm run sls --package` to test that it works so far.
+
+### *(4.13.2)* Implement the lambda function `functions/get-upload-url.js`.
+
+ We need to make a `putObject` request to S3. From the graphQL schema  `getImageUploadUrl(extension: String, contentType: String)` , we know that we need an extension and contentType as args, both of which are optional. We can get them from `event.arguments`.
+
+For S3 `putObject` we need `key`, `contentType` and the bucket env var.
+
+*(4.13.2.1)* To construct the `key` for S3, we can use `event.identity.username` (Lumigo screenshot)
+
+![construct-s3-key](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/v9m1cqkpuwuo9gck2u55.png)
+
+*(4.13.2.2)* To get the `contentType` we use `*event*.arguments.contentType `
+
+*(4.13.2.3)* create the S3 bucket env var, to help make the s3 putObject request.
+
+For the bucket env var, we have to add an entry to `serverless.yml` `resources` section:
+
+```yml
+# ./serverless.yml
+functions:
+  confirmUserSignup: #
+  
+  getImageUploadUrl:
+    handler: functions/getImageUploadUrl.handler
+    environment:  # (4.13.2) 
+      BUCKET_NAME: !Ref AssetsBucket
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject # the lambda needs the S3 putObject permission
+          # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
+          - s3:PutObjectAcl 
+        # allow the function to interact with any object in the bucket  
+        Resource: !Sub ${AssetsBucket.Arn}/*    
+
+resources:
+  Resources:  
+    UsersTable: #
+    CognitoUserPool: #
+    UserPoolInvokeConfirmUserSignupLambdaPermission: #
+    WeUserPoolClient: #
+    
+    # (4.13.2) acquire the S3 bucket env var, to help make the s3 putObject request
+    AssetsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccelerateConfiguration:
+           # because we used: const s3 = new S3({useAccelerateEndpoint: true})
+          AccelerationStatus: Enabled
+        CorsConfiguration: # because the UI client needs to make a request
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'    
+```
+
+Other notes:
+
+* When creating urls for the user to upload content, use S3 Transfer Acceleration.
+
+* `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids. Problem with `chance` is the random ids are not sortable, ulid generates sortable keys.
+* If we need to customize the file upload (ex: file size limit) we can use `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles' post on S3 presigned URLs vs presigned POSTs [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932), and the [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html) on creating POST policies (including a list of conditions you can apply).
+
+
+
+```js
+// ./functions/get-upload-url.js
+
+// (4.13.2) Implement the lambda function. We need t o make a `putObject` request to S3.
+const S3 = require('aws-sdk/clients/s3')
+// when creating urls for the user to upload content, use S3 Transfer Acceleration
+const s3 = new S3({useAccelerateEndpoint: true})
+const ulid = require('ulid')
+// (4.13.2.3) get the bucket env var (settings in serverless.yml file)
+const {BUCKET_NAME} = process.env.BUCKET_NAME
+
+const handler = async event => {
+  // (4.13.2.1) construct the key for S3 putObject request
+  // use ulid to create a randomized, but sorted id (chance is not sorted when we create multiple ids)
+  const id = ulid.ulid()
+  // construct a S3 key using the Construct a S3 key using the event.identity.username (got it from Lumigo)
+  let key = `${event.identity.username}/${id}`
+  // get the extension from graphQL schema : getImageUploadUrl(extension: String, contentType: String): AWSURL!
+  const extension = event.arguments.extension
+  // extension is optional, and we need to add a dot if there isn't one
+  if (extension) {
+    if (extension.startsWith('.')) {
+      key += extension
+    } else {
+      key += `.${extension}`
+    }
+  }
+
+  // (4.13.2.2) get the contentType from event.arguments.contentType
+  // get the contentType from graphQL schema as well, it is optional as well so we give it a default value
+  const contentType = event.arguments.contentType || 'image/jpeg'
+  if (!contentType.startsWith('image/')) {
+    throw new Error('contentType must start be an image')
+  }
+
+  // use S3 to get a signed url, we are uploading an image so the operation is `putObject`
+  const params = {
+    Bucket: process.env.BUCKET_NAME,
+    Key: key,
+    ACL: 'public-read',
+    ContentType: contentType,
+  }
+  // note that s3.getSignedUrl is completely local, does not make a request to S3 (no need for a promise)
+  const signedUrl = s3.getSignedUrl('putObject', params)
+
+  return signedUrl
+}
+
+module.exports = {
+  handler,
+}
+```
+
+`npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in the `.env` file.
+
+## 4.14 Unit test getImageUploadUrl
+

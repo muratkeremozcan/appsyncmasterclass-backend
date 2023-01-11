@@ -9,8 +9,8 @@ const {
 describe('Query.getMyProfile.request template', () => {
   it('Should execute the template with $context.identity.username and turn it into a DDB json structure', () => {
     // create an appsync context (for $context.identity.username)
-    const userName = chance.guid()
-    const context = generateAppSyncContext(userName, {})
+    const username = chance.guid()
+    const context = generateAppSyncContext(username, {})
 
     // get the request template
     const template = getTemplate('Query.getMyProfile.request.vtl')
@@ -22,7 +22,7 @@ describe('Query.getMyProfile.request template', () => {
       version: '2018-05-29',
       operation: 'GetItem',
       key: {
-        id: {S: userName},
+        id: {S: username},
       },
     })
   })

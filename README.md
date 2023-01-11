@@ -109,6 +109,8 @@ npm run sls -- config credentials \
   --secret ***
 ```
 
+> When testing integration or e2e, if you get a nonsense Jest timeout 5000 ms error, the credentials must have expired. You have to renew them to get the tests passing. The clue is when having to `npm run deploy` and that does not succeed.
+
 Then deploy with `npm run deploy`. In _AWS console / Cognito_ we find
 `appsyncmasterclass` as defined in
 [serverless.appsync-api.yml](./serverless.appsync-api.yml)
@@ -237,7 +239,13 @@ Prop-tips from Yan:
 * In integration tests, only use mocks for AWS services to simulate hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You can mock your internal services/APIs.
 * Use temporary stacks for feature branches to avoid destabilizing shared environments, and during CI/CD pipeline to run end-to-end tests to remove the overhead of cleaning up test data. https://theburningmonk.com/2019/09/why-you-should-use-temporary-stacks-when-you-do-serverless/
 
-## 4.6 Integration testing
+## 4.6 Integration testing `confirm-user-signup`
+
+The pattern is as follows:
+
+* Create a mock event (an object)
+* Feed it to the handler (the handler causes a write to DDB, hence the "integration")
+* Check that the result matches the expectation (by reading from DDB, hence "integration")
 
 Use the `serverless-export-env` plugin to create a `.env` file with our env vars. It picks up a few values from `serverless.yml`.
 
@@ -785,14 +793,12 @@ Other notes:
 
 ```js
 // ./functions/get-upload-url.js
-// (4.13.2) Implement the lambda function. We need t o make a `putObject` request to S3.
 
+// [4.13.2] Implement the lambda function. We need to make a `putObject` request to S3.
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
 const ulid = require('ulid')
-// (4.13.2.3) get the bucket env var (settings in serverless.yml file)
-const {BUCKET_NAME} = process.env.BUCKET_NAME
 
 const handler = async event => {
   // (4.13.2.1) construct the key for S3 putObject request
@@ -812,7 +818,7 @@ const handler = async event => {
   }
 
   // (4.13.2.2) get the contentType from event.arguments.contentType
-  // get the contentType from graphQL schema as well, it is optional as well so we give it a default value
+  // get the contentType from graphQL schema as well, it is optional so we give it a default value
   const contentType = event.arguments.contentType || 'image/jpeg'
   if (!contentType.startsWith('image/')) {
     throw new Error('contentType must start be an image')
@@ -820,23 +826,29 @@ const handler = async event => {
 
   // [4.13.2] use S3 to upload an image to S3. The operation is `putObject`
   const params = {
-    Bucket: process.env.BUCKET_NAME,
+    Bucket: process.env.BUCKET_NAME, // (4.13.2.3) get the bucket env var (settings in serverless.yml file)
     Key: key,
     ACL: 'public-read',
     ContentType: contentType,
   }
   // note that s3.getSignedUrl is completely local, does not make a request to S3 (no need for a promise)
-  const signedUrl = s3.getSignedUrl('putObject', params)
-
-  return signedUrl
+  return s3.getSignedUrl('putObject', params)
 }
 
 module.exports = {
   handler,
 }
+
 ```
 
 `npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in the `.env` file.
 
 ## 4.14 Unit test getImageUploadUrl
 
+Similar to section 4.6 `confirm-user-signup-integration.test.js`, we need to:
+
+* Create a mock event (an object)
+* Feed it to the handler
+* Check that the result matches the expectation (the handler creates a certain S3 url)
+
+Since there is no DDB integration as in 4.6, this one is a unit test.

@@ -19,7 +19,7 @@ const handler = async event => {
     const screenName = `${name.replace(/[^a-zA-Z0-9]/g, '')}${suffix}`
 
     const user = {
-      id: event.userName,
+      id: event.userName, // per the shape of the data, userName is camelCase
       name,
       screenName,
       createdAt: new Date().toJSON(),

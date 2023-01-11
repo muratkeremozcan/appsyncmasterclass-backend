@@ -1,10 +1,8 @@
-// (4.13.2) Implement the lambda function. We need to make a `putObject` request to S3.
+// [4.13.2] Implement the lambda function. We need to make a `putObject` request to S3.
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
 const ulid = require('ulid')
-// (4.13.2.3) get the bucket env var (settings in serverless.yml file)
-const {BUCKET_NAME} = process.env.BUCKET_NAME
 
 const handler = async event => {
   // (4.13.2.1) construct the key for S3 putObject request
@@ -32,7 +30,8 @@ const handler = async event => {
 
   // [4.13.2] use S3 to upload an image to S3. The operation is `putObject`
   const params = {
-    Bucket: BUCKET_NAME,
+    // (4.13.2.3) get the bucket env var (settings in serverless.yml file)
+    Bucket: process.env.BUCKET_NAME,
     Key: key,
     ACL: 'public-read',
     ContentType: contentType,

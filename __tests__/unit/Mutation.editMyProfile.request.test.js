@@ -9,7 +9,7 @@ const {
 describe('Mutation.editMyProfile.request template', () => {
   it("Should use 'newProfile' fields in expression values", () => {
     // create an appsync context (for $context.identity.username)
-    const userName = chance.guid()
+    const username = chance.guid()
     const newProfile = {
       name: 'Murat',
       imageUrl: null,
@@ -19,7 +19,7 @@ describe('Mutation.editMyProfile.request template', () => {
       website: null,
       birthdate: null,
     }
-    const context = generateAppSyncContext(userName, {newProfile}) // we need to give it an argument (compared to getMyProfile)
+    const context = generateAppSyncContext(username, {newProfile}) // we need to give it an argument (compared to getMyProfile)
 
     // get the request template
     const template = getTemplate('Mutation.editMyProfile.request.vtl')
@@ -30,7 +30,7 @@ describe('Mutation.editMyProfile.request template', () => {
     expect(result).toEqual({
       version: '2018-05-29',
       operation: 'UpdateItem',
-      key: {id: {S: userName}},
+      key: {id: {S: username}},
       update: {
         expression:
           'set #name = :name, imageUrl = :imageUrl, backgroundImageUrl = :backgroundImageUrl, bio = :bio, #location = :location, website = :website, birthdate = :birthdate',

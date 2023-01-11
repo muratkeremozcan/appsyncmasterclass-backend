@@ -1,12 +1,37 @@
-// [4.6] integration test for user-signup
+// [4.6] integration test for confirm-user-signup
 require('dotenv').config()
 const handler = require('../../functions/confirm-user-signup').handler
-const {
-  generateUser,
-  generateSignUpEvent,
-} = require('../../test-helpers/helpers')
+const {generateUser} = require('../../test-helpers/helpers')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
+
+/**
+ * Generates an event object that can be used to test the lambda function
+ * @param {*} username
+ * @param {*} name
+ * @param {*} email
+ * @returns {Object} - event */
+const generateSignUpEvent = (username, name, email) => {
+  // got this object from Lumigo
+  return {
+    version: '1',
+    region: process.env.AWS_REGION,
+    userPoolId: process.env.COGNITO_USER_POOL_ID,
+    userName: username,
+    triggerSource: 'PostConfirmation_ConfirmSignUp',
+    request: {
+      userAttributes: {
+        sub: username,
+        'cognito:email_alias': email,
+        'cognito:user_status': 'CONFIRMED',
+        email_verified: 'false',
+        name,
+        email,
+      },
+    },
+    response: {},
+  }
+}
 
 describe('When confirmUserSignup runs', () => {
   it("The user's profile should be saved in DynamoDB", async () => {

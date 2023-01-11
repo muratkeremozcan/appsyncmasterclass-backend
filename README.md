@@ -243,7 +243,7 @@ Prop-tips from Yan:
 
 The pattern is as follows:
 
-* Create a mock event (an object)
+* Create an event: an object which includes user info.
 * Feed it to the handler (the handler causes a write to DDB, hence the "integration")
 * Check that the result matches the expectation (by reading from DDB, hence "integration")
 
@@ -299,15 +299,15 @@ AWS_REGION=eu-west-1
 USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 ```
 
- In the test there are 3 main things we do:
-
-* Create an event: an object which includes user info.
-* Feed the event to the handler
-* As a result we should see a DynamoDB table entry, confirm it.
-
 Take a look at [./__tests__/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
 
-## 4.7 E2e test 
+## 4.7 E2e test `confirm-user-signup`
+
+ In the test there are 3 main things we do:
+
+* We create a user from scratch using `AWS.CognitoIdentityServiceProvider`  (cognito).
+* We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
+* As a result we should see a DynamoDB table entry, confirm it.
 
 In order to work with cognito and simulate a user signup, we need `WebUserPoolClient` id. We capture that as an output in the `serverless.yml ` `Outputs` section, similar to what we did to acquire *COGNITO_USER_POOL_ID (4.3.1)*.
 
@@ -332,12 +332,6 @@ WEB_COGNITO_USER_POOL_CLIENT_ID=******
 AWS_REGION=eu-west-1
 USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 ```
-
- In the test there are 3 main things we do:
-
-* We create a user from scratch using `AWS.CognitoIdentityServiceProvider`  (cognito).
-* We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
-* As a result we should see a DynamoDB table entry, confirm it.
 
 Take a look at [./__tests__/confirm-user-signup-e2e.test.js](./__tests__/confirm-user-signup-e2e.test.js).
 
@@ -418,8 +412,8 @@ Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
 As a signed in user, make a graphQL request with the query `getMyProfile`.
 
 * Sign in
-* Make a graphQL request with the query (copy from AppSync console)
-* Confirm that the returned profile should be in the shape of the query.
+* Make a graphQL request with the query
+* Confirm that the returned profile is in the shape of the query.
 
 Check out `__tests__/e2e/user-profile.test.js`.
 
@@ -627,7 +621,7 @@ Check out `__tests__/unit/Mutation.editMyProfile.request.test.js`.
 As a signed in user, make a graphQL request with the query `editMyProfile`.
 
 * Sign in
-* Make a graphQL request with the query (copy from AppSync console)
+* Make a graphQL request with the query and variable
 * Confirm that the returned profile has been edited
 
 Check out `__tests__/e2e/user-profile.test.js`.
@@ -843,7 +837,7 @@ module.exports = {
 
 `npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in the `.env` file.
 
-## 4.14 Unit test getImageUploadUrl
+## 4.14 Unit test `getImageUploadUrl`
 
 Similar to section 4.6 `confirm-user-signup-integration.test.js`, we need to:
 
@@ -851,4 +845,45 @@ Similar to section 4.6 `confirm-user-signup-integration.test.js`, we need to:
 * Feed it to the handler
 * Check that the result matches the expectation (the handler creates a certain S3 url)
 
-Since there is no DDB integration as in 4.6, this one is a unit test.
+Since there is no DDB interaction as in 4.6, or any interaction with the S3 bucket, this one is a unit test.
+
+Check out `__tests__/unit/get-upload-url.test.js`.
+
+## 4.15 E2e test `getImageUploadUrl`
+
+As a signed in user, make a graphQL request with the query `getImageUploadUrl`. Upload an image to the S3 bucket.
+
+* Sign in
+* Make a graphQL request with the query and variables to get a signed S3 URL
+* Confirm that the upload url exists, and upload can happen
+
+Check out `__tests__/e2e/image-upload.test.js`.
+
+For the types, there are 3 key pieces of info:
+
+* `getImageUploadUrl` takes `extension` and `contentType` as an arguments:
+
+```
+# schema.api.graphql
+type Query {
+  getImageUploadUrl(extension: String, contentType: String): AWSURL!
+```
+
+* At the AppSync web console we build an example
+
+```
+query MyQuery {
+  getImageUploadUrl(extension: ".png", contentType: "image/png")
+}
+```
+
+* In the test, we can take the 2 inputs as a parameters
+
+```javascript
+const getImageUploadUrl = 
+    `query getImageUploadUrl($extension: String, $contentType: String) {
+      getImageUploadUrl(extension: $extension, contentType: $contentType)
+    }`
+```
+
+Check out `__tests__/e2e/image-upload.test.js`.

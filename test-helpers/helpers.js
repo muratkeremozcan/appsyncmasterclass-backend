@@ -117,56 +117,7 @@ const cleanUpUser = async (username, cognito, userPoolId) => {
     .promise()
 }
 
-/**
- * Generates an event object that can be used to test the lambda function
- * @param {*} username
- * @param {*} name
- * @param {*} email
- * @returns {Object} - event */
-const generateSignUpEvent = (username, name, email) => {
-  // got this object from Lumigo
-  return {
-    version: '1',
-    region: process.env.AWS_REGION,
-    userPoolId: process.env.COGNITO_USER_POOL_ID,
-    userName: username,
-    triggerSource: 'PostConfirmation_ConfirmSignUp',
-    request: {
-      userAttributes: {
-        sub: username,
-        'cognito:email_alias': email,
-        'cognito:user_status': 'CONFIRMED',
-        email_verified: 'false',
-        name,
-        email,
-      },
-    },
-    response: {},
-  }
-}
-
-/**
- * Generates an event object that can be used to test the lambda function
- * @param {string} username
- * @param {string} extension
- * @param {string} contentType
- * @returns {Object} - event
- */
-const generateImageUploadEvent = (username, extension, contentType) => {
-  return {
-    identity: {
-      username: username,
-    },
-    arguments: {
-      extension,
-      contentType,
-    },
-  }
-}
-
 module.exports = {
-  generateSignUpEvent,
-  generateImageUploadEvent,
   generateUser,
   signUpUser,
   signInUser,

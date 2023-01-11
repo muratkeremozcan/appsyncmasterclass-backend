@@ -1,9 +1,27 @@
 require('dotenv').config()
 const chance = require('chance').Chance()
 const handler = require('../../functions/get-upload-url').handler
-const {generateImageUploadEvent} = require('../../test-helpers/helpers')
 
-describe('When getImageUploadUrl runs', () => {
+/**
+ * Generates an event object that can be used to test the lambda function
+ * @param {string} username
+ * @param {string} extension
+ * @param {string} contentType
+ * @returns {Object} - event
+ */
+const generateImageUploadEvent = (username, extension, contentType) => {
+  return {
+    identity: {
+      username: username,
+    },
+    arguments: {
+      extension,
+      contentType,
+    },
+  }
+}
+
+describe('getImageUploadUrl', () => {
   const variations = [
     ['.png', 'image/png'],
     ['.jpeg', 'image/jpeg'],
@@ -12,7 +30,7 @@ describe('When getImageUploadUrl runs', () => {
     [null, null],
   ]
   it.each(variations)(
-    'Returns a signed S3 url for extension %s and content type %s',
+    'should returns a signed S3 url for extension %s and content type %s',
     async (extension, contentType) => {
       // create a mock event and feed it to the handler
       const username = chance.guid()

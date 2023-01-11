@@ -65,7 +65,7 @@ describe('Given an authenticated user', () => {
 
   it('The user can edit their profile with editMyProfile', async () => {
     // as the signed in user, make a request
-    // we can copy the query from the AppSync console
+    // we can copy the query from the AppSync console,
     // here we are taking an input as a parameter, mirroring the type at schema.api.graphql
     // editMyProfile(newProfile: ProfileInput!): MyProfile!
     const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
@@ -87,6 +87,7 @@ describe('Given an authenticated user', () => {
       }
     }`
 
+    // Make a graphQL request with the query and variables
     const newName = chance.first()
     const data = await axiosGraphQLQuery(
       process.env.API_URL,

@@ -9,4 +9,3 @@ jspm_packages
 serverless.manifest.json
 .serverless/manifest.json
 coverage
-__tests__/e2e/image-upload.test.js

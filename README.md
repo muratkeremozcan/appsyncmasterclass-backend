@@ -980,9 +980,9 @@ Check out `__tests__/unit/get-upload-url.test.js`.
 As a signed in user, make a graphQL request with the query `getImageUploadUrl`.
 Upload an image to the S3 bucket.
 
-- Sign in
-- Make a graphQL request with the query and variables to get a signed S3 URL
-- Confirm that the upload url exists, and upload can happen
+- Sign in.
+- Make a graphQL request with the query and variables to get a signed S3 URL.
+- Confirm that the upload url exists, and upload can happen.
 
 Check out `__tests__/e2e/image-upload.test.js`.
 
@@ -1011,8 +1011,6 @@ const getImageUploadUrl = `query getImageUploadUrl($extension: String, $contentT
       getImageUploadUrl(extension: $extension, contentType: $contentType)
     }`
 ```
-
-Check out `__tests__/e2e/image-upload.test.js`.
 
 ## 4.15 Implement tweet mutation
 
@@ -1298,92 +1296,51 @@ We have to have a real user for this integration test, but it is still an integr
 
 Check out `__tests__/integration/tweets.test.js`.
 
-```javascript
-// ./__tests__/integration/tweets.test.js
-// [4.16] Integration test for tweet mutation
-require('dotenv').config()
-const AWS = require('aws-sdk')
-const {signInUser} = require('../../test-helpers/helpers')
-const handler = require('../../functions/tweet').handler
+## 4.17 E2e test for tweet mutation
 
-/**
- * Generates an event object that can be used to test the lambda function
- * @param {string} username - the id of the user who is tweeting
- * @param {string} text - the text of the tweet
- * @returns {Object} - event
- */
-const generateTweetEvent = (username, text) => {
-  return {
-    identity: {
-      username: username,
-    },
-    arguments: {
-      text,
-    },
-  }
-}
+As a signed in user, make a graphQL request with the mutation `tweet`. This will cause 3 db interactions. We do not have to repeat the same DB verifications as the integration test, but we can check that the outgoing mutation is of a certain shape when we make the graphQL request.
 
-describe('Given an authenticated user', () => {
-  let signedInUser
-  beforeAll(async () => {
-    signedInUser = await signInUser()
-  })
+- Sign in
+- Make a graphQL request with the tweet mutation and its text argument.
+- Check the content of the response for the  mutation (no need to repeat the integration test DDB verifications, so long as we got a response, DDB transactions already happened).
 
-  it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
-    // create a mock event and feed it to the handler
-    const event = generateTweetEvent(signedInUser.username, 'Hello world!')
-    const context = {}
-    const tweet = await handler(event, context)
+For the types, there are 3 key pieces of info:
 
-    // verify the tables
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
+- `tweet` takes `text` as an argument:
 
-    const tweetsTableResp = await DynamoDB.get({
-      TableName: process.env.TWEETS_TABLE,
-      Key: {
-        id: tweet.id,
-      },
-    }).promise()
-    expect(tweetsTableResp.Item).toBeTruthy()
-
-    const timelinesTableResp = await DynamoDB.get({
-      TableName: process.env.TIMELINES_TABLE,
-      Key: {
-        userId: signedInUser.username,
-        tweetId: tweet.id,
-      },
-    }).promise()
-    expect(timelinesTableResp.Item).toBeTruthy()
-
-    const usersTableResp = await DynamoDB.get({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: signedInUser.username,
-      },
-    }).promise()
-    expect(usersTableResp.Item).toBeTruthy()
-    expect(usersTableResp.Item.tweetsCount).toEqual(1)
-  })
-
-  afterAll(async () => {
-    // clean up DynamoDB and Cognito
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
-    await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: signedInUser.username,
-      },
-    }).promise()
-
-    await signedInUser.cognito
-      .adminDeleteUser({
-        UserPoolId: signedInUser.userPoolId,
-        Username: signedInUser.username,
-      })
-      .promise()
-  })
-})
+```
+# schema.api.graphql
+type Mutation {
+  tweet(text: String!): Tweet!
 ```
 
-## 4.17 E2e test for tweet mutation
+- At the AppSync web console we build an example
+
+```
+mutation MyMutation {
+  tweet(text: "") {
+    id
+    createdAt
+    text
+    replies
+    likes
+    retweets
+  }
+}
+```
+
+- In the test, when building the query we can take the text argument.
+
+```javascript
+const tweet = `mutation tweet($text: String!) {
+      tweet(text: $text) {
+        id
+        createdAt
+        text
+        replies
+        likes
+        retweets
+      }
+    }`
+```
 

@@ -73,9 +73,9 @@ functions:
   tweet:
     handler: functions/tweet.handler
     environment: # we need to transact with 3 DDB tables
-      USERS_TABLE_NAME: !Ref UsersTable
-      TWEETS_TABLE_NAME: !Ref TweetsTable
-      TIMELINES_TABLE_NAME: !Ref TimelinesTable
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
     iamRoleStatements:
       # in DDB, Put means rest POST, and Update means rest PUT
       - Effect: Allow # we need to update the tweet count at UsersTable

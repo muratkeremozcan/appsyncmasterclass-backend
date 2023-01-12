@@ -887,3 +887,268 @@ const getImageUploadUrl =
 ```
 
 Check out `__tests__/e2e/image-upload.test.js`.
+
+## 4.15 Implement tweet mutation
+
+*(4.15.0)* Create a DDB table to store tweets; `TweetsTable`.
+
+```yml
+# serverless.yml
+
+resources:
+  Resources:
+    UsersTable: #
+    TweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+            # to fetch the tweets for a particular user, 
+            # we also need the DDB partition key
+          - AttributeName: creator
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byCreator
+            KeySchema:
+              - AttributeName: creator # hash key
+                KeyType: HASH
+              - AttributeName: id # range/sort key
+                KeyType: RANGE
+            Projection:
+              # so that when we get the tweets, we get all items
+              ProjectionType: ALL
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: tweets-table
+    
+```
+
+*(4.15.1)* Create a DDB table to store tweet timelines; `TimelinesTable`
+
+```yml
+#serverless.yml
+
+resources:
+  Resources:
+    UsersTable: #
+    TweetsTable: #
+    TimelinesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: timelines-table     
+```
+
+ When we create a new tweet, it gets written to the `TweetsTable` and `TimelinesTable`. We also have to update `tweetsCount` for user profile page (part of the `IProfile` from graphQL schema), which we track in `UsersTable`. Having to transact with 3 tables, we could do these 3 operations in one DDB transaction. However, what we cannot do in a DDB resolver is we cannot generate the `ulid`s for the tweets, and for that we need to use a lambda resolver instead.
+
+*(4.15.2)* Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`. 
+
+*(4.15.2.0)* Add the  mapping template to `mappingTemplates`, we need resolvers when we are transacting with DDB.
+
+```yml
+# ./serverless.appsync-api.yml
+
+mappingTemplates:
+	# [4.8] Implement getMyProfile query. 
+	# We need to setup an AppSync resolver and have it get an item from DDB.
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable 
+    
+  # [4.11] Implement editMyProfile query. 
+  # We need to setup an AppSync resolver and have it edit an item at DDB.
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable 
+  
+  # [4.13] Implement getImageUploadUrl query
+  # (use a lambda to upload a file to S3)
+  - type: Query
+    field: getImageUploadUrl
+    dataSource: getImageUploadUrlFunction  
+    request: false
+    response: false
+    
+   # (4.15.2) Create a lambda resolver to generate a tweet `ulid`,
+   #  write to TweetsTable, TimelinesTable and update `UsersTable`.
+   # (4.15.2.0) Add the  mapping template
+  - type: Mutation
+    field: tweet
+    dataSource: tweetFunction
+    request: false
+    response: false
+    
+ dataSources:
+  - type: NONE
+    name: none
+  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0)
+    name: usersTable
+    config:
+      tableName: !Ref UsersTable
+  - type: AWS_LAMBDA # (4.13.0)
+    name: getImageUploadUrlFunction
+    config:
+      functionName: getImageUploadUrl
+  - type: AWS_LAMBDA # (4.15.2.0)
+    name: tweetFunction
+    config:
+      functionName: tweet
+```
+
+*(4.15.2.1)* add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,  write to Tweets and Timelines tables, and update Users table.
+
+```yml
+  # serverless.yml
+functions:
+  confirmUserSignup: #
+  getImageUploadUrl: #  
+  tweet:
+    handler: functions/tweet.handler
+    environment: # we need to transact with 3 DDB tables
+      USERS_TABLE_NAME: !Ref UsersTable
+      TWEETS_TABLE_NAME: !Ref TweetsTable
+      TIMELINES_TABLE_NAME: !Ref TimelinesTable
+    iamRoleStatements:
+      # in DDB, Put means rest POST, and Update means rest PUT
+      - Effect: Allow # we need to update the tweet count at UsersTable
+        Action: dynamodb:UpdateItem #
+        Resource: !GetAtt UsersTable.Arn
+      - Effect: Allow # we need to write to TweetsTable and TimelinesTable
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+```
+
+Poor man's enum in JS:
+
+```javascript
+// ./lib/constants.js
+// poor man's enum in JS
+const TweetTypes = {
+  TWEET: 'Tweet',
+  RETWEET: 'Retweet',
+  REPLY: 'Reply',
+}
+
+module.exports = {
+  TweetTypes,
+}
+```
+
+*(4.15.2.2)* Add the JS for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,  write to Tweets and Timelines tables, and update Users table.
+
+```javascript
+// ./functions/tweet.js
+
+// (4.15.2.2) add the lambda function that will generate a tweet ulid for the 3 DDB tables,
+// write to Tweets and Timelines tables, and update Users table
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+const ulid = require('ulid')
+const {TweetTypes} = require('../lib/constants')
+
+const {USERS_TABLE_NAME, TIMELINES_TABLE_NAME, TWEETS_TABLE_NAME} = process.env
+
+const handler = async event => {
+  // we know from graphQL schema the argument text - tweet(text: String!): Tweet!
+  // we can extract that from event.arguments
+  const {text} = event.arguments
+  // we can get the username from event.identity.username (Lumigo and before in (4.13.2.1) )
+  const {username} = event.identity
+  // generate a new ulid & timestamp for the tweet
+  const id = ulid.ulid()
+  const timestamp = new Date().toJSON()
+
+  const newTweet = {
+    // __typename helps us identify between the 3 types that implement ITweet (Tweet, Retweet, Reply)
+    __typename: TweetTypes.TWEET,
+    id,
+    text,
+    creator: username,
+    createdAt: timestamp,
+    replies: 0,
+    likes: 0,
+    retweets: 0,
+  }
+
+  // we need 3 operations; 2 writes to Tweets and Timelines tables, and and update to Users table
+  await DocumentClient.transactWrite({
+    TransactItems: [
+      {
+        Put: {
+          TableName: TWEETS_TABLE_NAME,
+          Item: newTweet,
+        },
+      },
+      {
+        Put: {
+          TableName: TIMELINES_TABLE_NAME,
+          Item: {
+            userId: username,
+            tweetId: id,
+            timestamp,
+          },
+        },
+      },
+      {
+        Update: {
+          TableName: USERS_TABLE_NAME,
+          Key: {
+            id: username,
+          },
+          UpdateExpression: 'ADD tweetsCount :one',
+          ExpressionAttributeValues: {
+            ':one': 1,
+          },
+          // do not update if the user does not exist
+          ConditionExpression: 'attribute_exists(id)',
+        },
+      },
+    ],
+  }).promise()
+
+  return newTweet
+}
+
+module.exports = {
+  handler,
+}
+```
+
+`npm run deploy` and test the mutation at Appsync.
+
+![tweet-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z0ezr67acgvjhw10a5vj.png)
+
+Verify the 3 tables at DDB.
+
+![3-tables](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/vywbwq8uocjfrpxeecr6.png)
+
+## Integration test for tweet mutation
+
+The pattern is as follows:
+
+* Create an event: an object which includes <something>.
+* Feed it to the handler (the handler causes a write to DDB, hence the "integration")
+* Check that the result matches the expectation (by reading from DDB, hence "integration")

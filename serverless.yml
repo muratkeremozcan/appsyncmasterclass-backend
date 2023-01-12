@@ -52,7 +52,7 @@ functions:
     # (4.4.2) we use npm i -D serverless-iam-roles-per-function to do this
     iamRoleStatements:
       - Effect: Allow
-        Action: dynamodb:PutItem
+        Action: dynamodb:PutItem # in DDB, Put means rest POST, and Update means rest PUT
         Resource: !GetAtt UsersTable.Arn
 
   # (4.13.1) add the lambda function that will do the work (getImageUploadUrl)
@@ -68,6 +68,25 @@ functions:
           - s3:PutObjectAcl # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
         Resource: !Sub ${AssetsBucket.Arn}/* # allow the function to interact with any object in the bucket
 
+  # (4.15.2.1) add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,
+  # write to Tweets and Timelines tables, and update Users table.
+  tweet:
+    handler: functions/tweet.handler
+    environment: # we need to transact with 3 DDB tables
+      USERS_TABLE_NAME: !Ref UsersTable
+      TWEETS_TABLE_NAME: !Ref TweetsTable
+      TIMELINES_TABLE_NAME: !Ref TimelinesTable
+    iamRoleStatements:
+      # in DDB, Put means rest POST, and Update means rest PUT
+      - Effect: Allow # we need to update the tweet count at UsersTable
+        Action: dynamodb:UpdateItem #
+        Resource: !GetAtt UsersTable.Arn
+      - Effect: Allow # we need to write to TweetsTable and TimelinesTable
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+
 resources:
   Resources:
     # [4.4] Save user profile on PostConfirmation
@@ -81,7 +100,7 @@ resources:
             KeyType: HASH
         AttributeDefinitions:
           - AttributeName: id
-            AttributeType: S # string
+            AttributeType: S
         Tags:
           - Key: Environment
             # (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
@@ -89,6 +108,61 @@ resources:
             # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: users-table
+
+    # [4.15] Implement tweet mutation
+    # (4.15.0) Create a DynamoDB table to store tweets
+    TweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          # to fetch the tweets for a particular user, we also need the DDB partition key
+          - AttributeName: creator # partition key
+            AttributeType: S
+          - AttributeName: id # sort key
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byCreator
+            KeySchema:
+              - AttributeName: creator # partition key
+                KeyType: HASH
+              - AttributeName: id # sort key
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL # so that when we get the tweets, we get all items
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: tweets-table
+
+    # (4.15.1) Create a DynamoDB table to store tweet timelines
+    TimelinesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: timelines-table
 
     # [4.3] Configure Cognito User Pool
     CognitoUserPool:
@@ -144,7 +218,7 @@ resources:
           - ALLOW_USER_SRP_AUTH
           - ALLOW_USER_PASSWORD_AUTH
           - ALLOW_REFRESH_TOKEN_AUTH
-        # with this we get a "wrong pw" in case a user doesn't exis dt, makes it harder for attackers to find out if the user exists
+        # with this we get a "wrong pw" in case a user doesn't exist, makes it harder for attackers to find out if the user exists
         PreventUserExistenceErrors: ENABLED
 
     # (4.13.2.3) create the S3 bucket env var, to help make the s3 putObject request

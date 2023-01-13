@@ -1432,9 +1432,13 @@ In *(4.15.0)* we created a table for the tweets, and we identified a `GlobalSeco
 ```
 // Query.getTweets.request.vtl 
 
+// this part did not work in the unit test (4.19),
 #if ($context.arguments.limit > 25)
   $util.error("max limit is 25")
 #end
+// so we used this (4.19)
+#set ($isValidLimit = $context.arguments.limit <= 25)
+$util.validate($isValidLimit, "max limit is 25")
 
 {
   "version" : "2018-05-29",
@@ -1611,3 +1615,13 @@ query MyQuery {
 
 ## 4.19 Unit test `getTweets`
 
+There is custom vtl code in `mapping-templates/Tweet.profile.response.vtl` and `Query.getTweets.request.vtl` worth unit testing.
+
+Testing the `.vtl` file, the approach is to:
+
+* Create an AppSync context
+* Get the template
+* Use `amplify-velocity-template` to render the template, given the context
+* Check the result
+
+Check out `__tests__/unit/Tweet.profile.response.test.js` and `__tests__/unit/Query.getTweets.request.test.js`.

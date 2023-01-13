@@ -1,5 +1,31 @@
 # appsyncmasterclass-backend
 
+In order to deploy, you need an AWS account and have to configure serverless. After so, you may need to renew the authorization config periodically with the CLI command. Once authorized, you deploy and can run e2e tests.
+
+```bash
+npm i
+
+# configure credentials (needed for deploy and e2e tests)
+npm run sls -- config credentials --provider aws --key <yourAWSAccessKeyId> --secret <AWSSecretKey> --overwrite
+
+# deploy
+npm run deploy
+
+# TODO: an sls command like cdk synth
+
+# export env vars to .env file
+npm run export:env
+
+# test (unit, integration and e2e)
+npm t
+
+# lint
+npm run lint
+
+# (fix) format
+npm run format
+```
+
 ## 4.1 Setup backend project
 
 Setup a GitHub repo.
@@ -1625,3 +1651,6 @@ Testing the `.vtl` file, the approach is to:
 * Check the result
 
 Check out `__tests__/unit/Tweet.profile.response.test.js` and `__tests__/unit/Query.getTweets.request.test.js`.
+
+## 4.20 E2e test getTweets
+

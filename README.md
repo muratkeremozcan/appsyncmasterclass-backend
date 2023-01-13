@@ -1294,7 +1294,7 @@ The pattern is as follows:
 
 We have to have a real user for this integration test, but it is still an integration test given that we are feeding an event object to the handler. 
 
-Check out `__tests__/integration/tweets.test.js`.
+Check out `__tests__/integration/tweet-integration.test.js`.
 
 ## 4.17 E2e test for tweet mutation
 
@@ -1343,4 +1343,271 @@ const tweet = `mutation tweet($text: String!) {
       }
     }`
 ```
+
+Check out `__tests__/e2e/tweet-e2e.test.js`.
+
+## 4.18 Implement `getTweets` query
+
+`getTweets` is a query from `schema.api.graphql`.
+
+```
+type Query{ 
+	getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
+}
+```
+
+We are going to get the tweets from DDB, therefore we need the usual Appsync mapping-template yml and the vtl files query request and response.
+
+(4.18.0) Add a mapping template to the yml.
+
+```yml
+# ./serverless.appsync-api.yml
+
+mappingTemplates:
+	# [4.8] Implement getMyProfile query.
+	# We need to setup an AppSync resolver and have it get an item from DDB.
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable
+
+  # [4.11] Implement editMyProfile query.
+  # We need to setup an AppSync resolver and have it edit an item at DDB.
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable
+
+  # [4.13] Implement getImageUploadUrl query
+  # (use a lambda to upload a file to S3)
+  - type: Query
+    field: getImageUploadUrl
+    dataSource: getImageUploadUrlFunction
+    request: false
+    response: false
+
+   # (4.15.2) Create a lambda resolver to generate a tweet `ulid`,
+   #  write to TweetsTable, TimelinesTable and update `UsersTable`.
+   # (4.15.2.0) Add the  mapping template
+  - type: Mutation
+    field: tweet
+    dataSource: tweetFunction
+    request: false
+    response: false
+     
+  # [4.18] Implement getTweets query
+  # (4.18.0) Add the mapping template
+  - type: Query
+    field: getTweets
+    dataSource: tweetsTable
+
+
+ dataSources:
+  - type: NONE
+    name: none
+    
+  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0)
+    name: usersTable
+    config:
+      tableName: !Ref UsersTable
+
+  - type: AWS_LAMBDA # (4.13.0)
+    name: getImageUploadUrlFunction
+    config:
+      functionName: getImageUploadUrl
+      
+  - type: AWS_LAMBDA # (4.15.2.0)
+    name: tweetFunction
+    config:
+      functionName: tweet
+      
+  - type: AMAZON_DYNAMODB # (4.18.0) define a data source for the query
+    name: tweetsTable
+    config:
+      tableName: !Ref TweetsTable
+```
+
+*(4.18.1)* Add the .vtl files under `./mapping-templates/` for the request and response.
+
+In *(4.15.0)* we created a table for the tweets, and we identified a `GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html). We can get userId (the first argument of the query)  by ` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd argument, `nextToken`, we can similarly use `$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous to ascending order (latest tweet last), we want latest tweet first so this is set to `false`. We limit the number of tweets returned to be less than 25.
+
+```
+// Query.getTweets.request.vtl 
+
+#if ($context.arguments.limit > 25)
+  $util.error("max limit is 25")
+#end
+
+{
+  "version" : "2018-05-29",
+  "operation" : "Query",
+  "query" : {
+    "expression" : "creator = :userId",
+    "expressionValues" : {
+      ":userId" : $util.dynamodb.toDynamoDBJson($context.arguments.userId)
+    }
+  },
+  "index" : "byCreator",
+  "nextToken" : $util.toJson($context.arguments.nextToken),
+  "limit" : $util.toJson($context.arguments.limit),
+  "scanIndexForward" : false,
+  "consistentRead" : false,
+  "select" : "ALL_ATTRIBUTES"
+}
+```
+
+From the schema we know that the query responds with a type `TweetsPage`. 
+
+```
+// schema.api.graphql
+type Query{ 
+	getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
+}
+
+type TweetsPage {
+  tweets: [ITweet!]
+  nextToken: String
+}
+```
+
+Because `tweets` will be an array, we extract that with `.items` in ` $util.toJson($context.result.items)`.  For `nextToken`, if the token is an empty string we want to turn it into null, so we use `defaultIfNullOrBlank`. `nexToken` maps to `nextToken`. 
+
+```
+// Query.getTweets.response.vtl
+
+{
+  "tweets": $util.toJson($context.result.items),
+  "nextToken": $util.toJson($util.defaultIfNullOrBlank($context.result.nextToken, null))
+}
+```
+
+At the moment we do not have the Profile structure in the Tweet object, if we look at DDB. Per the schema, that is something we want. What we have is `creator`, which is the id of the user that created the tweet.
+
+```
+// schema.api.graphql
+
+type Tweet implements ITweet {
+  id: ID!
+  profile: IProfile!
+  createdAt: AWSDateTime!
+  text: String!
+  replies: Int!
+  likes: Int!
+  retweets: Int!
+  liked: Boolean!
+  retweeted: Boolean!
+}
+
+interface IProfile {
+  id: ID!
+  name: String!
+  screenName: String!
+  imageUrl: AWSURL
+  backgroundImageUrl: AWSURL
+  bio: String
+  location: String
+  website: AWSURL
+  birthdate: AWSDate
+  createdAt: AWSDateTime!
+  tweets: TweetsPage!
+  followersCount: Int!
+  followingCount: Int!
+  tweetsCount: Int!
+  likesCounts: Int!
+}
+```
+
+![tweet-object](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2q83kl4cwejudeame5xr.png)
+
+*(4.18.2)* Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`, so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers. Create a nested field in mapping Templates.
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates: 
+  - type: Query ## 
+  - type: Mutation ##
+  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
+  # We went by the order of lessons instead so it is easier to follow when reading the notes.
+  
+  # Nested fields
+  
+  - type: Tweet
+    field: profile
+    dataSource: usersTable
+```
+
+*(4.18.3)* Create the `.vtl` files `Tweet.profile.request.vtl`, `Tweet.profile.response.vtl` under `./mapping-templates/`
+
+Since we have `creator` field in the `Tweet`, we can reference the nesting parent with `$context.source` .
+
+> Nested resolvers can only be implemented for graphQL types, not interfaces.
+
+```
+// Tweet.profile.request.vtl
+
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.source.creator)
+  }
+}
+```
+
+From `schema.api.graphql` we see that `Profile` interface is implemented by both `MyProfile` and `OtherProfile`. We need to differentiate between the two.
+
+```
+// Tweet.profile.response.vtl
+
+#if (!$util.isNull($context.result))
+  #if ($context.result.id == $context.identity.username)
+    #set ($context.result["__typename"] = "MyProfile")
+  #else
+    #set ($context.result["__typename"] = "OtherProfile")
+  #end
+#end
+
+$util.toJson($context.result)
+```
+
+Deploy with `npm run deploy`. Test an AppSync query. We need a confirmed user from Cognito.
+
+```
+query MyQuery {
+  getTweets(limit: 10, userId: "6b926c1a-6a54-42b3-9bf0-b623e54b1cf2") {
+    nextToken
+    tweets {
+      id
+      createdAt
+      profile {
+        id
+        name
+        screenName
+        ... on MyProfile {
+          id
+          name
+          followersCount
+          followingCount
+        }
+        ... on OtherProfile {
+          id
+          name
+          followedBy
+        }
+      }
+      ... on Tweet {
+        id
+        likes
+        replies
+        retweets
+        text
+      }
+    }
+  }
+}
+
+```
+
+![4-18-Appsync](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ysyu0a1p9b5hslog3nge.png)
+
+## 4.19 Unit test `getTweets`
 

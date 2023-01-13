@@ -38,7 +38,7 @@ mappingTemplates:
     response: false
 
   # (4.15.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
-  # (4.15.2.0) Add the  mapping template
+  # (4.15.2.0) Add the  mapping template to the yml
   - type: Mutation
     field: tweet
     dataSource: tweetFunction
@@ -46,18 +46,42 @@ mappingTemplates:
     request: false
     response: false
 
+  # [4.18] Implement getTweets query
+  # (4.18.0) Add the mapping template
+  - type: Query
+    field: getTweets
+    dataSource: tweetsTable
+
+  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
+  # We went by the order of lessons instead so it is easier to follow when reading the notes.
+
+  # NESTED FIELDS
+  # (4.18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
+  # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
+  - type: Tweet
+    field: profile
+    dataSource: usersTable
+
 dataSources:
   - type: NONE
     name: none
-  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0)
+
+  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0) define a data source for the query and mutation
     name: usersTable
     config:
       tableName: !Ref UsersTable
-  - type: AWS_LAMBDA # (4.13.0)
+
+  - type: AWS_LAMBDA # (4.13.0) define a data source for the query
     name: getImageUploadUrlFunction
     config:
       functionName: getImageUploadUrl
-  - type: AWS_LAMBDA # (4.15.2.0)
+
+  - type: AWS_LAMBDA # (4.15.2.0) define a data source for the mutation
     name: tweetFunction
     config:
       functionName: tweet
+
+  - type: AMAZON_DYNAMODB # (4.18.0) define a data source for the query
+    name: tweetsTable
+    config:
+      tableName: !Ref TweetsTable

@@ -7,10 +7,11 @@ const velocityTemplate = require('amplify-velocity-template')
 /**
  * Used to generate a context for the mapping template (for  $context.identity.username)
  * @param {string} username the username as in `$context.identity.username`
- * @param {*} args Optional arguments to pass to the template
+ * @param {object} args Optional arguments to pass to the template
+ * @param {object} result Optional result of the previous resolver (used in case of nested resolvers)
  * @returns {object} the context
  */
-const generateAppSyncContext = (username, args) => {
+const generateAppSyncContext = (username, args, result) => {
   const util = velocityUtil.create([], new Date(), Object())
   const context = {
     identity: {
@@ -18,6 +19,7 @@ const generateAppSyncContext = (username, args) => {
     },
     args,
     arguments: args,
+    result,
   }
   return {
     context,

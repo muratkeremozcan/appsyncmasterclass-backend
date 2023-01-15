@@ -21,14 +21,14 @@ mappingTemplates:
     # Realize how it matches `mappingTemplates:type&field`
     # The convention Handles request:<fileName> and response:<fileName> that would be right here otherwise
 
-  # [11] Implement editMyProfile query. We need to setup an AppSync resolver and have it edit an item at DDB.
-  # (11.0) add an entry to the mappingTemplates
+  # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
+  # (12.0) add an entry to the mappingTemplates
   - type: Mutation
     field: editMyProfile
     dataSource: usersTable
 
-  # [13] Implement getImageUploadUrl query (use a lambda to implement it)
-  # (13.0) add an entry to the mappingTemplates
+  # [15] Implement getImageUploadUrl query (use a lambda to implement it)
+  # (15.0) add an entry to the mappingTemplates
   - type: Query
     field: getImageUploadUrl
     dataSource: getImageUploadUrlFunction # we define dataSources below for this
@@ -37,17 +37,17 @@ mappingTemplates:
     request: false
     response: false
 
-  # (15.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
-  # (15.2.0) Add the  mapping template to the yml
+  # (17.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
+  # (17.2.0) Add the  mapping template to the yml
   - type: Mutation
     field: tweet
     dataSource: tweetFunction
-    # same as (13.0)
+    # same as (15.0)
     request: false
     response: false
 
-  # [18] Implement getTweets query
-  # (18.0) Add the mapping template
+  # [20] Implement getTweets query
+  # (20.0) Add the mapping template
   - type: Query
     field: getTweets
     dataSource: tweetsTable
@@ -66,22 +66,22 @@ dataSources:
   - type: NONE
     name: none
 
-  - type: AMAZON_DYNAMODB # (8.1, 11.0) define a data source for the query and mutation
+  - type: AMAZON_DYNAMODB # (8.1, 12.0) define a data source for the query and mutation
     name: usersTable
     config:
       tableName: !Ref UsersTable
 
-  - type: AWS_LAMBDA # (13.0) define a data source for the query
+  - type: AWS_LAMBDA # (15.0) define a data source for the query
     name: getImageUploadUrlFunction
     config:
       functionName: getImageUploadUrl
 
-  - type: AWS_LAMBDA # (15.2.0) define a data source for the mutation
+  - type: AWS_LAMBDA # (17.2.0) define a data source for the mutation
     name: tweetFunction
     config:
       functionName: tweet
 
-  - type: AMAZON_DYNAMODB # (18.0) define a data source for the query
+  - type: AMAZON_DYNAMODB # (20.0) define a data source for the query
     name: tweetsTable
     config:
       tableName: !Ref TweetsTable

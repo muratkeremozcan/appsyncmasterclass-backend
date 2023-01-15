@@ -55,10 +55,10 @@ functions:
         Action: dynamodb:PutItem # in DDB, Put means rest POST, and Update means rest PUT
         Resource: !GetAtt UsersTable.Arn
 
-  # (13.1) add the lambda function that will do the work (getImageUploadUrl)
+  # (15.1) add the lambda function that will do the work (getImageUploadUrl)
   getImageUploadUrl:
     handler: functions/get-upload-url.handler
-    # (13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    # (15.2) create the S3 bucket env var, to help make the s3 putObject request
     environment:
       BUCKET_NAME: !Ref AssetsBucket
     iamRoleStatements:
@@ -68,7 +68,7 @@ functions:
           - s3:PutObjectAcl # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
         Resource: !Sub ${AssetsBucket.Arn}/* # allow the function to interact with any object in the bucket
 
-  # (15.2.1) add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,
+  # (17.2.1) add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,
   # write to Tweets and Timelines tables, and update Users table.
   tweet:
     handler: functions/tweet.handler
@@ -109,8 +109,8 @@ resources:
           - Key: Name
             Value: users-table
 
-    # [15] Implement tweet mutation
-    # (15.0) Create a DynamoDB table to store tweets
+    # [17] Implement tweet mutation
+    # (17.0) Create a DynamoDB table to store tweets
     TweetsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -141,7 +141,7 @@ resources:
           - Key: Name
             Value: tweets-table
 
-    # (15.1) Create a DynamoDB table to store tweet timelines
+    # (17.1) Create a DynamoDB table to store tweet timelines
     TimelinesTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -221,7 +221,7 @@ resources:
         # with this we get a "wrong pw" in case a user doesn't exist, makes it harder for attackers to find out if the user exists
         PreventUserExistenceErrors: ENABLED
 
-    # (13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    # (15.2) create the S3 bucket env var, to help make the s3 putObject request
     AssetsBucket:
       Type: AWS::S3::Bucket
       Properties:

@@ -1,4 +1,4 @@
-// [4.19] unit test for getTweets request
+// [19] unit test for getTweets request
 const chance = require('chance').Chance()
 const {
   generateAppSyncContext,

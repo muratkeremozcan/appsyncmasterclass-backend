@@ -1,3 +1,5 @@
+// This script is analyzes the `manifest.json` file,
+// looks for `outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
 const _ = require('lodash')
 const dotenv = require('dotenv')
 const fs = require('fs')

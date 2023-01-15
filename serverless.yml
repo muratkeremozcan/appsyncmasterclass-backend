@@ -3,12 +3,12 @@ app: appsyncmasterclass-backend
 service: appsyncmasterclass-backend
 frameworkVersion: '2'
 
-# [4.1] exclude `package.json` files from being bundled.
+# [1] exclude `package.json` files from being bundled.
 plugins:
   - serverless-appsync-plugin
   - serverless-iam-roles-per-function
-  - serverless-export-env # (4.6) integration test
-  - serverless-manifest-plugin # [4.10] get API_URL from CognitoUserPoolArn
+  - serverless-export-env # (6) integration test
+  - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn
 
 provider:
   name: aws
@@ -16,7 +16,7 @@ provider:
   region: eu-west-1
   # any env var defined here applies to all the functions
   environment:
-    # (4.4.2) when using aws nodeJs SDK, always enable HTTP keep-alive
+    # (4.2) when using aws nodeJs SDK, always enable HTTP keep-alive
     STAGE: ${self:custom.stage} # stage: dev # if not specified, defaults to dev
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
 
@@ -26,20 +26,20 @@ package:
     - package.json
 
 custom:
-  # (4.6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
+  # (6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
   region: ${opt:region, self:provider.region}
-  # (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+  # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
-  # [4.1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
+  # [1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
-  # (4.10) get API_URL from CognitoUserPoolArn
+  # (10) get API_URL from CognitoUserPoolArn
   manifest:
     postProcess: ./processManifest.js
     disablePostDeployGeneration: true
     disableOutput: true
     silent: true
 
-# (4.4.1) Add a functions block for the lambda trigger function
+# (4.1) Add a functions block for the lambda trigger function
 functions:
   confirmUserSignup:
     handler: functions/confirm-user-signup.handler
@@ -49,16 +49,16 @@ functions:
       USERS_TABLE: !Ref UsersTable
     # the function needs the permission to write to the UsersTable
     # note: we don't want a global iamRoleStatements: under provider: , we just want permission for this function
-    # (4.4.2) we use npm i -D serverless-iam-roles-per-function to do this
+    # (4.2) we use npm i -D serverless-iam-roles-per-function to do this
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:PutItem # in DDB, Put means rest POST, and Update means rest PUT
         Resource: !GetAtt UsersTable.Arn
 
-  # (4.13.1) add the lambda function that will do the work (getImageUploadUrl)
+  # (13.1) add the lambda function that will do the work (getImageUploadUrl)
   getImageUploadUrl:
     handler: functions/get-upload-url.handler
-    # (4.13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    # (13.2.3) create the S3 bucket env var, to help make the s3 putObject request
     environment:
       BUCKET_NAME: !Ref AssetsBucket
     iamRoleStatements:
@@ -68,7 +68,7 @@ functions:
           - s3:PutObjectAcl # it also needs ACL permission because we set it in the params (get-upload-url.js/s3.getSignedUrl('putObject', params))
         Resource: !Sub ${AssetsBucket.Arn}/* # allow the function to interact with any object in the bucket
 
-  # (4.15.2.1) add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,
+  # (15.2.1) add the yml for the lambda function that will generate a tweet `ulid` for the 3 DDB tables,
   # write to Tweets and Timelines tables, and update Users table.
   tweet:
     handler: functions/tweet.handler
@@ -89,8 +89,8 @@ functions:
 
 resources:
   Resources:
-    # [4.4] Save user profile on PostConfirmation
-    # (4.4.0) Create a DynamoDB table to store user profiles
+    # [4] Save user profile on PostConfirmation
+    # (4.0) Create a DynamoDB table to store user profiles
     UsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -103,14 +103,14 @@ resources:
             AttributeType: S
         Tags:
           - Key: Environment
-            # (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
             # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: users-table
 
-    # [4.15] Implement tweet mutation
-    # (4.15.0) Create a DynamoDB table to store tweets
+    # [15] Implement tweet mutation
+    # (15.0) Create a DynamoDB table to store tweets
     TweetsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -135,13 +135,13 @@ resources:
               ProjectionType: ALL # so that when we get the tweets, we get all items
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
-            # same as (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
           # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: tweets-table
 
-    # (4.15.1) Create a DynamoDB table to store tweet timelines
+    # (15.1) Create a DynamoDB table to store tweet timelines
     TimelinesTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -158,13 +158,13 @@ resources:
             AttributeType: S
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
-            # same as (4.4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
           # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: timelines-table
 
-    # [4.3] Configure Cognito User Pool
+    # [3] Configure Cognito User Pool
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -177,24 +177,24 @@ resources:
             RequireNumbers: false
             RequireUppercase: false
             RequireSymbols: false
-        # (4.3.0) allows login via email
+        # (3.0) allows login via email
         UsernameAttributes:
           - email
-        # (4.3.0) we need to know the name and associate it with cognito user pool
+        # (3.0) we need to know the name and associate it with cognito user pool
         # with this setting we can configure a name attribute
         Schema:
           - AttributeDataType: String
             Name: name
             Required: false
             Mutable: true
-        # (4.4.3) Configure Cognito to call the lambda trigger function when a new user is registered.
+        # (4.3) Configure Cognito to call the lambda trigger function when a new user is registered.
         # We can't use the lambda function's name, because that's something local to serverless framework
         # instead we figure out the logical id sls generates for the lambda function, by using npm run sls -- package
         # which generates cloudformation template under .serverless folder. There look for ConfirmUserSignupLambdaFunction
         LambdaConfig:
           PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction.Arn
 
-    # (4.4.4) We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any
+    # (4.4) We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any
     # grants CognitoUserPool the lambda:invokeFunction permission for ConfirmUserSignupLambdaFunction
     UserPoolInvokeConfirmUserSignupLambdaPermission:
       Type: AWS::Lambda::Permission
@@ -204,7 +204,7 @@ resources:
         Principal: cognito-idp.amazonaws.com
         SourceArn: !GetAtt CognitoUserPool.Arn
 
-    # (4.3.5) We need to be logged in with Cognito to test AppSync queries.
+    # (3.5) We need to be logged in with Cognito to test AppSync queries.
     # Create a cognito user by hand at *CognitoUserPool / Users and Groups*. (I used my email).
     # We also need to configure a application client at *CognitoUserPool / App clients*
     # to be able to interact with the Cognito User Pool.
@@ -221,7 +221,7 @@ resources:
         # with this we get a "wrong pw" in case a user doesn't exist, makes it harder for attackers to find out if the user exists
         PreventUserExistenceErrors: ENABLED
 
-    # (4.13.2.3) create the S3 bucket env var, to help make the s3 putObject request
+    # (13.2.3) create the S3 bucket env var, to help make the s3 putObject request
     AssetsBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -238,18 +238,18 @@ resources:
                 - '*'
 
   Outputs:
-    # (4.3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
+    # (3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
     # We get that value with !Ref
     CognitoUserPoolId:
       Value: !Ref CognitoUserPool
 
-    # (4.7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id.
+    # (7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id.
     # We capture that as an output in the `serverless.yml` Outputs section,
-    # similar to what we did to acquire COGNITO_USER_POOL_ID (4.3.1)
+    # similar to what we did to acquire COGNITO_USER_POOL_ID (3.1)
     WebCognitoUserPoolClientId:
       Value: !Ref WebUserPoolClient
 
-    # (4.6) add AWS_REGION as an env var
+    # (6) add AWS_REGION as an env var
     # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
     AwsRegion:
       Value: ${self:custom.region}

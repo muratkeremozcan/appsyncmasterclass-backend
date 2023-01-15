@@ -1,4 +1,7 @@
-// [4.6] integration test for confirm-user-signup
+// [6] integration test for confirm-user-signup
+// - Create an event: an object which includes user info.
+// - Feed it to the handler (the handler causes a write to DDB, hence the "integration")
+// - Check that the result matches the expectation (by reading from DDB, hence "integration")
 require('dotenv').config()
 const handler = require('../../functions/confirm-user-signup').handler
 const {generateUser} = require('../../test-helpers/helpers')

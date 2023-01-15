@@ -1,3 +1,7 @@
+// [14] unit test getImageUploadUrl lambda function
+// - Create a mock event (an object)
+// - Feed it to the handler
+// - Check that the result matches the expectation (the handler creates a certain S3 url)
 require('dotenv').config()
 const chance = require('chance').Chance()
 const handler = require('../../functions/get-upload-url').handler
@@ -12,7 +16,7 @@ const handler = require('../../functions/get-upload-url').handler
 const generateImageUploadEvent = (username, extension, contentType) => {
   return {
     identity: {
-      username: username,
+      username,
     },
     arguments: {
       extension,
@@ -30,13 +34,16 @@ describe('getImageUploadUrl', () => {
     [null, null],
   ]
   it.each(variations)(
-    'should returns a signed S3 url for extension %s and content type %s',
+    'should return a signed S3 url for extension %s and content type %s',
     async (extension, contentType) => {
       // create a mock event and feed it to the handler
       const username = chance.guid()
       // const extension = '.png' // we can make the input data-driven with variations
       // const contentType = 'image/png'
       const event = generateImageUploadEvent(username, extension, contentType)
+
+      // the handler creates a S3 signed url
+      const signedUrl = await handler(event)
 
       const result = new RegExp(
         `https://${
@@ -47,10 +54,6 @@ describe('getImageUploadUrl', () => {
           contentType ? contentType.replace('/', '%2F') : 'image%2Fjpeg'
         }.*`,
       )
-
-      // the handler creates a S3 signed url
-      const signedUrl = await handler(event)
-
       expect(signedUrl).toMatch(result)
     },
   )

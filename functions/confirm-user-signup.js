@@ -4,7 +4,7 @@ const DocumentClient = new DynamoDB.DocumentClient()
 const chance = new Chance()
 const {USERS_TABLE} = process.env
 
-// (4.4.5) implement the lambda function
+// (4.5) implement the lambda function for confirming a user signup
 const handler = async event => {
   if (event.triggerSource === 'PostConfirmation_ConfirmSignUp') {
     const name = event.request.userAttributes['name']

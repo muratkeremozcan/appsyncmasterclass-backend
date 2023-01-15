@@ -1,4 +1,13 @@
-// [4.9] e2e test getMyProfile [4.12] editMyProfile
+// [9] e2e test getMyProfile
+// - Sign in
+// - Make a graphQL request with the query
+// - Confirm that the returned profile is in the shape of the query.
+
+// [12] editMyProfile
+// As a signed in user, make a graphQL request with the query `editMyProfile`.
+// - Sign in
+// - Make a graphQL request with the query and variable
+// - Confirm that the returned profile has been edited
 require('dotenv').config()
 const {signInUser} = require('../../test-helpers/helpers')
 const {axiosGraphQLQuery} = require('../../test-helpers/graphql')

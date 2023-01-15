@@ -1,4 +1,8 @@
-// [4.19] unit test for tweetProfile response
+// [19] unit test for tweetProfile response
+// - Create an AppSync context
+// - Get the template
+// - Use `amplify-velocity-template` to render the template, given the context
+// - Check the result
 const chance = require('chance').Chance()
 const {
   generateAppSyncContext,

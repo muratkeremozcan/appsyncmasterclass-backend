@@ -1,4 +1,9 @@
-// [4.8] unit test for getMyProfile query
+// [8] unit test for getMyProfile query
+// test that `Query.getMyProfile.request.vtl` executes the template
+// with `$context.identity.username` and turn it into a DDB json structure.
+// - Create an AppSync context that contains the username (for `$context.identity.username`).
+// - Get the template (file `Query.getMyProfile.request.vtl`).
+// - Render the template (using the utility npm packages).
 const chance = require('chance').Chance()
 const {
   generateAppSyncContext,

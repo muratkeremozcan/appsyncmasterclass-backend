@@ -1,7 +1,7 @@
-# (4.1)
+# (1)
 name: appsyncmasterclass
-schema: schema.api.graphql # name of the graphql schema file [4.2]
-# (4.3.2) after configuring the Cognito User Pool, we need to configure the AppSync API to use it.
+schema: schema.api.graphql # name of the graphql schema file [2]
+# (3.2) after configuring the Cognito User Pool, we need to configure the AppSync API to use it.
 authenticationType: AMAZON_COGNITO_USER_POOLS
 
 userPoolConfig:
@@ -9,26 +9,26 @@ userPoolConfig:
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
 
-# (4.8.1) tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query
+# (8.1) tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query
 mappingTemplatesLocation: mapping-templates
 
 mappingTemplates:
-  # [4.8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
+  # [8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
   - type: Query
     field: getMyProfile
     dataSource: usersTable # we define dataSources below for this
-    # (4.8.2) Per convention, add two files at the folder `./mapping-templates`, `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl`
+    # (8.2) Per convention, add two files at the folder `./mapping-templates`, `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl`
     # Realize how it matches `mappingTemplates:type&field`
     # The convention Handles request:<fileName> and response:<fileName> that would be right here otherwise
 
-  # [4.11] Implement editMyProfile query. We need to setup an AppSync resolver and have it edit an item at DDB.
-  # (4.11.0) add an entry to the mappingTemplates
+  # [11] Implement editMyProfile query. We need to setup an AppSync resolver and have it edit an item at DDB.
+  # (11.0) add an entry to the mappingTemplates
   - type: Mutation
     field: editMyProfile
     dataSource: usersTable
 
-  # [4.13] Implement getImageUploadUrl query (use a lambda to implement it)
-  # (4.13.0) add an entry to the mappingTemplates
+  # [13] Implement getImageUploadUrl query (use a lambda to implement it)
+  # (13.0) add an entry to the mappingTemplates
   - type: Query
     field: getImageUploadUrl
     dataSource: getImageUploadUrlFunction # we define dataSources below for this
@@ -37,17 +37,17 @@ mappingTemplates:
     request: false
     response: false
 
-  # (4.15.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
-  # (4.15.2.0) Add the  mapping template to the yml
+  # (15.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
+  # (15.2.0) Add the  mapping template to the yml
   - type: Mutation
     field: tweet
     dataSource: tweetFunction
-    # same as (4.13.0)
+    # same as (13.0)
     request: false
     response: false
 
-  # [4.18] Implement getTweets query
-  # (4.18.0) Add the mapping template
+  # [18] Implement getTweets query
+  # (18.0) Add the mapping template
   - type: Query
     field: getTweets
     dataSource: tweetsTable
@@ -56,7 +56,7 @@ mappingTemplates:
   # We went by the order of lessons instead so it is easier to follow when reading the notes.
 
   # NESTED FIELDS
-  # (4.18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
+  # (18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
   # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
   - type: Tweet
     field: profile
@@ -66,22 +66,22 @@ dataSources:
   - type: NONE
     name: none
 
-  - type: AMAZON_DYNAMODB # (4.8.1, 4.11.0) define a data source for the query and mutation
+  - type: AMAZON_DYNAMODB # (8.1, 11.0) define a data source for the query and mutation
     name: usersTable
     config:
       tableName: !Ref UsersTable
 
-  - type: AWS_LAMBDA # (4.13.0) define a data source for the query
+  - type: AWS_LAMBDA # (13.0) define a data source for the query
     name: getImageUploadUrlFunction
     config:
       functionName: getImageUploadUrl
 
-  - type: AWS_LAMBDA # (4.15.2.0) define a data source for the mutation
+  - type: AWS_LAMBDA # (15.2.0) define a data source for the mutation
     name: tweetFunction
     config:
       functionName: tweet
 
-  - type: AMAZON_DYNAMODB # (4.18.0) define a data source for the query
+  - type: AMAZON_DYNAMODB # (18.0) define a data source for the query
     name: tweetsTable
     config:
       tableName: !Ref TweetsTable

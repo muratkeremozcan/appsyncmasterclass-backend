@@ -1,4 +1,7 @@
-// [4.7] end-to-end test for user-signup
+// [7] end-to-end test for confirm-user-signup
+// - We create a user from scratch using `AWS.CognitoIdentityServiceProvider` (cognito).
+// - We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
+// - As a result we should see a DynamoDB table entry, confirm it.
 require('dotenv').config()
 const {signUpUser} = require('../../test-helpers/helpers')
 const AWS = require('aws-sdk')

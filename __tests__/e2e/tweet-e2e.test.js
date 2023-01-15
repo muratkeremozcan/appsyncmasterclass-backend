@@ -1,3 +1,10 @@
+// [17] E2e test for tweet mutation
+/// As a signed in user, make a graphQL request with the mutation `tweet`.
+/// This will cause 3 db interactions. We do not have to repeat the same DB verifications as the integration test,
+/// but we can verify the response from the mutation.
+// - Sign in
+// - Make a graphQL request with the tweet mutation and its text argument.
+// - Check the content of the response for the mutation
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/helpers')
@@ -11,7 +18,7 @@ describe('Given an authenticated user', () => {
   })
 
   it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
-    // [4.16] E2e test for tweet mutation
+    // [16] E2e test for tweet mutation
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
@@ -25,6 +32,7 @@ describe('Given an authenticated user', () => {
         retweets
       }
     }`
+
     const text = chance.string({length: 16})
 
     // Make a graphQL request with the tweet mutation and its text argument
@@ -44,7 +52,7 @@ describe('Given an authenticated user', () => {
       retweets: 0,
     })
 
-    // [4.18] E2e test for getTweets query
+    // [18] E2e test for getTweets query
     const getTweets = `query getTweets($userId: ID!, $limit: Int!, $nextToken: String) {
       getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
         nextToken
@@ -71,22 +79,37 @@ describe('Given an authenticated user', () => {
       process.env.API_URL,
       signedInUser.accessToken,
       getTweets,
-      {userId: signedInUser.id, limit: 25, nextToken: null},
+      {userId: signedInUser.username, limit: 25, nextToken: null},
     )
     expect(getTweetsResp.getTweets.nextToken).toBeNull()
-    expect(getTweetsResp.getTweets.tweets).toHaveLength(25)
+    expect(getTweetsResp.getTweets.tweets).toHaveLength(1)
     expect(getTweetsResp.getTweets.tweets[0]).toMatchObject(tweetResp.tweet)
 
     // cannot ask for more than 25
-    const get26Tweets = await axiosGraphQLQuery(
+    const get26Tweets = axiosGraphQLQuery(
       process.env.API_URL,
       signedInUser.accessToken,
       getTweets,
-      {userId: signedInUser.id, limit: 26, nextToken: null},
+      {userId: signedInUser.username, limit: 26, nextToken: null},
     )
     await expect(get26Tweets).rejects.toMatchObject({
       message: expect.stringContaining('max limit is 25'),
     })
+
+    // clean up
+    const DynamoDB = new AWS.DynamoDB.DocumentClient()
+    await DynamoDB.delete({
+      TableName: process.env.TWEETS_TABLE,
+      Key: {
+        id: tweetResp.tweet.id,
+      },
+    }).promise()
+    await DynamoDB.delete({
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        id: signedInUser.username,
+      },
+    }).promise()
   })
 
   afterAll(async () => {

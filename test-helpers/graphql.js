@@ -1,4 +1,4 @@
-// (4.9) bare bones http request
+// (9) bare bones http request
 const http = require('axios')
 const _ = require('lodash')
 

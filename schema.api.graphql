@@ -4,7 +4,7 @@ schema {
   mutation: Mutation
 }
 
-# [4.2] identify and implement the Queries and Mutations of your system
+# [2] identify and implement the Queries and Mutations of your system
 # variable! means a non-nullable value
 # ID, AWSUrl, AWSDate, AWSDateTime are GraphQL built-in types
 

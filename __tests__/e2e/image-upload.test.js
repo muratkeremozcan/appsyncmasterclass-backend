@@ -1,4 +1,10 @@
-// [4.9] e2e test getMyProfile [4.12] editMyProfile
+// [14] e3e test image upload
+// As a signed in user, make a graphQL request with the query `getImageUploadUrl`.
+/// Upload an image to the S3 bucket.
+// - Sign in.
+// - Make a graphQL request with the query and variables to get a signed S3 URL.
+// - Confirm that the upload url exists, and upload can happen.
+
 require('dotenv').config()
 const {signInUser} = require('../../test-helpers/helpers')
 const AWS = require('aws-sdk')

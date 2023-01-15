@@ -1,4 +1,11 @@
-// [4.8] unit test for getMyProfile query
+// [8] unit test for getMyProfile query
+// We are going to test that `Mutation.editMyProfile.request.vtl`
+// executes the template with `$context.identity.username` and turns it into a DDB json structure.
+
+// - Create an AppSync context that contains the username (for`$context.identity.username`).
+/// KEY: when generating the context we need to give it an argument (editMyProfile(newProfile: ProfileInput!): MyProfile!).
+// - Get the template (file `Mutation.editMyProfile.request.vtl`).
+// - Render the template (using the utility npm packages).
 const chance = require('chance').Chance()
 const {
   generateAppSyncContext,
@@ -19,7 +26,8 @@ describe('Mutation.editMyProfile.request template', () => {
       website: null,
       birthdate: null,
     }
-    const context = generateAppSyncContext(username, {newProfile}) // we need to give it an argument (compared to getMyProfile)
+    // we need to give it an argument (editMyProfile(newProfile: ProfileInput!): MyProfile!).
+    const context = generateAppSyncContext(username, {newProfile})
 
     // get the request template
     const template = getTemplate('Mutation.editMyProfile.request.vtl')

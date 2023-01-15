@@ -1,4 +1,9 @@
-// [4.16] Integration test for tweet mutation
+// [16] Integration test for tweet mutation
+/// We have to have a real user for this integration test, but it is still an integration test
+/// given that we are feeding an event object to the handler.
+// - Create an event: an object which includes `identity.username` and `arguments.text`.
+// - Feed it to the handler (the handler causes 2 writes and update to DDB, hence the "integration")
+// - Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/helpers')
@@ -61,6 +66,22 @@ describe('Given an authenticated user', () => {
     }).promise()
     expect(usersTableResp.Item).toBeTruthy()
     expect(usersTableResp.Item.tweetsCount).toEqual(1)
+
+    // clean up
+    await DynamoDB.delete({
+      TableName: process.env.TWEETS_TABLE,
+      Key: {
+        id: tweet.id,
+      },
+    }).promise()
+
+    await DynamoDB.delete({
+      TableName: process.env.TIMELINES_TABLE,
+      Key: {
+        userId: signedInUser.username,
+        tweetId: tweet.id,
+      },
+    }).promise()
   })
 
   afterAll(async () => {

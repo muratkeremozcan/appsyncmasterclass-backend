@@ -1,4 +1,4 @@
-// [14] e3e test image upload
+// [16] e3e test image upload
 // As a signed in user, make a graphQL request with the query `getImageUploadUrl`.
 /// Upload an image to the S3 bucket.
 // - Sign in.

@@ -1,4 +1,4 @@
-// [16] Integration test for tweet mutation
+// [18] Integration test for tweet mutation
 /// We have to have a real user for this integration test, but it is still an integration test
 /// given that we are feeding an event object to the handler.
 // - Create an event: an object which includes `identity.username` and `arguments.text`.

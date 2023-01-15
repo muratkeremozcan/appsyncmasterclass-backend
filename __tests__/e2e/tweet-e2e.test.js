@@ -1,4 +1,4 @@
-// [17] E2e test for tweet mutation
+// [19] E2e test for tweet mutation
 /// As a signed in user, make a graphQL request with the mutation `tweet`.
 /// This will cause 3 db interactions. We do not have to repeat the same DB verifications as the integration test,
 /// but we can verify the response from the mutation.
@@ -18,7 +18,7 @@ describe('Given an authenticated user', () => {
   })
 
   it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
-    // [16] E2e test for tweet mutation
+    // [19] E2e test for tweet mutation
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql

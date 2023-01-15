@@ -1,4 +1,4 @@
-// (15.2.2) add the lambda function that will generate a tweet ulid for the 3 DDB tables,
+// (17.2.2) add the lambda function that will generate a tweet ulid for the 3 DDB tables,
 // write to Tweets and Timelines tables, and update Users table
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
@@ -11,7 +11,7 @@ const handler = async event => {
   // we know from graphQL schema the argument text - tweet(text: String!): Tweet!
   // we can extract that from event.arguments
   const {text} = event.arguments
-  // we can get the username from event.identity.username (Lumigo and before in (13.2.1) )
+  // we can get the username from event.identity.username
   const {username} = event.identity
   // generate a new ulid & timestamp for the tweet
   const id = ulid.ulid()

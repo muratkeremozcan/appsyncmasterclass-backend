@@ -3,7 +3,7 @@
 // - Make a graphQL request with the query
 // - Confirm that the returned profile is in the shape of the query.
 
-// [12] editMyProfile
+// [14] editMyProfile
 // As a signed in user, make a graphQL request with the query `editMyProfile`.
 // - Sign in
 // - Make a graphQL request with the query and variable

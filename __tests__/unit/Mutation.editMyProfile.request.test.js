@@ -1,4 +1,4 @@
-// [8] unit test for getMyProfile query
+// [13] unit test for editMyProfile mutation
 // We are going to test that `Mutation.editMyProfile.request.vtl`
 // executes the template with `$context.identity.username` and turns it into a DDB json structure.
 

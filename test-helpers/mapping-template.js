@@ -4,15 +4,19 @@ const fs = require('fs')
 const velocityMapper = require('amplify-appsync-simulator/lib/velocity/value-mapper/mapper')
 const velocityTemplate = require('amplify-velocity-template')
 
+// create JSdoc comments for generateAppSyncContext
 /**
  * Used to generate a context for the mapping template (for  $context.identity.username)
- * @param {string} username the username as in `$context.identity.username`
- * @param {object} args Optional arguments to pass to the template
- * @param {object} result Optional result of the previous resolver (used in case of nested resolvers)
- * @param {object} source Optional source of the previous resolver (used in case of nested resolvers)
+ * @param {{username: string, args: object, result: object, source: object, info: object}}
  * @returns {object} the context
  */
-const generateAppSyncContext = (username, args, result, source) => {
+const generateAppSyncContext = ({
+  username,
+  args,
+  result,
+  source,
+  info,
+} = {}) => {
   const util = velocityUtil.create([], new Date(), Object())
   const context = {
     identity: {
@@ -22,6 +26,7 @@ const generateAppSyncContext = (username, args, result, source) => {
     arguments: args,
     result,
     source,
+    info,
   }
   return {
     context,

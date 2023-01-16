@@ -10,7 +10,7 @@ describe('TimelinePage.tweets.request template', () => {
   it('Should return empty array if source.tweets is empty', () => {
     // create an appsync context (for $context.source.tweets))
     const username = chance.guid()
-    const context = generateAppSyncContext(username, {}, {}, {tweets: []})
+    const context = generateAppSyncContext({username, source: {tweets: []}})
 
     // get the request template
     const template = getTemplate('TimelinePage.tweets.request.vtl')
@@ -31,7 +31,7 @@ describe('TimelinePage.tweets.request template', () => {
         tweetId,
       },
     ]
-    const context = generateAppSyncContext(username, {}, {}, {tweets})
+    const context = generateAppSyncContext({username, source: {tweets}})
 
     // get the request template
     const template = getTemplate('TimelinePage.tweets.request.vtl')

@@ -10,10 +10,13 @@ describe('Query.getTweets.request template', () => {
   it('Should error if limit is over 25', () => {
     // create an appsync context (for $context.identity.username)
     const username = chance.guid()
-    const context = generateAppSyncContext(username, {
-      userId: username,
-      limit: 26,
-      nextToken: null,
+    const context = generateAppSyncContext({
+      username,
+      args: {
+        userId: username,
+        limit: 26,
+        nextToken: null,
+      },
     })
 
     // get the request template

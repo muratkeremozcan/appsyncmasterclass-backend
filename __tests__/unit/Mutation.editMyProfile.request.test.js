@@ -27,7 +27,7 @@ describe('Mutation.editMyProfile.request template', () => {
       birthdate: null,
     }
     // we need to give it an argument (editMyProfile(newProfile: ProfileInput!): MyProfile!).
-    const context = generateAppSyncContext(username, {newProfile})
+    const context = generateAppSyncContext({username, args: {newProfile}})
 
     // get the request template
     const template = getTemplate('Mutation.editMyProfile.request.vtl')

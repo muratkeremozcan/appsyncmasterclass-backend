@@ -1983,7 +1983,43 @@ query MyQuery {
 
 Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 25 Use `context.info` to remove unnecessary DDB calls
 
+Add some logic to our request template `Tweet.profile.request.vtl` to check what fields the query is actually asking for. If it is only asking for the for the id, return early without making a request to DDB.
+
+```
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.source.creator)
+  }
+}
+```
+
+Becomes:
+
+```
+#if ($context.info.selectionSetList.size() == 1 && $context.info.selectionSetList[0] == "id")
+  #set ($result = { "id": "$context.source.creator" })
+
+  #if ($context.source.creator == $context.identity.username)
+    #set ($result["__typename"] = "MyProfile")
+  #else
+    #set ($result["__typename"] = "OtherProfile")
+  #end
+  
+  #return($result)
+#end
+
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.source.creator)
+  }
+}
+```
 
 
 

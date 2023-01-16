@@ -1444,14 +1444,12 @@ mappingTemplates:
       tableName: !Ref TweetsTable
 ```
 
-_(18.1)_ Add the .vtl files under `./mapping-templates/` for the request and
+_(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and
 response.
 
 In _(15.0)_ we created a table for the tweets, and we identified a
 `GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize
-the mapping template reference for DDB at
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
+the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
 We can get userId (the first argument of the query) by
 ` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
 argument, `nextToken`, we can similarly use
@@ -1735,4 +1733,238 @@ const getTweets = `query getTweets($userId: ID!, $limit: Int!, $nextToken: Strin
 
 Check out `__tests__/e2e/tweet-e2e.test.js`.
 
-## 23 `getMyTimeline` query
+## 23 Implement `getMyTimeline` query
+
+`getMyTimeline` is a query from `schema.api.graphql`.
+
+```
+type Query{
+  getMyTimeline(limit: Int!, nextToken: String): TweetsPage!
+}
+```
+
+We are going to get the timeline from DDB timelinesTable, therefore we need the usual Appsync
+mapping-template yml and the vtl files query request and response.
+
+(23.0) Add a mapping template to the yml.
+
+```yml
+# ./serverless.appsync-api.yml
+
+mappingTemplates:
+  ###
+  - type: Query
+    field: getTweets
+    dataSource: tweetsTable
+    
+  # [23] Implement getmyTimeline query
+  # (23.0) Add the mapping template to the yml
+  - type: Query
+    field: getMyTimeline
+    dataSource: timelinesTable
+    
+ dataSources:
+  - type: AMAZON_DYNAMODB 
+    name: tweetsTable
+    config:
+      tableName: !Ref TweetsTable
+
+  - type: AMAZON_DYNAMODB # (23.0) define a data source for the query
+    name: timelinesTable
+    config:
+      tableName: !Ref TimelinesTable
+
+```
+
+_(23.1)_ Add the .vtl files under `./mapping-templates/` for the request and response. We utilize
+the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html). Very similar to (20.1). `userId` instead of `creatorId`, and the current user is the value which we get from `$context.identity.username`. We do not need `"index" : "byCreator"`. The response is identical to 20.1 as well.
+
+```
+// Query.getMyTimeline.request.vtl
+
+#set ($isValidLimit = $context.arguments.limit <= 25)
+$util.validate($isValidLimit, "max limit is 25")
+
+{
+  "version" : "2018-05-29",
+  "operation" : "Query",
+  "query" : {
+    "expression" : "userId = :userId",
+    "expressionValues" : {
+      ":userId" : $util.dynamodb.toDynamoDBJson($context.identity.username)
+    }
+  },
+  "nextToken" : $util.toJson($context.arguments.nextToken),
+  "limit" : $util.toJson($context.arguments.limit),
+  "scanIndexForward" : false,
+  "consistentRead" : false,
+  "select" : "ALL_ATTRIBUTES"
+}
+```
+
+```
+// Query.getMyTimeline.response.vtl
+
+{
+  "tweets": $util.toJson($context.result.items),
+  "nextToken": $util.toJson($util.defaultIfNullOrBlank($context.result.nextToken, null))
+}
+```
+
+After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table. We can use pipeline functions for that. Pipeline functions tell AppSync to perform multiple steps for a resolver; get a page of tweets from the timelines table and hydrate them by doing a batch get against Tweets table. But for now we can play with the types at `schema.api.graphql`.  *(23.2)* Add a type `TimelinePage` and make `getMyTimeline` return a `TimelinePage` instead of `TweetsPage`.
+
+```
+# schema.api.graphql
+
+type Query {
+  getMyTimeline(limit: Int!, nextToken: String): TimelinePage!
+}
+type TimelinePage {
+  tweets: [ITweet!]
+  nextToken: String
+}
+```
+
+ *(23.3)* Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested field that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`.
+
+*(23.4)* For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
+
+* We will have access to a list of tweets from Timelines table, which has userId and tweetId. 
+* We can use the tweetId to fetch the tweets from the Tweets table. 
+* We are going the take the source tweets array from the `TimelinePage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
+
+To add each tweet object into the array, use `$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to ignore the return value of the `$tweets.add` operation, otherwise the vtl interpreter will fail.
+
+For the `tables` > TweetsTable > keys, after we're done populating the tweets array use `$util.toJson($tweets)` to serialize it.
+
+*(23.5)* We need the value of the TweetsTable we are going to BatchGetItem from. To get this value we add a block to the `serverless.appsync-api.yml`
+
+```yml
+substitutions:
+  TweetsTable: !Ref TweetsTable
+```
+
+```
+// TimelinePage.tweets.request
+
+#if ($context.source.tweets.size() == 0)
+  #return([])
+#end
+
+// get the tweet ids in an array
+// DDB batch get
+
+#set ($tweets = [])
+#foreach ($item in $context.source.tweets)
+  #set ($tweet = {})
+  #set ($tweet.id = $item.tweetId)
+  $util.qr($tweets.add($util.dynamodb.toMapValues($tweet)))
+#end
+
+{
+  "version" : "2018-05-29",
+  "operation" : "BatchGetItem",
+  "tables" : {
+    "${TweetsTable}": {
+      "keys": $util.toJson($tweets),
+      "consistentRead": false
+    }
+  }
+}
+```
+
+```
+// TimelinePage.tweets.response.vtl
+
+$util.toJson($context.result.data.${TweetsTable})
+```
+
+`npm run deploy` and test at AppSync web UI.
+
+```
+query MyQuery {
+  getMyTimeline(limit: 10) {
+    nextToken
+    tweets {
+      id
+      profile {
+        name
+        screenName
+        id
+      }
+      ... on Tweet {
+        id
+        likes
+        replies
+        retweets
+        text
+      }
+    }
+  }
+}
+```
+
+
+
+![23](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2cwnep1zj2cur7pl8vhg.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

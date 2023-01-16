@@ -52,6 +52,12 @@ mappingTemplates:
     field: getTweets
     dataSource: tweetsTable
 
+  # [23] Implement getMyTimeline query
+  # (23.0) Add the mapping template to the yml
+  - type: Query
+    field: getMyTimeline
+    dataSource: timelinesTable
+
   # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
   # We went by the order of lessons instead so it is easier to follow when reading the notes.
 
@@ -62,26 +68,48 @@ mappingTemplates:
     field: profile
     dataSource: usersTable
 
+  # (23.3) Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to.
+  # We can have that resolver hydrate the data from a different table.
+  # Create a nested field that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`
+  - type: TimelinePage
+    field: tweets
+    dataSource: tweetsTable
+
 dataSources:
   - type: NONE
     name: none
 
-  - type: AMAZON_DYNAMODB # (8.1, 12.0) define a data source for the query and mutation
-    name: usersTable
+  - type: AMAZON_DYNAMODB
+    name: usersTable # (8.1, 12.0) define a data source for the query and mutation
     config:
       tableName: !Ref UsersTable
 
-  - type: AWS_LAMBDA # (15.0) define a data source for the query
-    name: getImageUploadUrlFunction
+  - type: AWS_LAMBDA
+    name: getImageUploadUrlFunction # (15.0) define a data source for the query
     config:
       functionName: getImageUploadUrl
 
-  - type: AWS_LAMBDA # (17.2.0) define a data source for the mutation
-    name: tweetFunction
+  - type: AWS_LAMBDA
+    name: tweetFunction # (17.2.0) define a data source for the mutation
     config:
       functionName: tweet
 
-  - type: AMAZON_DYNAMODB # (20.0) define a data source for the query
-    name: tweetsTable
+  - type: AMAZON_DYNAMODB
+    name: tweetsTable # (20.0) define a data source for the query
     config:
       tableName: !Ref TweetsTable
+
+  - type: AMAZON_DYNAMODB
+    name: timelinesTable # (23.0) define a data source for the query
+    config:
+      tableName: !Ref TimelinesTable
+
+# (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
+# * We will have access to a list of tweets from Timelines table, which has userId and tweetId.
+# * We can use the tweetId to fetch the tweets from the Tweets table.
+# * We are going the take the source tweets array from the `TimelinePage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`,
+##  extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
+# (23.5) We need the value of the TweetsTable we are going to BatchGetItem from.
+# To get this value we add a block to the `serverless.appsync-api.yml`
+substitutions:
+  TweetsTable: !Ref TweetsTable

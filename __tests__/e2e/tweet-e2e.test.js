@@ -5,6 +5,10 @@
 // - Sign in
 // - Make a graphQL request with the tweet mutation and its text argument.
 // - Check the content of the response for the mutation
+// [24] E2e test for getMyTimeline query
+// - Create the tweet (17)
+// - getMyTimeline
+// - Test error case of 26 limit.
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/helpers')
@@ -53,6 +57,7 @@ describe('Given an authenticated user', () => {
     })
 
     // [18] E2e test for getTweets query
+    // create the query
     const getTweets = `query getTweets($userId: ID!, $limit: Int!, $nextToken: String) {
       getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
         nextToken
@@ -75,6 +80,7 @@ describe('Given an authenticated user', () => {
       }
     }`
 
+    // make a graphQL request and check the response
     const getTweetsResp = await axiosGraphQLQuery(
       process.env.API_URL,
       signedInUser.accessToken,
@@ -93,6 +99,54 @@ describe('Given an authenticated user', () => {
       {userId: signedInUser.username, limit: 26, nextToken: null},
     )
     await expect(get26Tweets).rejects.toMatchObject({
+      message: expect.stringContaining('max limit is 25'),
+    })
+
+    // [24] E2e test for getTimeline query
+    // create the query
+    const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
+      getMyTimeline(limit: $limit, nextToken: $nextToken) {
+        nextToken
+        tweets {
+          id
+          createdAt
+          profile {
+            id
+            name
+            screenName
+          }
+  
+          ... on Tweet {          
+            text
+            replies
+            likes
+            retweets
+          }
+        }
+      }
+    }`
+
+    // make a graphQL request and check the response
+    const getMyTimelineResp = await axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      getMyTimeline,
+      {limit: 25, nextToken: null},
+    )
+    expect(getMyTimelineResp.getMyTimeline.nextToken).toBeNull()
+    expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
+    expect(getMyTimelineResp.getMyTimeline.tweets[0]).toMatchObject(
+      tweetResp.tweet,
+    )
+
+    // cannot ask for more than 25
+    const get26MyTimeline = axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      getMyTimeline,
+      {limit: 26, nextToken: null},
+    )
+    await expect(get26MyTimeline).rejects.toMatchObject({
       message: expect.stringContaining('max limit is 25'),
     })
 

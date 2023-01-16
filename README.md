@@ -1017,7 +1017,7 @@ Check out `__tests__/e2e/image-upload.test.js`.
 
 For the types, there are 3 key pieces of info:
 
-- `getImageUploadUrl` takes `extension` and `contentType` as an arguments:
+- `getImageUploadUrl` takes `extension` and `contentType` as arguments:
 
 ```
 # schema.api.graphql
@@ -1676,11 +1676,11 @@ Check out `__tests__/unit/Tweet.profile.response.test.js` and
 
 For the types, there are 3 key pieces of info:
 
-- `getTweets` takes `userId`, `limit`, `nextToken` as an arguments:
+- `getTweets` takes `userId`, `limit`, `nextToken` as arguments:
 
 ```
 # schema.api.graphql
-type Qiery {
+type Query {
   getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
 ```
 
@@ -1904,9 +1904,84 @@ query MyQuery {
 }
 ```
 
-
-
 ![23](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2cwnep1zj2cur7pl8vhg.png)
+
+### 24 Test `getMyTimeline` query
+
+The unit test for `getMyTimeline` would be duplicating the `getTweets`, because the vtl templates are near identical.
+
+We can write a test for `TimelinePage.tweets.request.vtl` since there is plenty  going on there.
+
+Check out `__tests__/unit/TimelinePage.tweets.request.test.js`.
+
+For the e2e test:
+
+- Create the tweet (17)
+- getMyTimeline, check that there is a response
+- Test error case of 26 limit.
+
+For the types, there are 3 key pieces of info:
+
+- `getMyTimeline` takes `limit`, `nextToken` as arguments:
+
+```
+# schema.api.graphql
+type Query {
+   getMyTimeline(limit: Int!, nextToken: String): TimelinePage!
+```
+
+- At the AppSync web console we build an example
+
+```
+query MyQuery {
+  getMyTimeline(limit: 10) {
+    nextToken
+    tweets {
+      id
+      profile {
+        name
+        screenName
+        id
+      }
+      ... on Tweet {
+        id
+        likes
+        replies
+        retweets
+        text
+      }
+    }
+  }
+}
+```
+
+- In the test, when building the query we can take the text argument.
+
+```javascript
+    const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
+      getMyTimeline(limit: $limit, nextToken: $nextToken) {
+        nextToken
+        tweets {
+          id
+          createdAt
+          profile {
+            id
+            name
+            screenName
+          }
+  
+          ... on Tweet {          
+            text
+            replies
+            likes
+            retweets
+          }
+        }
+      }
+    }`
+```
+
+Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 
 

@@ -237,6 +237,30 @@ resources:
               AllowedHeaders:
                 - '*'
 
+    # [25] like mutation
+    # (25.0) create a new DDB table to track which user has liked which tweet
+    LikesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: likes-table
+
   Outputs:
     # (3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
     # We get that value with !Ref

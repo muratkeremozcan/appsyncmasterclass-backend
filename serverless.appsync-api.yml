@@ -13,6 +13,9 @@ userPoolConfig:
 mappingTemplatesLocation: mapping-templates
 
 mappingTemplates:
+  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
+  ## QUERIES
+
   # [8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
   - type: Query
     field: getMyProfile
@@ -20,31 +23,6 @@ mappingTemplates:
     # (8.2) Per convention, add two files at the folder `./mapping-templates`, `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl`
     # Realize how it matches `mappingTemplates:type&field`
     # The convention Handles request:<fileName> and response:<fileName> that would be right here otherwise
-
-  # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
-  # (12.0) add an entry to the mappingTemplates
-  - type: Mutation
-    field: editMyProfile
-    dataSource: usersTable
-
-  # [15] Implement getImageUploadUrl query (use a lambda to implement it)
-  # (15.0) add an entry to the mappingTemplates
-  - type: Query
-    field: getImageUploadUrl
-    dataSource: getImageUploadUrlFunction # we define dataSources below for this
-    # For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template.
-    # this is how we configure it, and serverless-appsync-plugin takes care of it
-    request: false
-    response: false
-
-  # (17.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
-  # (17.2.0) Add the  mapping template to the yml
-  - type: Mutation
-    field: tweet
-    dataSource: tweetFunction
-    # same as (15.0)
-    request: false
-    response: false
 
   # [20] Implement getTweets query
   # (20.0) Add the mapping template
@@ -58,10 +36,39 @@ mappingTemplates:
     field: getMyTimeline
     dataSource: timelinesTable
 
-  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
-  # We went by the order of lessons instead so it is easier to follow when reading the notes.
+  # [15] Implement getImageUploadUrl query (use a lambda to implement it)
+  # (15.0) add an entry to the mappingTemplates
+  - type: Query
+    field: getImageUploadUrl
+    dataSource: getImageUploadUrlFunction # we define dataSources below for this
+    # For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template.
+    # this is how we configure it, and serverless-appsync-plugin takes care of it
+    request: false
+    response: false
 
-  # NESTED FIELDS
+  ## MUTATIONS
+
+  # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
+  # (12.0) add an entry to the mappingTemplates
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable
+
+  # (17.2) Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
+  # (17.2.0) Add the  mapping template to the yml
+  - type: Mutation
+    field: tweet
+    dataSource: tweetFunction
+    # same as (15.0)
+    request: false
+    response: false
+
+  # (26.1) setup an AppSync resolver to update 3 tables when like happens: UsersTable, TweetsTable, LikesTable.
+  - type: Mutation
+    field: like
+    dataSource: likeMutation
+
+  ## NESTED FIELDS
   # (18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
   # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
   - type: Tweet
@@ -79,20 +86,12 @@ dataSources:
   - type: NONE
     name: none
 
+  ## DDB data sources
+
   - type: AMAZON_DYNAMODB
     name: usersTable # (8.1, 12.0) define a data source for the query and mutation
     config:
       tableName: !Ref UsersTable
-
-  - type: AWS_LAMBDA
-    name: getImageUploadUrlFunction # (15.0) define a data source for the query
-    config:
-      functionName: getImageUploadUrl
-
-  - type: AWS_LAMBDA
-    name: tweetFunction # (17.2.0) define a data source for the mutation
-    config:
-      functionName: tweet
 
   - type: AMAZON_DYNAMODB
     name: tweetsTable # (20.0) define a data source for the query
@@ -104,12 +103,49 @@ dataSources:
     config:
       tableName: !Ref TimelinesTable
 
+  # (26.1) define a data source for the mutation, this one needs to be a chained data source
+  # because we need likeMutation to have permissions to modify the 3 tables
+  - type: AMAZON_DYNAMODB
+    name: likesTable
+    config:
+      tableName: !Ref LikesTable
+  # (26.1) we need the like mutation to create an entry in the LikesTable, then update UsersTable and TweetsTable
+  # When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation
+  - type: AMAZON_DYNAMODB
+    name: likeMutation
+    config:
+      tableName: !Ref LikesTable
+      iamRoleStatements: # this is like (17.2.1) using lambda resolver to transact with 3 tables
+        - Effect: Allow
+          Action: dynamodb:PutItem
+          Resource: !GetAtt LikesTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource:
+            - !GetAtt UsersTable.Arn
+            - !GetAtt TweetsTable.Arn
+
+  ## LAMBDA data sources
+
+  - type: AWS_LAMBDA
+    name: getImageUploadUrlFunction # (15.0) define a data source for the query
+    config:
+      functionName: getImageUploadUrl
+
+  - type: AWS_LAMBDA
+    name: tweetFunction # (17.2.0) define a data source for the mutation
+    config:
+      functionName: tweet
+
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.
 # * We can use the tweetId to fetch the tweets from the Tweets table.
 # * We are going the take the source tweets array from the `TimelinePage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`,
 ##  extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
-# (23.5) We need the value of the TweetsTable we are going to BatchGetItem from.
-# To get this value we add a block to the `serverless.appsync-api.yml`
 substitutions:
+  # (23.5) We need the value of the TweetsTable we are going to BatchGetItem from.
+  # To get this value we add a block to the `serverless.appsync-api.yml`
   TweetsTable: !Ref TweetsTable
+  # (26.1) when we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions
+  LikesTable: !Ref LikesTable
+  UsersTable: !Ref UsersTable

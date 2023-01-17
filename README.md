@@ -2021,15 +2021,182 @@ Becomes:
 }
 ```
 
+## 26 Implement `like` mutation
 
+```
+type Mutation {
+  like(tweetId: ID!): Boolean!
+```
 
+When we like a tweet:
 
+* Increment the like count in the Users table. 
+* For the tweet, in Tweetstable  increment the number of likes received.
+* Introduce a new table (LikesTable) for which user has liked which tweet, and update that too.
 
+*(26.0)* create a new DDB table to track which user has liked which tweet.
 
+```yml
+# serverless.yml
+resources:
+  Resources:
+    LikesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: likes-table
+```
 
+We have to update 3 tables when the like mutation happens. We can do this in a DDB transaction. (In _(17.1)_ we also updated 3 tables, but used a lambda resolver because we had to generate a `ulid`). As usual, we have to create a mapping template, dataSource  and `vtl` files.
 
+In the vtl files we will:
 
+* Create an entry in LikesTable with `userId` and `tweetId`.
+* Update TweetsTable with `tweetId`.
+* Update UsersTable with `userId`.
 
+*(26.1)* Create a mapping template for `like`, dataSource for `likesTable` and for `likeMutation` .  When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation (`likeMutation`). When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions.
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # (25.1) setup an AppSync resolver to update 3 tables when like happens: 
+  # UsersTable, TweetsTable, LikesTable.
+  - type: Mutation
+    field: like
+    dataSource: likeMutation
+
+dataSources:
+ - type: AMAZON_DYNAMODB
+    name: likesTable # (25.1) define a data source for the mutation
+    config:
+      tableName: !Ref LikesTable
+  # (25.1) we need the like mutation to create an entry in the LikesTable
+  # then update UsersTable and TweetsTable
+  # When we need to do multiple transactions in an AppSync resolver, 
+  # we need to create a dataSource for the mutation
+  - type: AMAZON_DYNAMODB
+    name: likeMutation
+    config:
+      tableName: !Ref LikesTable
+      # this is like (17.2.1) using lambda resolver to transact with 3 tables
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:PutItem
+          Resource: !GetAtt LikesTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource:
+            - !GetAtt UsersTable.Arn
+            - !GetAtt TweetsTable.Arn
+
+substututions:
+  TweetsTable: !Ref TweetsTable
+  # (25.1) when we want to use refer to the resources in a vtl file with ${resourceName},
+  # we need to add it to the substitutions
+  LikesTable: !Ref LikesTable
+  UsersTable: !Ref UsersTable
+
+```
+
+*(26.2)* Create the `vtl` files.
+
+`Mutation.like.request.vtl`
+
+```
+{
+  "version": "2018-05-29",
+  "operation": "TransactWriteItems",
+  "transactItems": [
+    {
+      "table": "${LikesTable}",
+      "operation": "PutItem",
+      "key": {
+        "userId": $util.dynamodb.toDynamoDBJson($context.identity.username),
+        "tweetId": $util.dynamodb.toDynamoDBJson($context.arguments.tweetId)
+      },
+      "condition": {
+        "expression": "attribute_not_exists(tweetId)"
+      }
+    },
+    {
+      "table": "${TweetsTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.arguments.tweetId)
+      },
+      "update": {
+        "expression": "ADD likes :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    },
+    {
+      "table": "${UsersTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.identity.username)
+      },
+      "update": {
+        "expression": "ADD likesCounts :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    }
+  ]
+}
+```
+
+`Mutation.like.response.vtl`
+
+```
+#if (!$util.isNull($context.result.cancellationReasons))
+  $util.error('DynamoDB transaction error')
+#end
+
+#if (!$util.isNull($context.error))
+  $util.error('Failed to execute DynamoDB transaction')
+#end
+
+true
+```
+
+`npm run deploy` and observe the new table in DDB.
+
+![4-DDB-tables](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ap1uq047f04q3i3ieyvp.png)
+
+Grab a `tweetId` from `TweetsTable`, create an AppSync mutation to like the tweet.
+
+![like-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fn1hebhj1qp65nqhlql5.png)
+
+After the like, the `LikesTable` should populate.
+
+![likes-table](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qvcdtgayse3i4a5tc958.png)
+
+### 27 Implement `Tweet.liked` nested resolver
 
 
 

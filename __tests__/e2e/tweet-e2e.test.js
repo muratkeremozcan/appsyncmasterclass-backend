@@ -34,6 +34,7 @@ describe('Given an authenticated user', () => {
         replies
         likes
         retweets
+        liked
       }
     }`
 
@@ -54,6 +55,7 @@ describe('Given an authenticated user', () => {
       replies: 0,
       likes: 0,
       retweets: 0,
+      liked: false,
     })
 
     // [18] E2e test for getTweets query
@@ -75,6 +77,7 @@ describe('Given an authenticated user', () => {
             replies
             likes
             retweets
+            liked
           }
         }
       }
@@ -121,6 +124,7 @@ describe('Given an authenticated user', () => {
             replies
             likes
             retweets
+            liked
           }
         }
       }

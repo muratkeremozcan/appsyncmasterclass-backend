@@ -1557,7 +1557,7 @@ interface IProfile {
 _(18.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
 the user information from `UsersTable`, so that we can populate the user profile
 in the Tweet type of our schema. We do that by using nested resolvers. Create a
-nested field in mapping Templates.
+nested resolver in mapping Templates.
 
 ```yml
 # serverless.appsync-api.yml
@@ -1565,10 +1565,10 @@ nested field in mapping Templates.
 mappingTemplates:
   - type: Query ##
   - type: Mutation ##
-  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
+  # Yan recommends to organize the mapping templates by Query, Mutation and nested resolvers.
   # We went by the order of lessons instead so it is easier to follow when reading the notes.
 
-  # Nested fields
+  # nested resolvers
 
   - type: Tweet
     field: profile
@@ -1825,9 +1825,9 @@ type TimelinePage {
 }
 ```
 
- *(23.3)* Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested field that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`.
+ *(23.3)* Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested resolver that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`.
 
-*(23.4)* For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
+*(23.4)* For the nested resolver to work we need another set of `vtl` files under `mapping-templates/`.
 
 * We will have access to a list of tweets from Timelines table, which has userId and tweetId. 
 * We can use the tweetId to fetch the tweets from the Tweets table. 
@@ -2198,9 +2198,77 @@ After the like, the `LikesTable` should populate.
 
 ### 27 Implement `Tweet.liked` nested resolver
 
+We can now implement the `liked: Boolean!` since we have the like mutation. It is going to be nested resolver as in `Tweet.profile`
 
+```
+# schema.api.graphql
 
+interface ITweet {
+  id: ID!
+  profile: IProfile!
+  createdAt: AWSDateTime!
+}
 
+type Tweet implements ITweet {
+  id: ID!
+  profile: IProfile!
+  createdAt: AWSDateTime!
+  text: String!
+  replies: Int!
+  likes: Int!
+  retweets: Int!
+  liked: Boolean!
+  retweeted: Boolean!
+}
+```
+
+*(27.0)* Create a nested resolved for `liked ` field. 
+
+```yml
+# serverless.appsync-api.yml	
+mappingTemplates:
+  ## QUERIES
+  ## MUTATIONS
+
+  ## NESTED RESOLVERS
+  - type: Tweet
+    field: profile
+    dataSource: usersTable
+
+  # [27] Implement the Tweet.liked nested resolver
+  # (27.0) create a nested resolver for liked field
+  - type: Tweet
+    field: liked
+    dataSource: likesTable
+```
+
+*(27.1)* Create vtl files `liked` request and response.
+
+ `Tweet.liked.request.vtl` 
+
+```
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "userId" : $util.dynamodb.toDynamoDBJson($context.identity.username),
+    "tweetId" : $util.dynamodb.toDynamoDBJson($context.source.id)
+  }
+}
+```
+
+`Tweet.liked.response.vtl`
+
+```
+#if ($util.isNull($context.result))
+  false
+#else
+  true
+#end
+
+```
+
+### 28 Refactor tests to use graphQL fragments
 
 
 

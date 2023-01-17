@@ -237,8 +237,8 @@ resources:
               AllowedHeaders:
                 - '*'
 
-    # [25] like mutation
-    # (25.0) create a new DDB table to track which user has liked which tweet
+    # [26] like mutation
+    # (26.0) create a new DDB table to track which user has liked which tweet
     LikesTable:
       Type: AWS::DynamoDB::Table
       Properties:

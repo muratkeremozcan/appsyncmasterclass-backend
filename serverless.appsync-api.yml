@@ -13,7 +13,7 @@ userPoolConfig:
 mappingTemplatesLocation: mapping-templates
 
 mappingTemplates:
-  # Yan recommends to organize the mapping templates by Query, Mutation and Nested fields.
+  # Yan recommends to organize the mapping templates by Query, Mutation and Nested resolvers.
   ## QUERIES
 
   # [8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
@@ -68,12 +68,18 @@ mappingTemplates:
     field: like
     dataSource: likeMutation
 
-  ## NESTED FIELDS
+  ## NESTED RESOLVERS
   # (18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
   # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
   - type: Tweet
     field: profile
     dataSource: usersTable
+
+  # [27] Implement the Tweet.liked nested resolver
+  # (27.0) create a nested resolver for liked
+  - type: Tweet
+    field: liked
+    dataSource: likesTable
 
   # (23.3) Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to.
   # We can have that resolver hydrate the data from a different table.

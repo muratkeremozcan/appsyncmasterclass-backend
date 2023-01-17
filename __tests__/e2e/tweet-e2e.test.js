@@ -12,23 +12,40 @@
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/helpers')
-const {axiosGraphQLQuery} = require('../../test-helpers/graphql')
 const chance = require('chance').Chance()
+// (28.2) import the fragments we will use in the test and register them
+const {
+  axiosGraphQLQuery,
+  registerFragment,
+} = require('../../test-helpers/graphql')
+const {
+  myProfileFragment,
+  otherProfileFragment,
+  iProfileFragment,
+  tweetFragment,
+  iTweetFragment,
+} = require('../../test-helpers/graphql-fragments')
+registerFragment('myProfileFields', myProfileFragment)
+registerFragment('otherProfileFields', otherProfileFragment)
+registerFragment('iProfileFields', iProfileFragment)
+registerFragment('tweetFields', tweetFragment)
+registerFragment('iTweetFields', iTweetFragment)
 
 describe('Given an authenticated user', () => {
-  let signedInUser
+  let signedInUser, DynamoDB, tweetResp, text, tweet
   beforeAll(async () => {
     signedInUser = await signInUser()
-  })
-
-  it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
+    DynamoDB = new AWS.DynamoDB.DocumentClient()
     // [19] E2e test for tweet mutation
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
-    const tweet = `mutation tweet($text: String!) {
+    tweet = `mutation tweet($text: String!) {
       tweet(text: $text) {
         id
+        profile {
+          ... iProfileFields
+        }
         createdAt
         text
         replies
@@ -38,16 +55,18 @@ describe('Given an authenticated user', () => {
       }
     }`
 
-    const text = chance.string({length: 16})
+    text = chance.string({length: 16})
 
     // Make a graphQL request with the tweet mutation and its text argument
-    const tweetResp = await axiosGraphQLQuery(
+    tweetResp = await axiosGraphQLQuery(
       process.env.API_URL,
       signedInUser.accessToken,
       tweet,
       {text},
     )
+  })
 
+  it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
     // Check the content of the response for the  mutation (no need to repeat the integration test DDB verifications,
     // so long as we got a response, DDB transactions already happened).
     expect(tweetResp.tweet).toMatchObject({
@@ -64,21 +83,7 @@ describe('Given an authenticated user', () => {
       getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
         nextToken
         tweets {
-          id
-          createdAt
-          profile {
-            id
-            name
-            screenName
-          }
-
-          ... on Tweet {
-            text
-            replies
-            likes
-            retweets
-            liked
-          }
+          ... iTweetFields
         }
       }
     }`
@@ -111,21 +116,7 @@ describe('Given an authenticated user', () => {
       getMyTimeline(limit: $limit, nextToken: $nextToken) {
         nextToken
         tweets {
-          id
-          createdAt
-          profile {
-            id
-            name
-            screenName
-          }
-  
-          ... on Tweet {          
-            text
-            replies
-            likes
-            retweets
-            liked
-          }
+          ... iTweetFields
         }
       }
     }`
@@ -154,29 +145,54 @@ describe('Given an authenticated user', () => {
       message: expect.stringContaining('max limit is 25'),
     })
 
-    // clean up
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
+    // [29] like mutation: should update the tweet to liked and check it
+    const like = `mutation like($tweetId: ID!) {
+      like(tweetId: $tweetId)
+    }`
+    await axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      like,
+      {tweetId: tweetResp.tweet.id},
+    )
+    const getTweetsResp2 = await axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      getTweets,
+      {userId: signedInUser.username, limit: 25, nextToken: null},
+    )
+    expect(getTweetsResp2.getTweets.tweets[0].liked).toBe(true)
+    // cannot like the same tweet twice
+    await expect(
+      axiosGraphQLQuery(process.env.API_URL, signedInUser.accessToken, like, {
+        tweetId: tweetResp.tweet.id,
+      }),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('DynamoDB transaction error'),
+    })
+  })
+
+  afterAll(async () => {
+    // clean up DynamoDB and Cognito
+    await DynamoDB.delete({
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        id: signedInUser.username,
+      },
+    }).promise()
+
     await DynamoDB.delete({
       TableName: process.env.TWEETS_TABLE,
       Key: {
         id: tweetResp.tweet.id,
       },
     }).promise()
-    await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: signedInUser.username,
-      },
-    }).promise()
-  })
 
-  afterAll(async () => {
-    // clean up DynamoDB and Cognito
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
     await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
+      TableName: process.env.TIMELINES_TABLE,
       Key: {
-        id: signedInUser.username,
+        userId: signedInUser.username,
+        tweetId: tweetResp.tweet.id,
       },
     }).promise()
 

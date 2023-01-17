@@ -10,9 +10,15 @@
 // - Confirm that the returned profile has been edited
 require('dotenv').config()
 const {signInUser} = require('../../test-helpers/helpers')
-const {axiosGraphQLQuery} = require('../../test-helpers/graphql')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
+// (28.2) import the fragments we will use in the test and register them
+const {
+  axiosGraphQLQuery,
+  registerFragment,
+} = require('../../test-helpers/graphql')
+const {myProfileFragment} = require('../../test-helpers/graphql-fragments')
+registerFragment('myProfileFields', myProfileFragment)
 
 describe('Given an authenticated user', () => {
   let signedInUser
@@ -25,20 +31,7 @@ describe('Given an authenticated user', () => {
     // we can copy the query from the AppSync console
     const getMyProfile = `query getMyProfile {
 			getMyProfile {
-				backgroundImageUrl
-				bio
-				birthdate
-				createdAt
-				followersCount
-				followingCount
-				id
-				imageUrl
-				likesCounts
-				location
-				name
-				screenName
-				tweetsCount
-				website
+				... myProfileFields
 			}
 		}`
     const data = await axiosGraphQLQuery(
@@ -79,20 +72,7 @@ describe('Given an authenticated user', () => {
     // editMyProfile(newProfile: ProfileInput!): MyProfile!
     const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
       editMyProfile(newProfile: $input) {
-        backgroundImageUrl
-        bio
-        birthdate
-        createdAt
-        followersCount
-        followingCount
-        id
-        imageUrl
-        likesCounts
-        location
-        name
-        screenName
-        tweetsCount
-        website
+        ... myProfileFields
       }
     }`
 

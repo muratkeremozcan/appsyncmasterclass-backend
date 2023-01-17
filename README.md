@@ -2270,9 +2270,13 @@ mappingTemplates:
 
 ### 28 Refactor tests to use graphQL fragments
 
+GraphQL fragments is a utility to reduce duplication in queries.
 
+Check out `test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`, `__tests__/e2e/tweet-e2e.test.js`.
 
+### 29 E2e Tests for `like` mutation
 
+We want to update a tweet to `liked` and verify that.
 
 
 

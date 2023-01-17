@@ -1,6 +1,14 @@
 // (9) bare bones http request
 const http = require('axios')
 const _ = require('lodash')
+// [28] Refactor tests to use graphQL fragments
+const fragments = {}
+/** A helper to register the fragments
+ * @param {string} name
+ * @param {object} fragment
+ * @returns {object}
+ */
+const registerFragment = (name, fragment) => (fragments[name] = fragment)
 
 const throwOnErrors = ({query, variables, errors}) => {
   if (errors) {
@@ -15,11 +23,32 @@ error: ${JSON.stringify(errors, null, 2)}
   }
 }
 
+function* findUsedFragments(query, usedFragments = new Set()) {
+  for (const name of Object.keys(fragments)) {
+    if (query.includes(name) && !usedFragments.has(name)) {
+      usedFragments.add(name)
+      yield name
+
+      const fragment = fragments[name]
+      const nestedFragments = findUsedFragments(fragment, usedFragments)
+
+      for (const nestedName of Array.from(nestedFragments)) {
+        yield nestedName
+      }
+    }
+  }
+}
+
 const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
   const headers = {}
   if (auth) {
     headers.Authorization = auth
   }
+
+  // (28.0) find the fragments used in the query
+  const usedFragments = Array.from(findUsedFragments(query)).map(
+    name => fragments[name],
+  )
 
   try {
     const resp = await http({
@@ -27,7 +56,7 @@ const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
       url,
       headers,
       data: {
-        query,
+        query: [query, ...usedFragments].join('\n'), // (28.1) include the fragments as part of the request we send to AppSync
         variables: JSON.stringify(variables),
       },
     })
@@ -46,4 +75,5 @@ const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
 
 module.exports = {
   axiosGraphQLQuery,
+  registerFragment,
 }

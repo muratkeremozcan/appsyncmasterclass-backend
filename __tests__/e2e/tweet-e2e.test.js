@@ -151,50 +151,96 @@ describe('e2e test for tweet', () => {
     })
   })
 
-  it('[29] like mutation: should update the tweet to liked and check it', async () => {
+  describe('[29] [33] [31] like, getLikes, unlike', () => {
     const like = `mutation like($tweetId: ID!) {
       like(tweetId: $tweetId)
     }`
-    await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      like,
-      {tweetId: tweetResp.tweet.id},
-    )
-    const getTweetsResp2 = await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      getTweets,
-      {userId: signedInUser.username, limit: 25, nextToken: null},
-    )
-    expect(getTweetsResp2.getTweets.tweets[0].liked).toBe(true)
-    // cannot like the same tweet twice
-    await expect(
-      axiosGraphQLQuery(process.env.API_URL, signedInUser.accessToken, like, {
-        tweetId: tweetResp.tweet.id,
-      }),
-    ).rejects.toMatchObject({
-      message: expect.stringContaining('DynamoDB transaction error'),
+    // [33] getLikes query
+    // create the query
+    const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String) {
+        getLikes(userId: $userId, limit: $limit, nextToken: $nextToken) {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+      }`
+    beforeAll(async () => {
+      // [29] like the tweet
+      await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        like,
+        {tweetId: tweetResp.tweet.id},
+      )
     })
-  })
 
-  it('[31] unlike mutation: should update the tweet to un-liked and check it', async () => {
-    const unlike = `mutation unlike($tweetId: ID!) {
-      unlike(tweetId: $tweetId)
-    }`
-    await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      unlike,
-      {tweetId: tweetResp.tweet.id},
-    )
-    const getTweetsResp3 = await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      getTweets,
-      {userId: signedInUser.username, limit: 25, nextToken: null},
-    )
-    expect(getTweetsResp3.getTweets.tweets[0].liked).toBe(false)
+    it('[29] like mutation, [33] getLikes query: should update the tweet to liked and check it', async () => {
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getTweets,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getTweetsResp.getTweets.tweets[0].liked).toBe(true)
+      // cannot like the same tweet twice
+      await expect(
+        axiosGraphQLQuery(process.env.API_URL, signedInUser.accessToken, like, {
+          tweetId: tweetResp.tweet.id,
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('DynamoDB transaction error'),
+      })
+
+      // [33] getLikes query
+      // make a graphQL request and check the response
+      const getLikesResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getLikes,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getLikesResp.getLikes.nextToken).toBeNull()
+      expect(getLikesResp.getLikes.tweets).toHaveLength(1)
+      expect(getLikesResp.getLikes.tweets[0]).toMatchObject({
+        ...tweetResp.tweet,
+        liked: true,
+        likes: 1,
+        profile: {
+          ...tweetResp.tweet.profile,
+          likesCounts: 1,
+        },
+      })
+    })
+
+    it('[31] unlike mutation, [33] getLikes query: should update the tweet to un-liked and check it', async () => {
+      const unlike = `mutation unlike($tweetId: ID!) {
+        unlike(tweetId: $tweetId)
+      }`
+      await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        unlike,
+        {tweetId: tweetResp.tweet.id},
+      )
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getTweets,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getTweetsResp.getTweets.tweets[0].liked).toBe(false)
+
+      // [33] getLikes and ensure we do not get anything
+      const getLikesResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getLikes,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getLikesResp.getLikes.nextToken).toBeNull()
+      expect(getLikesResp.getLikes.tweets).toHaveLength(0)
+    })
   })
 
   afterAll(async () => {

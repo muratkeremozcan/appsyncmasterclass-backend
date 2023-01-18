@@ -1,4 +1,4 @@
-// [23] unit test for TimelinePage.tweets.request.vtl
+// [23] unit test for UnhydratedTweetsPage.tweets.request.vtl
 const chance = require('chance').Chance()
 const {
   generateAppSyncContext,
@@ -6,14 +6,14 @@ const {
   renderTemplate,
 } = require('../../test-helpers/mapping-template')
 
-describe('TimelinePage.tweets.request template', () => {
+describe('UnhydratedTweetsPage.tweets.request template', () => {
   it('Should return empty array if source.tweets is empty', () => {
     // create an appsync context (for $context.source.tweets))
     const username = chance.guid()
     const context = generateAppSyncContext({username, source: {tweets: []}})
 
     // get the request template
-    const template = getTemplate('TimelinePage.tweets.request.vtl')
+    const template = getTemplate('UnhydratedTweetsPage.tweets.request.vtl')
 
     // use amplify-velocity-template to render the template, given the context
     const result = renderTemplate(template, context)
@@ -34,7 +34,7 @@ describe('TimelinePage.tweets.request template', () => {
     const context = generateAppSyncContext({username, source: {tweets}})
 
     // get the request template
-    const template = getTemplate('TimelinePage.tweets.request.vtl')
+    const template = getTemplate('UnhydratedTweetsPage.tweets.request.vtl')
 
     // use amplify-velocity-template to render the template, given the context
     const result = renderTemplate(template, context)

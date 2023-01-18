@@ -1811,27 +1811,27 @@ $util.validate($isValidLimit, "max limit is 25")
 }
 ```
 
-After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table. We can use pipeline functions for that. Pipeline functions tell AppSync to perform multiple steps for a resolver; get a page of tweets from the timelines table and hydrate them by doing a batch get against Tweets table. But for now we can play with the types at `schema.api.graphql`.  *(23.2)* Add a type `TimelinePage` and make `getMyTimeline` return a `TimelinePage` instead of `TweetsPage`.
+After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table. We can use pipeline functions for that. Pipeline functions tell AppSync to perform multiple steps for a resolver; get a page of tweets from the timelines table and hydrate them by doing a batch get against Tweets table. But for now we can play with the types at `schema.api.graphql`.  *(23.2)* Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a `UnhydratedTweetsPage` instead of `TweetsPage`.
 
 ```
 # schema.api.graphql
 
 type Query {
-  getMyTimeline(limit: Int!, nextToken: String): TimelinePage!
+  getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
 }
-type TimelinePage {
+type UnhydratedTweetsPage {
   tweets: [ITweet!]
   nextToken: String
 }
 ```
 
- *(23.3)* Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested resolver that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`.
+ *(23.3)* Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested resolver that uses the `tweets` field of the type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`.
 
 *(23.4)* For the nested resolver to work we need another set of `vtl` files under `mapping-templates/`.
 
 * We will have access to a list of tweets from Timelines table, which has userId and tweetId. 
 * We can use the tweetId to fetch the tweets from the Tweets table. 
-* We are going the take the source tweets array from the `TimelinePage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
+* We are going the take the source tweets array from the `UnhydratedTweetsPage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
 
 To add each tweet object into the array, use `$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to ignore the return value of the `$tweets.add` operation, otherwise the vtl interpreter will fail.
 
@@ -1845,7 +1845,7 @@ substitutions:
 ```
 
 ```
-// TimelinePage.tweets.request
+// UnhydratedTweetsPage.tweets.request
 
 #if ($context.source.tweets.size() == 0)
   #return([])
@@ -1874,7 +1874,7 @@ substitutions:
 ```
 
 ```
-// TimelinePage.tweets.response.vtl
+// UnhydratedTweetsPage.tweets.response.vtl
 
 $util.toJson($context.result.data.${TweetsTable})
 ```
@@ -1910,9 +1910,9 @@ query MyQuery {
 
 The unit test for `getMyTimeline` would be duplicating the `getTweets`, because the vtl templates are near identical.
 
-We can write a test for `TimelinePage.tweets.request.vtl` since there is plenty  going on there.
+We can write a test for `UnhydratedTweetsPage.tweets.request.vtl` since there is plenty  going on there.
 
-Check out `__tests__/unit/TimelinePage.tweets.request.test.js`.
+Check out `__tests__/unit/UnhydratedTweetsPage.tweets.request.test.js`.
 
 For the e2e test:
 
@@ -1927,7 +1927,7 @@ For the types, there are 3 key pieces of info:
 ```
 # schema.api.graphql
 type Query {
-   getMyTimeline(limit: Int!, nextToken: String): TimelinePage!
+   getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
 ```
 
 - At the AppSync web console we build an example
@@ -2396,13 +2396,103 @@ true
 
 `npm run deploy`.
 
-### 31 E2e test for unlike mutation
+### 31 E2e test for `unlike` mutation
 
 We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 32 Implement `getLikes` query
 
+`getLikes` is very similar to `getMyTimeline` (23); the schemas are the same with `userId` as the partition key, and `tweetId` as sort key. To get the tweets that a user likes, we just need to query the `LikesTable` against the user's `userId`. We have the same challenge we had in (23) with `getMyTimeline`; we don't have everything about the tweet itself and we need to hydrate it afterward.
 
+![32-beginning](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/vxd0ofgqvuco7voxc46h.png)
 
+We can use the same trick in (23); instead of returning a `TweetsPage`, we can return a `UnhydratedTweetsPage`. After we fetch the tweetId for the tweets on our timeline, we can hydrate them from the Tweets table. 
+
+```
+# schema.api.graphql
+
+type Query {
+  getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
+  # (32.0) change return type from TweetsPage to UnhydratedTweetsPage
+	getLikes(userId: ID!, limit: Int!, nextToken: String): UnhydratedTweetsPage!
+}
+
+type UnhydratedTweetsPage {
+  tweets: [ITweet!]
+  nextToken: String
+}
+```
+
+*(32.1)* Add the mapping template.
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # (32.1) add an entry to the mappingTemplates
+  - type: Query
+    field: getLikes
+    dataSource: likesTable
+  
+```
+
+*(32.2)* Add the `vtl` files for `Query.getLikes.request.vtl` and `Query.getLikes.response.vtl`. These will be similar to `getMyTimeline` in (23).
+
+```
+#set ($isValidLimit = $context.arguments.limit <= 25)
+$util.validate($isValidLimit, "max limit is 25")
+
+{
+  "version" : "2018-05-29",
+  "operation" : "Query",
+  "query" : {
+    "expression" : "userId = :userId",
+    "expressionValues" : {
+      ":userId" : $util.dynamodb.toDynamoDBJson($context.identity.username)
+    }
+  },
+  "nextToken" : $util.toJson($context.arguments.nextToken),
+  "limit" : $util.toJson($context.arguments.limit),
+  "scanIndexForward" : false,
+  "consistentRead" : false,
+  "select" : "ALL_ATTRIBUTES"
+}
+```
+
+```
+{
+  "tweets": $util.toJson($context.result.items),
+  "nextToken": $util.toJson($util.defaultIfNullOrBlank($context.result.nextToken, null))
+}
+```
+
+`npm run deploy`.
+
+### 33 E2e test for `getLikes` query
+
+`getLikes` query is similar to `getMyTimeline` query (24), the only distinction is that we need to reflect the arguments at the schema.
+
+```js
+const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
+      getMyTimeline(limit: $limit, nextToken: $nextToken) {
+        nextToken
+        tweets {
+          ... iTweetFields
+        }
+      }
+    }`
+
+const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String) {
+    getLikes(userId: $userId, limit: $limit, nextToken: $nextToken) {
+      nextToken
+      tweets {
+        ... iTweetFields
+      }
+    }
+  }`
+```
+
+Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 
 

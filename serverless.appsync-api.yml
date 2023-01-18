@@ -46,6 +46,12 @@ mappingTemplates:
     request: false
     response: false
 
+  # [32] implement getLike query
+  # (32.1) add an entry to the mappingTemplates
+  - type: Query
+    field: getLikes
+    dataSource: likesTable
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -87,10 +93,10 @@ mappingTemplates:
     field: liked
     dataSource: likesTable
 
-  # (23.3) Now we have a type `TimelinePage`, and a `tweets` field we can attach a nested resolver to.
+  # (23.3) Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to.
   # We can have that resolver hydrate the data from a different table.
-  # Create a nested field that uses the `tweets` field of the type `TimelinePage`, to be used to get data from `tweetsTable`
-  - type: TimelinePage
+  # Create a nested field that uses the `tweets` field of the type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`
+  - type: UnhydratedTweetsPage
     field: tweets
     dataSource: tweetsTable
 
@@ -168,7 +174,7 @@ dataSources:
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.
 # * We can use the tweetId to fetch the tweets from the Tweets table.
-# * We are going the take the source tweets array from the `TimelinePage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`,
+# * We are going the take the source tweets array from the `UnhydratedTweetsPage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`,
 ##  extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
 substitutions:
   # (23.5) We need the value of the TweetsTable we are going to BatchGetItem from.

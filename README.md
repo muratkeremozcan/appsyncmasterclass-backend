@@ -1559,6 +1559,12 @@ the user information from `UsersTable`, so that we can populate the user profile
 in the Tweet type of our schema. We do that by using nested resolvers. Create a
 nested resolver in mapping Templates.
 
+> When do we need nested resolvers?
+>
+> Oftentimes when we need to return another type, e.g. a Parent type might have a children property of type [Person]. A Customer type might have an orders array of type [Order] or a Person type might have a spouse property, also of type Person. 
+>
+> In all these examples, it's a relationship, which we can avoid eagerly loading the related item unless the caller asks for them. So if it's a nested resolver then GraphQL would know when to actually execute the nested resolver - ie. when the caller asks for the related entity in its query.
+
 ```yml
 # serverless.appsync-api.yml
 
@@ -2494,9 +2500,13 @@ const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String)
 
 Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 34 `Profile.tweets` nested resolver
 
-
-
+>When do we need nested resolvers?
+>
+>Oftentimes when we need to return another type, e.g. a Parent type might have a children property of type [Person]. A Customer type might have an orders array of type [Order] or a Person type might have a spouse property, also of type Person. 
+>
+>In all these examples, it's a relationship, which we can avoid eagerly loading the related item unless the caller asks for them. So if it's a nested resolver then GraphQL would know when to actually execute the nested resolver - ie. when the caller asks for the related entity in its query.
 
 
 

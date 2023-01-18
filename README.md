@@ -2276,23 +2276,129 @@ Check out `test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`, `__tes
 
 ### 29 E2e Tests for `like` mutation
 
-We want to update a tweet to `liked` and verify that.
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 30 Implement `unlike` mutation
 
+Unlike implementation is the reverse of like.
 
+```
+type Mutation {
+  like(tweetId: ID!): Boolean!
+  unlike(tweetId: ID!): Boolean!
+```
 
+*(30.0)* Create a mapping template for `unlike`, dataSource for `unlikeMutation`. When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation AND we already have the dataSource for `likesTable` from 26.1.  When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions, and we already have the `LikesTable` in the substitutions from (26.1).
 
+```yml
+# serverless.appsync-api.yml
 
+mappingTemplates:
+  - type: Mutation
+    field: like
+    dataSource: likeMutation
+  # (30.1) setup an AppSync resolver to update 3 tables when unlike happens: 
+	# UsersTable, TweetsTable, LikesTable.
+  - type: Mutation
+    field: unlike
+    dataSource: unlikeMutation
 
+dataSources:
+  # (30.1) we need the like mutation to delete an entry in the LikesTable,
+  # then update UsersTable and TweetsTable
+  # When we need to do multiple transactions in an AppSync resolver, 
+  # we need to create a dataSource for the mutation
+  # We already have it from (26.1), so we just need to add the deleteItem permission
+  - type: AMAZON_DYNAMODB
+    name: unlikeMutation
+    config:
+      tableName: !Ref LikesTable
+      iamRoleStatements: tables
+        - Effect: Allow
+          Action: dynamodb:DeleteItem
+          Resource: !GetAtt LikesTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: 
+            - !GetAtt UsersTable.Arn
+            - !GetAtt TweetsTable.Arn
+```
 
+*(26.2)* Create the `vtl` files.
 
+`Mutation.unlike.request.vtl`
 
+```
+{
+  "version": "2018-05-29",
+  "operation": "TransactWriteItems",
+  "transactItems": [
+    {
+      "table": "${LikesTable}",
+      "operation": "DeleteItem",
+      "key": {
+        "userId": $util.dynamodb.toDynamoDBJson($context.identity.username),
+        "tweetId": $util.dynamodb.toDynamoDBJson($context.arguments.tweetId)
+      },
+      "condition": {
+        "expression": "attribute_exists(tweetId)"
+      }
+    },
+    {
+      "table": "${TweetsTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.arguments.tweetId)
+      },
+      "update": {
+        "expression": "ADD likes :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(-1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    },
+    {
+      "table": "${UsersTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.identity.username)
+      },
+      "update": {
+        "expression": "ADD likesCounts :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(-1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    }
+  ]
+}
+```
 
+`Mutation.unlike.response.vtl`
 
+```
+#if (!$util.isNull($context.result.cancellationReasons))
+  $util.error('DynamoDB transaction error')
+#end
 
+#if (!$util.isNull($context.error))
+  $util.error('Failed to execute DynamoDB transaction')
+#end
 
+true
+```
 
+`npm run deploy`.
 
+### 31 E2e test for unlike mutation
+
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 
 

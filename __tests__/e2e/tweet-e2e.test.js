@@ -31,16 +31,31 @@ registerFragment('iProfileFields', iProfileFragment)
 registerFragment('tweetFields', tweetFragment)
 registerFragment('iTweetFields', iTweetFragment)
 
-describe('Given an authenticated user', () => {
-  let signedInUser, DynamoDB, tweetResp, text, tweet
+describe('e2e test for tweet', () => {
+  let signedInUser, DynamoDB, tweetResp
+
+  const text = chance.string({length: 16})
+
+  // [18] E2e test for getTweets query
+  // create the query
+  const getTweets = `query getTweets($userId: ID!, $limit: Int!, $nextToken: String) {
+    getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
+      nextToken
+      tweets {
+        ... iTweetFields
+        }
+      }
+    }`
+
   beforeAll(async () => {
     signedInUser = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
+
     // [19] E2e test for tweet mutation
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
-    tweet = `mutation tweet($text: String!) {
+    const tweet = `mutation tweet($text: String!) {
       tweet(text: $text) {
         id
         profile {
@@ -55,8 +70,6 @@ describe('Given an authenticated user', () => {
       }
     }`
 
-    text = chance.string({length: 16})
-
     // Make a graphQL request with the tweet mutation and its text argument
     tweetResp = await axiosGraphQLQuery(
       process.env.API_URL,
@@ -66,7 +79,7 @@ describe('Given an authenticated user', () => {
     )
   })
 
-  it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
+  it('[19] mutation; should check the content of the response', async () => {
     // Check the content of the response for the  mutation (no need to repeat the integration test DDB verifications,
     // so long as we got a response, DDB transactions already happened).
     expect(tweetResp.tweet).toMatchObject({
@@ -76,18 +89,9 @@ describe('Given an authenticated user', () => {
       retweets: 0,
       liked: false,
     })
+  })
 
-    // [18] E2e test for getTweets query
-    // create the query
-    const getTweets = `query getTweets($userId: ID!, $limit: Int!, $nextToken: String) {
-      getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
-        nextToken
-        tweets {
-          ... iTweetFields
-        }
-      }
-    }`
-
+  it('[18] getTweets query', async () => {
     // make a graphQL request and check the response
     const getTweetsResp = await axiosGraphQLQuery(
       process.env.API_URL,
@@ -109,8 +113,9 @@ describe('Given an authenticated user', () => {
     await expect(get26Tweets).rejects.toMatchObject({
       message: expect.stringContaining('max limit is 25'),
     })
+  })
 
-    // [24] E2e test for getTimeline query
+  it('[24] getTimeline query', async () => {
     // create the query
     const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
       getMyTimeline(limit: $limit, nextToken: $nextToken) {
@@ -144,8 +149,9 @@ describe('Given an authenticated user', () => {
     await expect(get26MyTimeline).rejects.toMatchObject({
       message: expect.stringContaining('max limit is 25'),
     })
+  })
 
-    // [29] like mutation: should update the tweet to liked and check it
+  it('[29] like mutation: should update the tweet to liked and check it', async () => {
     const like = `mutation like($tweetId: ID!) {
       like(tweetId: $tweetId)
     }`
@@ -170,6 +176,25 @@ describe('Given an authenticated user', () => {
     ).rejects.toMatchObject({
       message: expect.stringContaining('DynamoDB transaction error'),
     })
+  })
+
+  it('[31] unlike mutation: should update the tweet to un-liked and check it', async () => {
+    const unlike = `mutation unlike($tweetId: ID!) {
+      unlike(tweetId: $tweetId)
+    }`
+    await axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      unlike,
+      {tweetId: tweetResp.tweet.id},
+    )
+    const getTweetsResp3 = await axiosGraphQLQuery(
+      process.env.API_URL,
+      signedInUser.accessToken,
+      getTweets,
+      {userId: signedInUser.username, limit: 25, nextToken: null},
+    )
+    expect(getTweetsResp3.getTweets.tweets[0].liked).toBe(false)
   })
 
   afterAll(async () => {

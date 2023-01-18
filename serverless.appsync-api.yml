@@ -68,6 +68,12 @@ mappingTemplates:
     field: like
     dataSource: likeMutation
 
+  # [30] Implement unlike mutation
+  # (30.1) setup an AppSync resolver to update 3 tables when unlike happens: UsersTable, TweetsTable, LikesTable.
+  - type: Mutation
+    field: unlike
+    dataSource: unlikeMutation
+
   ## NESTED RESOLVERS
   # (18.2) Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`,
   # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
@@ -130,6 +136,22 @@ dataSources:
           Resource:
             - !GetAtt UsersTable.Arn
             - !GetAtt TweetsTable.Arn
+  # (30.1) we need the like mutation to delete an entry in the LikesTable, then update UsersTable and TweetsTable
+  # When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation
+  # We already have it from (26.1), so we just need to add the deleteItem permission
+  - type: AMAZON_DYNAMODB
+    name: unlikeMutation
+    config:
+      tableName: !Ref LikesTable
+      iamRoleStatements: # this is like (17.2.1) using lambda resolver to transact with 3 tables
+        - Effect: Allow
+          Action: dynamodb:DeleteItem
+          Resource: !GetAtt LikesTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource:
+            - !GetAtt UsersTable.Arn
+            - !GetAtt TweetsTable.Arn
 
   ## LAMBDA data sources
 
@@ -152,6 +174,6 @@ substitutions:
   # (23.5) We need the value of the TweetsTable we are going to BatchGetItem from.
   # To get this value we add a block to the `serverless.appsync-api.yml`
   TweetsTable: !Ref TweetsTable
-  # (26.1) when we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions
+  # (26.1) when we want to refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions
   LikesTable: !Ref LikesTable
   UsersTable: !Ref UsersTable

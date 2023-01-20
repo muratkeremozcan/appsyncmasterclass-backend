@@ -14,7 +14,7 @@ fragment myProfileFields on MyProfile {
   followersCount
   followingCount
   tweetsCount
-  likesCounts
+  likesCounts  
 }
 `
 
@@ -71,6 +71,7 @@ fragment iTweetFields on ITweet {
   }
 }
 `
+
 module.exports = {
   myProfileFragment,
   otherProfileFragment,

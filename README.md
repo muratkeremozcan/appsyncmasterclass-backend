@@ -1447,15 +1447,9 @@ mappingTemplates:
 _(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and
 response.
 
-In _(15.0)_ we created a table for the tweets, and we identified a
-`GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize
-the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
-We can get userId (the first argument of the query) by
-` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
-argument, `nextToken`, we can similarly use
-`$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous
-to ascending order (latest tweet last), we want latest tweet first so this is
-set to `false`. We limit the number of tweets returned to be less than 25.
+In _(15.0)_ we created a table for the tweets, and we identified a `GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
+We can get userId (the first argument of the query) by ` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
+argument, `nextToken`, we can similarly use `$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous to ascending order (latest tweet last), we want latest tweet first so this is set to `false`. We limit the number of tweets returned to be less than 25.
 
 ```
 // Query.getTweets.request.vtl
@@ -1558,6 +1552,12 @@ _(18.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
 the user information from `UsersTable`, so that we can populate the user profile
 in the Tweet type of our schema. We do that by using nested resolvers. Create a
 nested resolver in mapping Templates.
+
+> When do we need nested resolvers?
+>
+> Oftentimes when we need to return another type, e.g. a Parent type might have a children property of type [Person]. A Customer type might have an orders array of type [Order] or a Person type might have a spouse property, also of type Person. 
+>
+> In all these examples, it's a relationship, which we can avoid eagerly loading the related item unless the caller asks for them. So if it's a nested resolver then GraphQL would know when to actually execute the nested resolver - ie. when the caller asks for the related entity in its query.
 
 ```yml
 # serverless.appsync-api.yml
@@ -2494,15 +2494,160 @@ const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String)
 
 Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 34 Implement `Profile.tweets` nested resolver
 
+>When do we need nested resolvers?
+>
+>Think of its as a utility to avoid over-fetching. Oftentimes when we need to return another type, e.g. a Parent type might have a children property/field of type [Child]. A Customer type might have an orders array of type [Order] or a Person type might have a spouse property, also of type [Person]. 
+>
+>In all these examples, it's a relationship. We can avoid eagerly-loading the related item (ex: children, orders, spouse) unless the caller asks for them. So if it's a nested resolver then GraphQL would know when to actually execute the nested resolver - ie. when the caller specifically asks for it.
 
+In this case we only want to query the `tweets` field of a `IProfile` (`MyProfile`, `OtherProfile`).
 
+*(34.0)*  Create a nested resolver for MyProfile.tweet.
 
+```yml
+mappingTemplates:
+  # Queries
+  # Mutations
+  # Nested resolvers
 
+  # (34.0) Create a nested resolver for MyProfile.tweets
+  - type: MyProfile
+    field: tweets
+    dataSource: tweetsTable
+```
 
+*(34.1)* Add the `vtl` files. These are similar to `getTweets` (20).
 
+`MyProfile.tweets.request.vtl`
 
+```
+{
+  "version" : "2018-05-29",
+  "operation" : "Query",
+  "query" : {
+    "expression" : "creator = :userId",
+    "expressionValues" : {
+      ":userId" : $util.dynamodb.toDynamoDBJson($context.source.id)
+    }
+  },
+  "index" : "byCreator",
+  "limit" : $util.toJson(10),
+  "scanIndexForward" : false,
+  "consistentRead" : false,
+  "select" : "ALL_ATTRIBUTES"
+}
+```
 
+`MyProfile.tweets.response.vtl`
+
+```
+{
+  "tweets": $util.toJson($context.result.items),
+  "nextToken": $util.toJson($util.defaultIfNullOrBlank($context.result.nextToken, null))
+}
+```
+
+`npm run deploy`.
+
+### E2e testing for `Profile.tweets`
+
+For testing we have to be careful about an infinite loop situation when querying or mutation `myProfileFields`. `MyProfile.tweet` returns a `TweetsPage`, which in turn returns a `tweets` field, which in turn returns an `ITweet`, which in turn returns another `IProfile`.
+
+```
+// schema.api.graphql
+type MyProfile implements IProfile { (0)
+  id: ID!
+  name: String!
+  screenName: String!
+  imageUrl: AWSURL
+  backgroundImageUrl: AWSURL
+  bio: String
+  location: String
+  website: AWSURL
+  birthdate: AWSDate
+  createdAt: AWSDateTime!
+  tweets: TweetsPage! (1)
+  followersCount: Int!
+  followingCount: Int!
+  tweetsCount: Int!
+  likesCounts: Int!
+}
+
+type TweetsPage {
+  tweets: [ITweet!] (2)
+  nextToken: String
+}
+
+interface ITweet {
+  id: ID!
+  profile: IProfile! (3)
+  createdAt: AWSDateTime!
+}
+```
+
+ Make sure to not include `tweets` in `myProfileFragment ` being used in e2e tests
+
+```js
+// test-helpers/graphql-fragments.js
+const myProfileFragment = `
+fragment myProfileFields on MyProfile {
+  id
+  name
+  screenName
+  imageUrl
+  backgroundImageUrl
+  bio
+  location
+  website
+  birthdate
+  createdAt
+  followersCount
+  followingCount
+  tweetsCount
+  likesCounts
+  // do not!
+  tweets {
+    nextToken
+    tweets {
+      ... iTweetFields
+    }
+  }
+}
+`
+```
+
+Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This way when we make the calls, we're going to get the first page of tweets back. But, when we fetch the profiles for these tweets, it will not go into an infinite loop
+
+```js
+// __tests__/e2e/user-profile.test.js
+const getMyProfile = `query getMyProfile {
+			getMyProfile {
+				... myProfileFields
+				// add it here
+        tweets {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+			}
+		}`
+
+const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
+      editMyProfile(newProfile: $input) {
+        ... myProfileFields
+        // add it here
+        tweets {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+      }
+    }`
+```
 
 
 

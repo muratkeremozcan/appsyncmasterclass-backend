@@ -105,6 +105,17 @@ mappingTemplates:
     field: tweets
     dataSource: tweetsTable
 
+  # [34] Implement Profile.tweets nested resolver
+  # (34.0) Create a nested resolver for MyProfile.tweets
+  - type: MyProfile
+    field: tweets
+    dataSource: tweetsTable
+  - type: OtherProfile
+    field: tweets
+    dataSource: tweetsTable
+    request: MyProfile.tweets.request.vtl
+    response: MyProfile.tweets.response.vtl
+
 dataSources:
   - type: NONE
     name: none

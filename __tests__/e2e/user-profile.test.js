@@ -17,8 +17,18 @@ const {
   axiosGraphQLQuery,
   registerFragment,
 } = require('../../test-helpers/graphql')
-const {myProfileFragment} = require('../../test-helpers/graphql-fragments')
+const {
+  myProfileFragment,
+  otherProfileFragment,
+  iProfileFragment,
+  tweetFragment,
+  iTweetFragment,
+} = require('../../test-helpers/graphql-fragments')
 registerFragment('myProfileFields', myProfileFragment)
+registerFragment('otherProfileFields', otherProfileFragment)
+registerFragment('iProfileFields', iProfileFragment)
+registerFragment('tweetFields', tweetFragment)
+registerFragment('iTweetFields', iTweetFragment)
 
 describe('Given an authenticated user', () => {
   let signedInUser
@@ -30,10 +40,17 @@ describe('Given an authenticated user', () => {
     // as the signed in user, make a request
     // we can copy the query from the AppSync console
     const getMyProfile = `query getMyProfile {
-			getMyProfile {
-				... myProfileFields
-			}
-		}`
+      getMyProfile {
+        ... myProfileFields
+  
+        tweets {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+      }
+    }`
     const data = await axiosGraphQLQuery(
       process.env.API_URL,
       signedInUser.accessToken,
@@ -73,6 +90,13 @@ describe('Given an authenticated user', () => {
     const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
       editMyProfile(newProfile: $input) {
         ... myProfileFields
+  
+        tweets {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
       }
     }`
 

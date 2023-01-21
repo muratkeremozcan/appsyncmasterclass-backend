@@ -65,7 +65,7 @@ mappingTemplates:
   - type: Mutation
     field: tweet
     dataSource: tweetFunction
-    # same as (15.0)
+    # same as (15.0) We want AppSync to invoke the lambda function directly without going through a custom mapping template.
     request: false
     response: false
 
@@ -79,6 +79,13 @@ mappingTemplates:
   - type: Mutation
     field: unlike
     dataSource: unlikeMutation
+
+  # (35.2) add a mapping template for the retweet mutation. Similar to (17.2.0)
+  - type: Mutation
+    field: retweet
+    dataSource: retweetFunction
+    request: false
+    response: false
 
   ## NESTED RESOLVERS
   # When do we need nested resolvers?
@@ -115,6 +122,18 @@ mappingTemplates:
     dataSource: tweetsTable
     request: MyProfile.tweets.request.vtl
     response: MyProfile.tweets.response.vtl
+
+  # [36] Implement Retweet nested resolver
+  # (36.0) Create a nested resolver to get the profile on Retweet
+  - type: Retweet
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+  # (36.1) Create a nested resolver to fetch the retweeted tweet on Retweet
+  - type: Retweet
+    field: retweetOf
+    dataSource: tweetsTable
 
 dataSources:
   - type: NONE
@@ -186,6 +205,11 @@ dataSources:
     name: tweetFunction # (17.2.0) define a data source for the mutation
     config:
       functionName: tweet
+
+  - type: AWS_LAMBDA
+    name: retweetFunction # (35.3) Define a data source for the mutation
+    config:
+      functionName: retweet
 
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.

@@ -425,12 +425,19 @@ dataSources:
       tableName: !Ref UsersTable
 ```
 
+> What is VTL, and why do we use it?
+>
+> VTL is the template language that you can use with all AppSync integrations, including Lambda. 
+>
+> We need something to tell AppSync how to make a request to the thing it's integrating with, be it a DynamoDB table, a Lambda function, an HTTP endpoint or something else. We need to tell AppSync how to transform the response because it's probably not in the right shape that the resolver needs to return.
+>
+> * With Lambda, AppSync provides a default request & response template so you don't have to write one.
+> * For pipeline functions, you can now also use JavaScript to create the request and response templates instead of VTL, see https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers. But the JavaScript support is only limited to pipeline functions right now, and in most cases, you probably don't need a pipeline function if your resolver just needs to do one thing.
+
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
 `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize
 how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs
-to configure the `vtl` files
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
 
 - Take the identity of the user (available in `$context.identity`), take the
   username and turn it into a DDB structure.
@@ -1120,11 +1127,21 @@ transaction. However, what we cannot do in a DDB resolver is we cannot generate
 the `ulid`s for the tweets, and for that we need to use a lambda resolver
 instead.
 
-_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to
-`TweetsTable`, `TimelinesTable` and update `UsersTable`.
+_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
 
-_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers
-when we are transacting with DDB.
+_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers when we are transacting with DDB. We want AppSync to invoke the lambda function directly without going through a custom mapping template.
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  
+	- type: Mutation
+    field: retweet
+    dataSource: retweetFunction
+    request: false
+    response: false
+```
 
 ```yml
 # ./serverless.appsync-api.yml
@@ -1548,7 +1565,7 @@ interface IProfile {
 
 ![tweet-object](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2q83kl4cwejudeame5xr.png)
 
-_(18.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
+_(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
 the user information from `UsersTable`, so that we can populate the user profile
 in the Tweet type of our schema. We do that by using nested resolvers. Create a
 nested resolver in mapping Templates.
@@ -1575,7 +1592,7 @@ mappingTemplates:
     dataSource: usersTable
 ```
 
-_(18.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`,
+_(20.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`,
 `Tweet.profile.response.vtl` under `./mapping-templates/`
 
 Since we have `creator` field in the `Tweet`, we can reference the nesting
@@ -2618,7 +2635,7 @@ fragment myProfileFields on MyProfile {
 `
 ```
 
-Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This way when we make the calls, we're going to get the first page of tweets back. But, when we fetch the profiles for these tweets, it will not go into an infinite loop
+Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This way when we make the calls, we're going to get the first page of tweets back. But, when we fetch the profiles for these tweets, it will not go into an infinite loop.
 
 ```js
 // __tests__/e2e/user-profile.test.js
@@ -2649,9 +2666,287 @@ const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
     }`
 ```
 
+## 35 Implement `retweet` mutation
 
+*(35.0)* create a new DDB table to track which user has retweeted which tweet. Similar to (26.0)
 
+*(35.1)* We need to add an entry to the `TweetsTable` for the retweet, which means we need a tweetId, which is a `ulid` and requires us to use a lambda resolver. Similar to (17.2). `retweet` function will need the additional `iamRoleStatemements`.
 
+```yml
+# serverless.yml
+
+functions:
+  ## 
+  retweet:
+    handler: functions/retweet.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+      RETWEETS_TABLE: !Ref RetweetsTable
+      # Get from Tweets, Update Tweets and Users, 
+      # write to Tweets, Timelines, Retweets,
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource: 
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+          - !GetAtt RetweetsTable.Arn
+
+resources:
+  Resources:
+    ## ...
+    RetweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: tweetId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: retweets-table
+```
+
+*(35.2)* add a mapping template for the retweet mutation. Similar to (17.2.0), we want AppSync to invoke the lambda function directly without going through a custom mapping template.
+
+*(35.3)* Define a data source for the mutation
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  
+	- type: Mutation
+    field: retweet
+    dataSource: retweetFunction
+    request: false
+    response: false
+    
+datasources:
+  ## DDB data sources
+  ## Lambda data sources
+  
+  - type: AWS_LAMBDA
+    name: retweetFunction
+    config:
+      functionName: retweet
+```
+
+*(35.4)* Create the lambda function for retweet. Similar to (17.2.2).
+
+* Get from Tweets,
+* Write to Tweets, Timelines, Retweets
+* Update Tweets and Users
+
+```js
+// (35.4) add the lambda function that will
+// Get from Tweets, write to Tweets, Timelines, Retweets, Update Tweets and Users
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+const ulid = require('ulid')
+const {TweetTypes} = require('../lib/constants')
+
+const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE, RETWEETS_TABLE} = process.env
+
+const handler = async event => {
+  // we know from graphQL schema the argument retweet - retweet(tweetId: ID!): Boolean!
+  // we can extract that from event.arguments
+  const {tweetId} = event.arguments
+  // we can get the username from event.identity.username
+  const {username} = event.identity
+  // generate a new ulid & timestamp for the tweet
+  const id = ulid.ulid()
+  const timestamp = new Date().toJSON()
+
+  // get from Tweets
+  const getTweetResp = await DocumentClient.get({
+    TableName: TWEETS_TABLE,
+    Key: {
+      id: tweetId,
+    },
+  }).promise()
+
+  const tweet = getTweetResp.Item
+
+  if (!tweet) {
+    throw new Error('Tweet is not found')
+  }
+
+  /* from the schema:
+  type Retweet implements ITweet {
+    id: ID!
+    profile: IProfile!
+    createdAt: AWSDateTime!
+    retweetOf: ITweet!
+  }
+  */
+  const newTweet = {
+    // __typename helps us identify between the 3 types that implement ITweet (Tweet, Retweet, Reply)
+    __typename: TweetTypes.RETWEET,
+    id,
+    creator: username,
+    createdAt: timestamp,
+    retweetOf: tweetId,
+  }
+
+  // write to Tweets, Retweets (only write to Timelines if it's not the same user)
+  // update Tweets, Users
+
+  const transactItems = [
+    {
+      Put: {
+        TableName: TWEETS_TABLE,
+        Item: newTweet,
+      },
+    },
+    {
+      Put: {
+        TableName: RETWEETS_TABLE,
+        Item: {
+          userId: username,
+          tweetId,
+          createdAt: timestamp,
+        },
+        ConditionExpression: 'attribute_not_exists(tweetId)',
+      },
+    },
+    {
+      Update: {
+        TableName: TWEETS_TABLE,
+        Key: {
+          id: tweetId,
+        },
+        UpdateExpression: 'ADD retweets :one',
+        ExpressionAttributeValues: {
+          ':one': 1,
+        },
+        ConditionExpression: 'attribute_exists(id)',
+      },
+    },
+    {
+      Update: {
+        TableName: USERS_TABLE,
+        Key: {
+          id: username,
+        },
+        UpdateExpression: 'ADD tweetsCount :one',
+        ExpressionAttributeValues: {
+          ':one': 1,
+        },
+        ConditionExpression: 'attribute_exists(id)',
+      },
+    },
+  ]
+
+  console.log(`creator: [${tweet.creator}]; username: [${username}]`)
+  // if it's not the same user, write to Timelines
+  if (tweet.creator !== username) {
+    transactItems.push({
+      Put: {
+        TableName: TIMELINES_TABLE,
+        Item: {
+          userId: tweet.creator,
+          tweetId: id,
+          timestamp,
+        },
+      },
+    })
+  }
+
+  await DocumentClient.transactWrite({
+    TransactItems: transactItems,
+  }).promise()
+
+  return true
+}
+
+module.exports = {
+  handler,
+}
+```
+
+`npm run deploy` and `npm run export:env`.
+
+## 36 Implement Retweet nested resolvers
+
+*(36.0)* Create a nested resolver to get the profile on Retweet. We need the profile field, and we already have the vtl files for that in (20.3) for `getTweets`.
+
+*(36.1)* Create a nested resolver to fetch the retweeted tweet on Retweet
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # Queries
+  # Mutations
+  
+  # Nested resolver
+  - type: Retweet
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+  
+  - type: Retweet
+    field: retweetOf
+    dataSource: tweetsTable
+```
+
+*(36.2)* Create the `vtl` files for `Retweet.retweetOf.request` and `response`.
+
+```
+// Retweet.retweetOf.request.vtl
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.source.retweetOf)
+  }
+}
+```
+
+```
+// Retweet.retweetOf.request.vtl
+$util.toJson($context.result)
+```
+
+`npm run deploy`
+
+### Integration test for retweet mutation
+
+The pattern is as follows:
+
+- Create an event: an object which includes `identity.username` and
+  `arguments.tweetId`.
+- Feed it to the handler (the handler causes writes and updates to 4 DDB tables, hence
+  the "integration")
+- Check that the result matches the expectation (by reading the 4 tables from
+  DDB, hence "integration")
+
+We have to have a real user for this integration test, but it is still an integration test given that we are feeding an event object to the handler.
+
+Check out `__tests__/integration/retweet-self-integration.test.js`, `__tests__/integration/retweet-other-integration.test.js`.
+
+### E2e test for retweet mutation
 
 
 

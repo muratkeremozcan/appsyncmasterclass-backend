@@ -87,6 +87,33 @@ functions:
           - !GetAtt TweetsTable.Arn
           - !GetAtt TimelinesTable.Arn
 
+  # (35.1) add a new function for retweet
+  # We need to add an entry to the `TweetsTable` for the retweet, which means we need a tweetId, which is a `ulid`
+  # ulid requires us to use a lambda resolver. Similar to (17.2).
+  retweet:
+    handler: functions/retweet.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref 36
+      RETWEETS_TABLE: !Ref RetweetsTable
+    iamRoleStatements:
+      # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines, Retweets,
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+          - !GetAtt RetweetsTable.Arn
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation
@@ -260,6 +287,28 @@ resources:
           # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
             Value: likes-table
+
+    # [35] Implement retweet mutation
+    # (35.0) create a new DDB table to track which user has retweeted which tweet
+    RetweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: tweetId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: retweets-table
 
   Outputs:
     # (3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,

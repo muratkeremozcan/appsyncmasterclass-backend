@@ -4,7 +4,7 @@
 // - Check that the result matches the expectation (by reading from DDB, hence "integration")
 require('dotenv').config()
 const handler = require('../../functions/confirm-user-signup').handler
-const {generateUser} = require('../../test-helpers/helpers')
+const {generateUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
 

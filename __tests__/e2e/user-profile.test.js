@@ -9,7 +9,7 @@
 // - Make a graphQL request with the query and variable
 // - Confirm that the returned profile has been edited
 require('dotenv').config()
-const {signInUser} = require('../../test-helpers/helpers')
+const {signInUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
 // (28.2) import the fragments we will use in the test and register them

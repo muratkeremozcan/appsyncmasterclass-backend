@@ -11,7 +11,7 @@
 // - Test error case of 26 limit.
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const {signInUser} = require('../../test-helpers/helpers')
+const {signInUser} = require('../../test-helpers/cognito')
 const chance = require('chance').Chance()
 // (28.2) import the fragments we will use in the test and register them
 const {
@@ -47,6 +47,16 @@ describe('e2e test for tweet', () => {
       }
     }`
 
+  // [24] E2e test for getMyTimeline
+  // create the query
+  const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
+    getMyTimeline(limit: $limit, nextToken: $nextToken) {
+      nextToken
+      tweets {
+        ... iTweetFields
+      }
+    }
+  }`
   beforeAll(async () => {
     signedInUser = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -116,16 +126,6 @@ describe('e2e test for tweet', () => {
   })
 
   it('[24] getTimeline query', async () => {
-    // create the query
-    const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
-      getMyTimeline(limit: $limit, nextToken: $nextToken) {
-        nextToken
-        tweets {
-          ... iTweetFields
-        }
-      }
-    }`
-
     // make a graphQL request and check the response
     const getMyTimelineResp = await axiosGraphQLQuery(
       process.env.API_URL,
@@ -240,6 +240,50 @@ describe('e2e test for tweet', () => {
       )
       expect(getLikesResp.getLikes.nextToken).toBeNull()
       expect(getLikesResp.getLikes.tweets).toHaveLength(0)
+    })
+  })
+
+  describe('[38] retweet,', () => {
+    beforeAll(async () => {
+      const retweet = `mutation retweet($tweetId: ID!) {
+        retweet(tweetId: $tweetId)
+      }`
+
+      await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        retweet,
+        {tweetId: tweetResp.tweet.id},
+      )
+    })
+
+    it('Should see the retweet when calling getTweets', async () => {
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getTweets,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+
+      console.log(getTweetsResp.getTweets.tweets)
+      expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
+      expect(getTweetsResp.getTweets.tweets[1]).toMatchObject({
+        profile: {
+          id: signedInUser.username,
+          tweetsCount: 2,
+        },
+        retweets: 1,
+      })
+    })
+
+    it('should not see the retweet when calling getMyTimeline', async () => {
+      const getMyTimelineResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getMyTimeline,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
     })
   })
 

@@ -11,7 +11,7 @@ describe('When a user signs up', () => {
     // this time we are creating and signing up a user from scratch
     // it will cause a lambda handler trigger
     const {name, username, cognito, userPoolId} = await signUpUser()
-    name //?
+
     // instead of creating a mock event and feeding it to the handler
     // we did a real sign up, which caused a write to DynamoDB
     // checking DDB is the same as the integration test
@@ -26,33 +26,31 @@ describe('When a user signs up', () => {
         id: username,
       },
     }).promise()
-    resp //?
-    resp.Item //?
     const ddbUser = resp.Item //?
 
-    // // the assertion is exactly the same as before
-    // expect(ddbUser).toMatchObject({
-    //   id: username,
-    //   name,
-    //   createdAt: expect.stringMatching(
-    //     /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d(?:\.\d+)?Z?/g,
-    //   ),
-    //   followersCount: 0,
-    //   followingCount: 0,
-    //   tweetsCount: 0,
-    //   likesCounts: 0,
-    // })
-    // const [firstName, lastName] = name.split(' ')
-    // expect(ddbUser.screenName).toContain(firstName)
-    // expect(ddbUser.screenName).toContain(lastName)
+    // the assertion is exactly the same as before
+    expect(ddbUser).toMatchObject({
+      id: username,
+      name,
+      createdAt: expect.stringMatching(
+        /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d(?:\.\d+)?Z?/g,
+      ),
+      followersCount: 0,
+      followingCount: 0,
+      tweetsCount: 0,
+      likesCounts: 0,
+    })
+    const [firstName, lastName] = name.split(' ')
+    expect(ddbUser.screenName).toContain(firstName)
+    expect(ddbUser.screenName).toContain(lastName)
 
-    // // clean up the DDB user
-    // await DynamoDB.delete({
-    //   TableName: process.env.USERS_TABLE,
-    //   Key: {
-    //     id: username,
-    //   },
-    // }).promise()
+    // clean up the DDB user
+    await DynamoDB.delete({
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        id: username,
+      },
+    }).promise()
 
     // with e2e, we also have to clean up the Cognito user
     await cognito

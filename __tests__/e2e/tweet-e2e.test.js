@@ -67,7 +67,8 @@ describe('e2e test for tweet', () => {
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
-    const tweet = `mutation tweet($text: String!) {
+    // TODO: (4) move tweet L71 to outer scop
+    const tweet = `mutation tweet($text: String!) { 
       tweet(text: $text) {
         id
         profile {
@@ -269,8 +270,8 @@ describe('e2e test for tweet', () => {
 
       expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
 
-      console.log(getTweetsResp.getTweets.tweets[0]) // TODO: check this
-      // TODO: check this
+      console.log(getTweetsResp.getTweets.tweets[0]) // TODO: (1) check things as they are (the console log should give something)
+      // TODO: (2) verify the console.log with an expect
       // expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
       //   profile: {
       //     id: signedInUser.username,
@@ -292,7 +293,7 @@ describe('e2e test for tweet', () => {
           id: signedInUser.username,
           tweetsCount: 2,
         },
-        retweeted: true, // TODO: check this
+        retweeted: true, // TODO: (1) check this
         retweets: 1,
       })
     })

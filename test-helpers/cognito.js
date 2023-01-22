@@ -33,30 +33,72 @@ const signUpUser = async () => {
   const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
   const cognito = new AWS.CognitoIdentityServiceProvider()
 
+  // Instead of SignUp + AdminConfirmSignup, use AdminCreateUser, which has the MessageAction property
+  // that way we do not run into "LimitExceededException: Exceeded daily email limit for the operation or the account"
+
   // we sign up and create a user
-  const signUpResp = await cognito
-    .signUp({
-      ClientId: clientId,
+  // const signUpResp = await cognito
+  //   .signUp({
+  //     ClientId: clientId,
+  //     Username: email,
+  //     Password: password,
+  //     UserAttributes: [
+  //       {
+  //         Name: 'name',
+  //         Value: name,
+  //       },
+  //     ],
+  //   })
+  //   .promise()
+  // const username = signUpResp.UserSub
+
+  // // we're not using a real email, we need a way to simulate the verification to confirmUserSignup
+  // await cognito
+  //   .adminConfirmSignUp({
+  //     UserPoolId: userPoolId,
+  //     Username: username,
+  //   })
+  //   .promise()
+
+  // we create a user as admin and set a password (no temporary passwords!)
+  const createUserResp = await cognito
+    .adminCreateUser({
+      UserPoolId: userPoolId,
       Username: email,
-      Password: password,
+      MessageAction: 'SUPPRESS',
       UserAttributes: [
         {
           Name: 'name',
           Value: name,
         },
+        {
+          Name: 'email',
+          Value: email,
+        },
+        {
+          Name: 'email_verified',
+          Value: 'true',
+        },
       ],
+      ClientMetadata: {
+        ClientId: clientId,
+      },
     })
     .promise()
-  const username = signUpResp.UserSub
 
-  // we're not using a real email, we need a way to simulate the verification to confirmUserSignup
   await cognito
-    .adminConfirmSignUp({
+    .adminSetUserPassword({
+      Username: email,
+      Password: password,
       UserPoolId: userPoolId,
-      Username: username,
+      Permanent: true,
     })
     .promise()
+
+  const username = createUserResp.User.Username
+
   console.log(`[${email}] - confirmed sign up`)
+  console.log(`[${password}] - with password`)
 
   return {
     username,

@@ -24,12 +24,14 @@ const {
   iProfileFragment,
   tweetFragment,
   iTweetFragment,
+  retweetFragment,
 } = require('../../test-helpers/graphql-fragments')
 registerFragment('myProfileFields', myProfileFragment)
 registerFragment('otherProfileFields', otherProfileFragment)
 registerFragment('iProfileFields', iProfileFragment)
 registerFragment('tweetFields', tweetFragment)
 registerFragment('iTweetFields', iTweetFragment)
+registerFragment('retweetFields', retweetFragment)
 
 describe('e2e test for tweet', () => {
   let signedInUser, DynamoDB, tweetResp
@@ -265,13 +267,32 @@ describe('e2e test for tweet', () => {
         {userId: signedInUser.username, limit: 25, nextToken: null},
       )
 
-      console.log(getTweetsResp.getTweets.tweets)
       expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
+
+      console.log(getTweetsResp.getTweets.tweets[0]) // TODO: check this
+      // TODO: check this
+      // expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
+      //   profile: {
+      //     id: signedInUser.username,
+      //     tweetsCount: 2,
+      //   },
+      //   retweetOf: {
+      //     ...tweetResp.tweet,
+      //     retweets: 1,
+      //     retweeted: true,
+      //     profile: {
+      //       id: signedInUser.username,
+      //       tweetsCount: 2,
+      //     },
+      //   },
+      // })
+
       expect(getTweetsResp.getTweets.tweets[1]).toMatchObject({
         profile: {
           id: signedInUser.username,
           tweetsCount: 2,
         },
+        retweeted: true, // TODO: check this
         retweets: 1,
       })
     })

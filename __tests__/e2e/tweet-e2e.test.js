@@ -59,6 +59,7 @@ describe('e2e test for tweet', () => {
       }
     }
   }`
+
   beforeAll(async () => {
     signedInUser = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -293,6 +294,10 @@ describe('e2e test for tweet', () => {
         },
         retweets: 1,
       })
+      // other user case is covered in integration, so we don't need to test it here
+      // it would be nice to have, but we are running into LimitExceededException errors
+      // there is no functional workaround so far
+      // https://school.theburningmonk.com/communities/Q29tbXVuaXR5LTc2MDU=/post/UG9zdC01OTQxODU1/
     })
 
     it('should not see the retweet when calling getMyTimeline', async () => {

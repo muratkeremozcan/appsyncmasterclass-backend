@@ -33,59 +33,30 @@ const signUpUser = async () => {
   const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
   const cognito = new AWS.CognitoIdentityServiceProvider()
 
-  // we create a user as admin and set a password (no temporary passwords!)
-  const createUserResp = await cognito
-    .adminCreateUser({
-      UserPoolId: userPoolId,
+  // we sign up and create a user
+  const signUpResp = await cognito
+    .signUp({
+      ClientId: clientId,
       Username: email,
-      MessageAction: 'SUPPRESS',
+      Password: password,
       UserAttributes: [
         {
           Name: 'name',
           Value: name,
         },
-        {
-          Name: 'email',
-          Value: email,
-        },
-        {
-          Name: 'email_verified',
-          Value: 'true',
-        },
       ],
-      ClientMetadata: {
-        ClientId: clientId,
-      },
-      TemporaryPassword: 'Password-1Password-1',
     })
     .promise()
+  const username = signUpResp.UserSub
 
-  const username = createUserResp.User.Username
-
-  const auth = await cognito
-    .initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: clientId,
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: 'Password-1Password-1',
-      },
-    })
-    .promise()
-
-  // respond to auth challenge (this is needed with adminCreateUser approach)
+  // we're not using a real email, we need a way to simulate the verification to confirmUserSignup
   await cognito
-    .adminRespondToAuthChallenge({
-      ChallengeName: 'NEW_PASSWORD_REQUIRED',
-      ClientId: clientId,
-      ChallengeResponses: {
-        USERNAME: username,
-        NEW_PASSWORD: password,
-      },
-      Session: auth.Session,
+    .adminConfirmSignUp({
       UserPoolId: userPoolId,
+      Username: username,
     })
     .promise()
+  console.log(`[${email}] - confirmed sign up`)
 
   return {
     username,

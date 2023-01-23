@@ -270,30 +270,27 @@ describe('e2e test for tweet', () => {
 
       expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
 
-      console.log(getTweetsResp.getTweets.tweets[0]) // TODO: (1) check things as they are (the console log should give something)
       // TODO: (2) verify the console.log with an expect
-      // expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
-      //   profile: {
-      //     id: signedInUser.username,
-      //     tweetsCount: 2,
-      //   },
-      //   retweetOf: {
-      //     ...tweetResp.tweet,
-      //     retweets: 1,
-      //     retweeted: true,
-      //     profile: {
-      //       id: signedInUser.username,
-      //       tweetsCount: 2,
-      //     },
-      //   },
-      // })
+      expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
+        profile: {
+          id: signedInUser.username,
+          tweetsCount: 2,
+        },
+        retweetOf: {
+          ...tweetResp.tweet,
+          retweets: 1,
+          profile: {
+            id: signedInUser.username,
+            tweetsCount: 2,
+          },
+        },
+      })
 
       expect(getTweetsResp.getTweets.tweets[1]).toMatchObject({
         profile: {
           id: signedInUser.username,
           tweetsCount: 2,
         },
-        retweeted: true, // TODO: (1) check this
         retweets: 1,
       })
     })

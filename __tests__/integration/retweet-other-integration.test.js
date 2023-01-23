@@ -1,6 +1,4 @@
-// [18] Integration test for tweet mutation
-/// We have to have a real user for this integration test, but it is still an integration test
-/// given that we are feeding an event object to the handler.
+// [37] retweet integration test
 // - Create an event: an object which includes `identity.username` and `arguments.tweetId`.
 // - Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
 // - Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")

@@ -1,11 +1,12 @@
-// [37] retweet integration test
+// [40] unretweet integration test
 // - Create an event: an object which includes `identity.username` and `arguments.tweetId`.
 // - Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
 // - Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/cognito')
-const handler = require('../../functions/retweet').handler
+const handler = require('../../functions/unretweet').handler
+const tweetHandler = require('../../functions/retweet').handler
 const {
   axiosGraphQLQuery,
   registerFragment,
@@ -26,7 +27,7 @@ registerFragment('iProfileFields', iProfileFragment)
  * @param {string} tweetId - the id of the tweet to retweet
  * @returns {Object} - event
  */
-const generateReTweetEvent = (username, tweetId) => {
+const generateEvent = (username, tweetId) => {
   return {
     identity: {
       username: username,
@@ -37,7 +38,7 @@ const generateReTweetEvent = (username, tweetId) => {
   }
 }
 
-describe('Given an authenticated user with a tweet', () => {
+describe('Given an authenticated user with a tweet and retweet', () => {
   let userA, tweetA, userId, tweetId, DynamoDB
   beforeAll(async () => {
     userA = await signInUser()
@@ -69,25 +70,33 @@ describe('Given an authenticated user with a tweet', () => {
     )
     tweetId = tweetA.tweet.id
     userId = userA.username
+
+    // retweet (the events have the same shape)
+    const event = generateEvent(userId, tweetId)
+    const context = {}
+    await tweetHandler(event, context)
   })
 
-  it('retweet self: should save the retweet in Tweets an Retweets tables, increment the count in Tweets and Users table, save to timelines table', async () => {
+  it('unretweet self: should Delete the tweet from the TweetsTable, the RetweetsTable, Decrement the count on the UsersTable and the TweetsTable', async () => {
     // create a mock event and feed it to the handler
-    const event = generateReTweetEvent(userId, tweetId)
+    const event = generateEvent(userId, tweetId)
     const context = {}
     await handler(event, context)
 
-    // save the retweet in Tweets
-    // increment the count in Tweets table
-    const tweetsTableResp = await DynamoDB.get({
+    // delete the retweet in Tweets
+    const tweetsTableResp = await DynamoDB.query({
       TableName: process.env.TWEETS_TABLE,
-      Key: {
-        id: tweetId,
+      IndexName: 'retweetsByCreator',
+      KeyConditionExpression: 'creator = :creator AND retweetOf = :tweetId',
+      ExpressionAttributeValues: {
+        ':creator': userId,
+        ':tweetId': tweetId,
       },
+      Limit: 1,
     }).promise()
-    expect(tweetsTableResp.Item).toBeTruthy()
+    expect(tweetsTableResp.Items).toHaveLength(0)
 
-    // save the retweet in Retweets table
+    // delete the retweet in Retweets table
     const reTweetsTableResp = await DynamoDB.get({
       TableName: process.env.RETWEETS_TABLE,
       Key: {
@@ -95,30 +104,19 @@ describe('Given an authenticated user with a tweet', () => {
         tweetId,
       },
     }).promise()
-    expect(reTweetsTableResp.Item).toBeTruthy()
+    expect(reTweetsTableResp.Item).toBeFalsy()
 
-    // increment the count in Users table
+    // decrement the count in Users table
     const usersTableResp = await DynamoDB.get({
       TableName: process.env.USERS_TABLE,
       Key: {
         id: userId,
       },
     }).promise()
-    expect(usersTableResp.Item).toBeTruthy()
-    expect(usersTableResp.Item.tweetsCount).toEqual(2)
+    expect(usersTableResp.Item.tweetsCount).toEqual(1)
 
-    // save to timelines table
-    const timelinesTableResp = await DynamoDB.get({
-      TableName: process.env.TIMELINES_TABLE,
-      Key: {
-        userId,
-        tweetId,
-      },
-    }).promise()
-    expect(timelinesTableResp.Item).toBeTruthy()
-
-    // doesn't save the retweet in timelines table, if the user is retweeting their own tweet
-    const timelinesTableQueryResp = await DynamoDB.query({
+    // delete retweet from timelines table
+    const timelinesTableResp = await DynamoDB.query({
       TableName: process.env.TIMELINES_TABLE,
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
@@ -126,7 +124,8 @@ describe('Given an authenticated user with a tweet', () => {
       },
       ScanIndexForward: false,
     }).promise()
-    expect(timelinesTableQueryResp.Items.length).toEqual(1)
+
+    expect(timelinesTableResp.Items).toHaveLength(1)
   })
 
   afterAll(async () => {

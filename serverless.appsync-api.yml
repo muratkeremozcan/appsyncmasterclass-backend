@@ -87,6 +87,14 @@ mappingTemplates:
     request: false
     response: false
 
+  # [39] Implement unretweet mutation
+  # (39.0) add a mapping template for the unretweet mutation. Similar to (35.2)
+  - type: Mutation
+    field: unretweet
+    dataSource: unretweetFunction
+    request: false
+    response: false
+
   ## NESTED RESOLVERS
   # When do we need nested resolvers?
   # Oftentimes when we need to return another type, e.g. a Parent type might have a children property of type [Person].
@@ -210,6 +218,11 @@ dataSources:
     name: retweetFunction # (35.3) Define a data source for the mutation
     config:
       functionName: retweet
+
+  - type: AWS_LAMBDA
+    name: unretweetFunction # (35.3) Define a data source for the mutation
+    config:
+      functionName: unretweet
 
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.

@@ -2994,9 +2994,69 @@ dataSources:
 
 Check out `__tests__/e2e/tweet-e2e.test.js`.
 
-##
+## 39 Implement unretweet mutation
 
+*(39.0)* add a mapping template for the unretweet mutation. Similar to (35.2) retweet mutation and (17.2.0) tweet mutation, we want AppSync to invoke the lambda function directly without going through a custom mapping template.
 
+*(39.1)* Define a data source for the mutation (similar to 35.3)
 
+```yml
+# serverless.appsync-api.yml
 
+mappingTemplates: 
+  - type: Mutation
+    field: unretweet
+    dataSource: unretweetFunction
+    request: false
+    response: false
+    
+datasources:
+  ## DDB data sources
+  ## Lambda data sources
+  
+  - type: AWS_LAMBDA
+    name: unretweetFunction
+    config:
+      functionName: unretweet
+```
+
+*(39.2)* Add the lambda function to `serverless.yml`, similar to (35.1).
+
+```yml
+# serverless.yml
+
+functions:
+  unretweet:
+    handler: functions/unretweet.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+      RETWEETS_TABLE: !Ref RetweetsTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      # we have to query DDB for the retweet so that we can delete it
+      # we use CloudFormation's !Sub to interpolate the ARN of the table
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource: !Sub '${TweetsTable.Arn}/index/retweetsByCreator'
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:DeleteItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+          - !GetAtt RetweetsTable.Arn
+```
+
+(39.3) Implement the unretweet function.
+
+* Delete the tweet from the TweetsTable, the RetweetsTable, and the TimelinesTable if it's not the same user
+* Decrement the count on the UsersTable and the TweetsTable
 

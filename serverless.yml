@@ -114,6 +114,35 @@ functions:
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
 
+  # (39.2) add a new function for unretweet, almost the same as retweet at (35.1)
+  unretweet:
+    handler: functions/unretweet.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+      RETWEETS_TABLE: !Ref RetweetsTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      # we have to query DDB for the retweet so that we can delete it
+      # we use CloudFormation's !Sub to interpolate the ARN of the table
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource: !Sub '${TweetsTable.Arn}/index/retweetsByCreator'
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:DeleteItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+          - !GetAtt RetweetsTable.Arn
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation

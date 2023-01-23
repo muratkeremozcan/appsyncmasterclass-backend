@@ -101,9 +101,9 @@ const handler = async event => {
     transactItems.push({
       Delete: {
         TableName: TIMELINES_TABLE,
-        Item: {
+        Key: {
           userId: username,
-          tweetId: tweetId,
+          tweetId: retweet.id,
         },
       },
     })

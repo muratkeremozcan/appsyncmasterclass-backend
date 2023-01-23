@@ -180,6 +180,8 @@ resources:
             AttributeType: S
           - AttributeName: id # sort key
             AttributeType: S
+          - AttributeName: retweetOf # (39.2) add a new index for retweets
+            AttributeType: S
         GlobalSecondaryIndexes:
           - IndexName: byCreator
             KeySchema:
@@ -189,6 +191,14 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # so that when we get the tweets, we get all items
+          - IndexName: retweetsByCreator # (39.2) add a new index for retweets
+            KeySchema:
+              - AttributeName: creator
+                KeyType: HASH
+              - AttributeName: retweetOf
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
             # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod

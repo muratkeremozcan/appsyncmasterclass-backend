@@ -3053,6 +3053,42 @@ functions:
           - !GetAtt TweetsTable.Arn
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
+          
+resources:
+  Resources
+    TweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: creator 
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: retweetOf # (39.2) add a new index for retweets
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byCreator
+            KeySchema:
+              - AttributeName: creator 
+                KeyType: HASH
+              - AttributeName: id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL 
+          - IndexName: retweetsByCreator # (39.2) add a new index for retweets
+            KeySchema:
+              - AttributeName: creator
+                KeyType: HASH
+              - AttributeName: retweetOf
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            Tags: ##..
+          
 ```
 
 (39.3) Implement the unretweet function.

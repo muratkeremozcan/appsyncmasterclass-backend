@@ -6,7 +6,7 @@
 // - Confirm that the upload url exists, and upload can happen.
 
 require('dotenv').config()
-const {signInUser} = require('../../test-helpers/helpers')
+const {signInUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 const path = require('path')
 const fs = require('fs')

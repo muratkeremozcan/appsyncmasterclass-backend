@@ -2931,7 +2931,7 @@ $util.toJson($context.result)
 
 `npm run deploy`
 
-### Integration test for retweet mutation
+### 37 Integration test for retweet mutation
 
 The pattern is as follows:
 
@@ -2946,9 +2946,55 @@ We have to have a real user for this integration test, but it is still an integr
 
 Check out `__tests__/integration/retweet-self-integration.test.js`, `__tests__/integration/retweet-other-integration.test.js`.
 
-### E2e test for retweet mutation
+### 38 E2e test for retweet mutation
 
+*(38.0)* When a user reweets their own tweet, and get their tweets, we want to get the information about the retweet (reweetOf). The `retweeted` boolean is on the `type Tweet`, so we need to add a nested resolver for that.
 
+(38.1) To enable that, although this is the test section, we added to the `serverless.appsync-api.yml` to increase retweet capabilities, and we added 2 vtl files. Reweets are similar to likes.
+
+```yml
+# serverless.appsync-api.yml
+mappingTemplates:
+  ## Nested resolvers
+  # (38.0) #  add a nested resolver for reweeted 
+  # similar to liked at (27.0)
+  - type: Tweet
+    field: retweeted
+    dataSource: retweetsTable
+    
+dataSources:
+  # (38.1) add a data source for the rested resolver
+  - type: AMAZON_DYNAMODB
+    name: retweetsTable
+    config:
+      tableName: !Ref RetweetsTable
+```
+
+```
+# mappingtemplates/Tweet.retweeted.request.vtl
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "userId" : $util.dynamodb.toDynamoDBJson($context.identity.username),
+    "tweetId" : $util.dynamodb.toDynamoDBJson($context.source.id)
+  }
+}
+```
+
+```
+# mappingtemplates/Tweet.retweeted.response.vtl
+
+#if ($util.isNull($context.result))
+  false
+#else
+  true
+#end
+```
+
+Check out `__tests__/e2e/tweet-e2e.test.js`.
+
+##
 
 
 

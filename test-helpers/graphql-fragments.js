@@ -69,6 +69,25 @@ fragment iTweetFields on ITweet {
   ... on Tweet {
     ... tweetFields
   }
+
+  ... on Retweet {
+    ... retweetFields
+  }
+}
+`
+
+const retweetFragment = `
+fragment retweetFields on Retweet {
+  id
+  profile {
+    ... iProfileFields
+  }
+  createdAt
+  retweetOf {
+    ... on Tweet {
+      ... tweetFields
+    }
+  }
 }
 `
 
@@ -78,4 +97,5 @@ module.exports = {
   iProfileFragment,
   tweetFragment,
   iTweetFragment,
+  retweetFragment,
 }

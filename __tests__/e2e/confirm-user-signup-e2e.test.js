@@ -3,7 +3,7 @@
 // - We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
 // - As a result we should see a DynamoDB table entry, confirm it.
 require('dotenv').config()
-const {signUpUser} = require('../../test-helpers/helpers')
+const {signUpUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 
 describe('When a user signs up', () => {

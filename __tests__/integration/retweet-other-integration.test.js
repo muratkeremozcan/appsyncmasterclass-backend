@@ -6,7 +6,7 @@
 // - Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const {signInUser} = require('../../test-helpers/helpers')
+const {signInUser} = require('../../test-helpers/cognito')
 const handler = require('../../functions/retweet').handler
 const {
   axiosGraphQLQuery,

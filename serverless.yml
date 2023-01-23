@@ -90,15 +90,15 @@ functions:
   # (35.1) add a new function for retweet
   # We need to add an entry to the `TweetsTable` for the retweet, which means we need a tweetId, which is a `ulid`
   # ulid requires us to use a lambda resolver. Similar to (17.2).
+  # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines, Retweets,
   retweet:
     handler: functions/retweet.handler
     environment:
       USERS_TABLE: !Ref UsersTable
       TWEETS_TABLE: !Ref TweetsTable
-      TIMELINES_TABLE: !Ref 36
+      TIMELINES_TABLE: !Ref TimelinesTable
       RETWEETS_TABLE: !Ref RetweetsTable
     iamRoleStatements:
-      # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines, Retweets,
       - Effect: Allow
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn

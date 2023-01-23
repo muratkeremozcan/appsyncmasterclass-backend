@@ -11,7 +11,7 @@
 // - Test error case of 26 limit.
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const {signInUser} = require('../../test-helpers/helpers')
+const {signInUser} = require('../../test-helpers/cognito')
 const chance = require('chance').Chance()
 // (28.2) import the fragments we will use in the test and register them
 const {
@@ -24,12 +24,14 @@ const {
   iProfileFragment,
   tweetFragment,
   iTweetFragment,
+  retweetFragment,
 } = require('../../test-helpers/graphql-fragments')
 registerFragment('myProfileFields', myProfileFragment)
 registerFragment('otherProfileFields', otherProfileFragment)
 registerFragment('iProfileFields', iProfileFragment)
 registerFragment('tweetFields', tweetFragment)
 registerFragment('iTweetFields', iTweetFragment)
+registerFragment('retweetFields', retweetFragment)
 
 describe('e2e test for tweet', () => {
   let signedInUser, DynamoDB, tweetResp
@@ -47,6 +49,17 @@ describe('e2e test for tweet', () => {
       }
     }`
 
+  // [24] E2e test for getMyTimeline
+  // create the query
+  const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
+    getMyTimeline(limit: $limit, nextToken: $nextToken) {
+      nextToken
+      tweets {
+        ... iTweetFields
+      }
+    }
+  }`
+
   beforeAll(async () => {
     signedInUser = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -55,7 +68,8 @@ describe('e2e test for tweet', () => {
     // send a graphQL query request as the user
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
-    const tweet = `mutation tweet($text: String!) {
+    // TODO: (4) move tweet L71 to outer scop
+    const tweet = `mutation tweet($text: String!) { 
       tweet(text: $text) {
         id
         profile {
@@ -116,16 +130,6 @@ describe('e2e test for tweet', () => {
   })
 
   it('[24] getTimeline query', async () => {
-    // create the query
-    const getMyTimeline = `query getMyTimeline($limit: Int!, $nextToken: String) {
-      getMyTimeline(limit: $limit, nextToken: $nextToken) {
-        nextToken
-        tweets {
-          ... iTweetFields
-        }
-      }
-    }`
-
     // make a graphQL request and check the response
     const getMyTimelineResp = await axiosGraphQLQuery(
       process.env.API_URL,
@@ -240,6 +244,70 @@ describe('e2e test for tweet', () => {
       )
       expect(getLikesResp.getLikes.nextToken).toBeNull()
       expect(getLikesResp.getLikes.tweets).toHaveLength(0)
+    })
+  })
+
+  describe('[38] retweet,', () => {
+    beforeAll(async () => {
+      const retweet = `mutation retweet($tweetId: ID!) {
+        retweet(tweetId: $tweetId)
+      }`
+
+      await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        retweet,
+        {tweetId: tweetResp.tweet.id},
+      )
+    })
+
+    it('Should see the retweet when calling getTweets', async () => {
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getTweets,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+
+      expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
+
+      // TODO: (2) verify the console.log with an expect
+      expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
+        profile: {
+          id: signedInUser.username,
+          tweetsCount: 2,
+        },
+        retweetOf: {
+          ...tweetResp.tweet,
+          retweets: 1,
+          profile: {
+            id: signedInUser.username,
+            tweetsCount: 2,
+          },
+        },
+      })
+
+      expect(getTweetsResp.getTweets.tweets[1]).toMatchObject({
+        profile: {
+          id: signedInUser.username,
+          tweetsCount: 2,
+        },
+        retweets: 1,
+      })
+      // other user case is covered in integration, so we don't need to test it here
+      // it would be nice to have, but we are running into LimitExceededException errors
+      // there is no functional workaround so far
+      // https://school.theburningmonk.com/communities/Q29tbXVuaXR5LTc2MDU=/post/UG9zdC01OTQxODU1/
+    })
+
+    it('should not see the retweet when calling getMyTimeline', async () => {
+      const getMyTimelineResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getMyTimeline,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+      expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
     })
   })
 

@@ -1,11 +1,11 @@
-// [37] retweet integration test
-// - Create an event: an object which includes `identity.username` and `arguments.tweetId`.
+// [43] reply integration test
+// - Create an event: an object which includes `identity.username` and `arguments.tweetId` and `arguments.text`.
 // - Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
-// - Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
+// - Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
 require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/cognito')
-const handler = require('../../functions/retweet').handler
+const handler = require('../../functions/reply').handler
 const {
   axiosGraphQLQuery,
   registerFragment,
@@ -23,16 +23,17 @@ registerFragment('iProfileFields', iProfileFragment)
 /**
  * Generates an event object that can be used to test the lambda function
  * @param {string} username - the id of the user who is tweeting
- * @param {string} tweetId - the id of the tweet to retweet
+ * @param {string} tweetId - the id of the tweet to reply
  * @returns {Object} - event
  */
-const generateReTweetEvent = (username, tweetId) => {
+const generateReplyEvent = (username, tweetId, text) => {
   return {
     identity: {
       username: username,
     },
     arguments: {
       tweetId,
+      text,
     },
   }
 }
@@ -44,7 +45,6 @@ describe('Given 2 authenticated users and a tweet', () => {
     userB = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
 
-    // as in (19) tweet mutation
     // send a graphQL query request as the user
     const tweet = `mutation tweet($text: String!) {
       tweet(text: $text) {
@@ -73,13 +73,14 @@ describe('Given 2 authenticated users and a tweet', () => {
     userBId = userB.username
   })
 
-  it('retweet other: should save the retweet in Tweets an Retweets tables, increment the count in Tweets and Users table, save to timelines table', async () => {
+  it('reply to other: should save the tweet in Tweets table, increment the count in Tweets and Users table, save to timelines table', async () => {
+    const replyText = chance.string({length: 16})
     // create a mock event and feed it to the handler
-    const event = generateReTweetEvent(userBId, tweetId)
+    const event = generateReplyEvent(userBId, tweetId, replyText)
     const context = {}
     await handler(event, context)
 
-    // save the retweet in Tweets
+    // save the reply in Tweets
     // increment the count in Tweets table
     const tweetsTableResp = await DynamoDB.get({
       TableName: process.env.TWEETS_TABLE,
@@ -88,16 +89,6 @@ describe('Given 2 authenticated users and a tweet', () => {
       },
     }).promise()
     expect(tweetsTableResp.Item).toBeTruthy()
-
-    // save the retweet in Retweets table
-    const reTweetsTableResp = await DynamoDB.get({
-      TableName: process.env.RETWEETS_TABLE,
-      Key: {
-        userId: userBId,
-        tweetId,
-      },
-    }).promise()
-    expect(reTweetsTableResp.Item).toBeTruthy()
 
     // increment the count in Users table
     const usersTableResp = await DynamoDB.get({
@@ -118,17 +109,6 @@ describe('Given 2 authenticated users and a tweet', () => {
       },
     }).promise()
     expect(timelinesTableResp.Item).toBeTruthy()
-
-    // saves the retweet in timelines table, if the user is retweeting someone else's tweet
-    const timelinesTableQueryResp = await DynamoDB.query({
-      TableName: process.env.TIMELINES_TABLE,
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-      },
-      ScanIndexForward: false,
-    }).promise()
-    expect(timelinesTableQueryResp.Items.length).toEqual(2)
   })
 
   afterAll(async () => {
@@ -137,14 +117,6 @@ describe('Given 2 authenticated users and a tweet', () => {
       TableName: process.env.TWEETS_TABLE,
       Key: {
         id: tweetId,
-      },
-    }).promise()
-
-    await DynamoDB.delete({
-      TableName: process.env.RETWEETS_TABLE,
-      Key: {
-        userId,
-        tweetId,
       },
     }).promise()
 

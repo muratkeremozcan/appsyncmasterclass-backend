@@ -3221,5 +3221,373 @@ module.exports = {
 }
 ```
 
-### Integration test unreweet mutation
+### 40 Integration test unreweet mutation
+
+* Create an event: an object which includes `identity.username` and `arguments.tweetId`.
+
+* Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
+
+* Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
+
+Check out `__tests__/integration/unretweet-self-integration.test.js`
+
+### 41 E2e test unretweet mutation
+
+Arrange: tweet, retweet
+
+Action: unretweet
+
+Assert: should not see the retweet
+
+Check out `__tests__/e2e/tweet-e2e.test.js`
+
+## 42 Implement reply mutation
+
+
+
+```
+# schema.api.graphql
+type Mutation { 
+	reply(tweetId: ID!, text: String!): Reply!
+
+```
+
+*(42.0)* add a mapping template for the reply mutation. Similar to (35.2) (39.0).
+
+When replying we have to generate a new tweet, create an id for it (ulid) therefore we need a lambda function.
+
+*(42.1)* Define a data source for the mutation
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  - type: Mutation
+    field: reply
+    dataSource: replyFunction
+    request: false
+    response: false
+    
+dataSources:
+  - type: AWS_LAMBDA
+    name: replyFunction
+    config:
+      functionName: reply
+```
+
+*(42.2)* Add the lambda function to `serverless.yml`.  Similar to (35.1) retweets without the retweet table.
+
+* Get from Tweets
+* Update Tweets and Users 
+* Write to Tweets, Timelines
+
+```yml
+# serverless.yml
+
+functions:
+	reply:
+    handler: functions/reply.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource: 
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+```
+
+(42.3) add the lambda function that will
+
+* Get from Tweets
+
+* Update Tweets and Users
+
+* Write to Tweets, Timelines
+
+```js
+// functions/reply.js
+
+// (42.3) add the lambda function that will
+// * Get from Tweets
+// * Update Tweets and Users
+// * Write to Tweets, Timelines
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+const ulid = require('ulid')
+const {TweetTypes} = require('../lib/constants')
+const {getTweetById} = require('../lib/tweets')
+const _ = require('lodash')
+
+const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
+
+async function getUserIdsToReplyTo(tweet) {
+  let userIds = [tweet.creator]
+  if (tweet.__typename === TweetTypes.REPLY) {
+    userIds = userIds.concat(tweet.inReplyToUserIds)
+  } else if (tweet.__typename === TweetTypes.RETWEET) {
+    const retweetOf = await getTweetById(tweet.retweetOf)
+    userIds = userIds.concat(await getUserIdsToReplyTo(retweetOf))
+  }
+
+  return _.uniq(userIds)
+}
+// ramda version
+// const getUserIdsToReplyToR = async tweet => {
+//   const retweetOf = await getTweetById(tweet.retweetOf)
+//   return R.pipe(
+//     x => (x.__typename === TweetTypes.REPLY ? x.inReplyToUserIds : []),
+//     x =>
+//       x.__typename === TweetTypes.RETWEET ? getUserIdsToReplyTo(retweetOf) : x,
+//     x => [tweet.creator].concat(x),
+//     R.uniq,
+//   )(tweet)
+// }
+
+const handler = async event => {
+  // we know from graphQL schema the arguments for reply - reply(tweetId: ID!, text: String!): Reply!
+  // we can extract both from event.arguments
+  const {tweetId, text} = event.arguments
+  // we can get the username from event.identity.username
+  // we need it because reply is like a new tweet, so we need to know who created it
+  const {username} = event.identity
+  // generate a new ulid & timestamp for the tweet
+  const id = ulid.ulid()
+  const timestamp = new Date().toJSON()
+
+  // get from Tweets (we can use a helper)
+  const tweet = await getTweetById(tweetId)
+
+  if (!tweet) throw new Error('Tweet is not found')
+
+  // get the user ids to reply to
+  const inReplyToUserIds = await getUserIdsToReplyTo(tweet)
+
+  /* from the schema:
+		type Reply implements ITweet {
+			id: ID!
+			profile: IProfile!
+			createdAt: AWSDateTime!
+			inReplyToTweet: ITweet!
+			inReplyToUsers: [IProfile!]
+			text: String!
+			replies: Int!
+			likes: Int!
+			retweets: Int!
+			liked: Boolean!
+			retweeted: Boolean!
+		}
+  */
+  const newTweet = {
+    // __typename helps us identify between the 3 types that implement ITweet (Tweet, Retweet, Reply)
+    __typename: TweetTypes.REPLY,
+    id,
+    creator: username,
+    createdAt: timestamp,
+    inReplyToTweetId: tweetId,
+    inReplyToUserIds,
+    text,
+    replies: 0,
+    likes: 0,
+    retweets: 0,
+  }
+
+  // * Get from Tweets
+  // * Update Tweets and Users
+  // * Write to Tweets, Timelines (if we have write for tweetsTable, we have read too)
+
+  const transactItems = [
+    {
+      Put: {
+        TableName: TWEETS_TABLE,
+        Item: newTweet,
+      },
+    },
+    {
+      Update: {
+        TableName: TWEETS_TABLE,
+        Key: {
+          id: tweetId,
+        },
+        UpdateExpression: 'ADD replies :one',
+        ExpressionAttributeValues: {
+          ':one': 1,
+        },
+        ConditionExpression: 'attribute_exists(id)',
+      },
+    },
+    {
+      Update: {
+        TableName: USERS_TABLE,
+        Key: {
+          id: username,
+        },
+        UpdateExpression: 'ADD tweetsCount :one',
+        ExpressionAttributeValues: {
+          ':one': 1,
+        },
+        ConditionExpression: 'attribute_exists(id)',
+      },
+    },
+    {
+      Put: {
+        TableName: TIMELINES_TABLE,
+        Item: {
+          userId: username,
+          tweetId: id,
+          timestamp,
+          inReplyToTweetId: tweetId,
+          inReplyToUserIds,
+        },
+      },
+    },
+  ]
+
+  await DocumentClient.transactWrite({
+    TransactItems: transactItems,
+  }).promise()
+
+  return true
+}
+
+module.exports = {
+  handler,
+}
+```
+
+### 43 Integration test for reply mutation
+
+- Create an event: an object which includes `identity.username` and `arguments.tweetId` and `arguments.text`.
+
+- Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
+
+- Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
+
+Check out `__tests__/integration/reply.test.js`.
+
+## 42 Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
+
+In reply we have 3 properties that are a type of interfaces:
+
+```
+  profile: IProfile!
+  inReplyToTweet: ITweet!
+  inReplyToUsers: [IProfile!]
+```
+
+ As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
+
+```
+type Reply implements ITweet {
+  id: ID!
+  profile: IProfile!
+  createdAt: AWSDateTime!
+  inReplyToTweet: ITweet!
+  inReplyToUsers: [IProfile!]
+  text: String!
+  replies: Int!
+  likes: Int!
+  retweets: Int!
+  liked: Boolean!
+  retweeted: Boolean!
+}
+```
+
+### `profile` nested resolver
+
+We can reuse the `vtl` files for `Tweet.profile`. Similar to (36.0) Retweet.profile.
+
+```yml
+mappingTemplates:
+## Queries
+## Mutations
+## Nested fields
+  - type: Reply
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+```
+
+### `inReplyToTweet` nested resolver
+
+*(42.1)* Create a nested resolver to get the inReplyToUsers on Reply, similar to (36.1) Retweet.retweetOf.
+
+```yml
+mappingTemplates:
+
+  - type: Reply
+    field: inReplyToTweet
+    dataSource: tweetsTable
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

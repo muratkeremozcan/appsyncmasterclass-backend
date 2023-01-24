@@ -154,6 +154,25 @@ mappingTemplates:
     field: retweetOf
     dataSource: tweetsTable
 
+  # [42] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
+  # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
+  # (42.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
+  - type: Reply
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
+    response: Tweet.profile.response.vtl
+
+  # (42.1) Create a nested resolver to get the inReplyToUsers on Reply (similar to 36.1)
+  - type: Reply
+    field: inReplyToTweet
+    dataSource: tweetsTable
+
+  # (42.4) Create a nested resolver to get the inReplyToUsers on Reply
+  - type: Reply
+    field: inReplyToUsers
+    dataSource: usersTable
+
 dataSources:
   - type: NONE
     name: none

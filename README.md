@@ -3505,7 +3505,9 @@ type Reply implements ITweet {
 
 ### `profile` nested resolver
 
-We can reuse the `vtl` files for `Tweet.profile`. Similar to (36.0) Retweet.profile.
+*(42.0)* Create a nested resolver to get the profile on Reply. Similar to (36.0) Retweet.profile.
+
+We can reuse the `vtl` files for `Tweet.profile`. 
 
 ```yml
 mappingTemplates:
@@ -3531,57 +3533,106 @@ mappingTemplates:
     dataSource: tweetsTable
 ```
 
+*(42.3)* Create the `vtl` files `Reply.inReplyToTweet.request.vtl`,  `Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet nested resolvers. 
 
+```
+# Reply.inReplyToTweet.request.vtl
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "id" : $util.dynamodb.toDynamoDBJson($context.source.inReplyToTweetId)
+  }
+}
+```
 
+```
+# Reply.inReplyToTweet.response.vtl
 
+$util.toJson($context.result)
+```
 
+### `inReplyToUsers` nested resolver
 
+*(42.4)* Create a nested resolver to get the inReplyToUsers on Reply.
 
+```yml
+mappingTemplates:
 
+  - type: Reply
+    field: inReplyToUsers
+    dataSource: usersTable
+```
 
+*(42.5)* Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and `Reply.inReplyToUsers.response.vtl`.
 
+```
+#if ($context.source.inReplyToUsers.size() == 0)
+  #return([])
+#end
 
+#set ($users = [])
+#if ($context.info.selectionSetList.size() == 1 && $context.info.selectionSetList[0] == "id")
+  #foreach ($id in $context.source.inReplyToUsers)
+    #set ($user = { "id": "$id" })
 
+    #if ($id == $context.identity.username)
+      #set ($user["__typename"] = "MyProfile")
+    #else
+      #set ($user["__typename"] = "OtherProfile")
+    #end
 
+    $util.qr($users.add($user))
 
+  #end 
+  
+  #return($users)
 
+#else 
+  #foreach ($id in $context.source.inReplyToUsers)
+    #set ($user = {})
+    #set ($user.id = $id)
+    $util.qr($users.add($util.dynamodb.toMapValues($user)))
+  #end
+#end
 
+{
+  "version" : "2018-05-29",
+  "operation" : "BatchGetItem",
+  "tables" : {
+    "${UsersTable}": {
+      "keys": $util.toJson($users),
+      "consistentRead": false
+    }
+  }
+}
+```
 
+```
+#foreach ($user in $context.result.data.${UsersTable})
+  #if ($user.id == $context.identity.username)
+    #set ($user["__typename"] = "MyProfile")
+  #else
+    #set ($user["__typename"] = "OtherProfile")
+  #end
+#end 
 
+$util.toJson($context.result.data.${UsersTable})
+```
 
+### 43 Unit test `Reply.inReplyToUsers.vtl`
 
+Similar to `Tweet.profile.request` (21.0). 
 
+- Create an AppSync context
 
+- Get the template
 
+- Use `amplify-velocity-template` to render the template, given the context
 
+- Check the result
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Check out `__tests__/unit/Reply.inReplyToUsers.test.js`.
 
 
 

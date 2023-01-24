@@ -3221,5 +3221,27 @@ module.exports = {
 }
 ```
 
-### Integration test unreweet mutation
+### 40 Integration test unreweet mutation
+
+* Create an event: an object which includes `identity.username` and `arguments.tweetId`.
+
+* Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
+
+* Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
+
+Check out `__tests__/integration/unretweet-self-integration.test.js`
+
+### 41 E2e test unretweet mutation
+
+Arrange: tweet, retweet
+
+Action: unretweet
+
+Assert: should not see the retweet
+
+Check out `__tests__/e2e/tweet-e2e.test.js`
+
+## 42 Implement reply mutation
+
+
 

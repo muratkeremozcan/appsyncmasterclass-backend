@@ -309,6 +309,36 @@ describe('e2e test for tweet', () => {
       )
       expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
     })
+
+    it('[41] Should not see the retweet upon unRetweeting', async () => {
+      const unretweet = `mutation unretweet($tweetId: ID!) {
+      unretweet(tweetId: $tweetId)
+    }`
+
+      await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        unretweet,
+        {tweetId: tweetResp.tweet.id},
+      )
+
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        signedInUser.accessToken,
+        getTweets,
+        {userId: signedInUser.username, limit: 25, nextToken: null},
+      )
+
+      expect(getTweetsResp.getTweets.tweets).toHaveLength(1)
+      expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
+        ...tweetResp.tweet,
+        retweets: 0,
+        profile: {
+          id: signedInUser.username,
+          tweetsCount: 1,
+        },
+      })
+    })
   })
 
   afterAll(async () => {

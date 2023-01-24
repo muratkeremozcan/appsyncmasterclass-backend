@@ -143,6 +143,30 @@ functions:
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
 
+  # (42.2) Add the lambda for reply
+  # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines
+  # Similar to (35.1) retweets without the retweet table
+  reply:
+    handler: functions/reply.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation
@@ -182,6 +206,8 @@ resources:
             AttributeType: S
           - AttributeName: retweetOf # (39.2) add a new index for retweets
             AttributeType: S
+          - AttributeName: inReplyToTweetId
+            AttributeType: S # (43.2) add a new index for replies
         GlobalSecondaryIndexes:
           - IndexName: byCreator
             KeySchema:
@@ -196,6 +222,14 @@ resources:
               - AttributeName: creator
                 KeyType: HASH
               - AttributeName: retweetOf
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: repliesForTweet # (43.2) add a new index for replies
+            KeySchema:
+              - AttributeName: inReplyToTweetId
+                KeyType: HASH
+              - AttributeName: id
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL

@@ -4,6 +4,7 @@ const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
 const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
+const {getTweetById} = require('../lib/tweets')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE, RETWEETS_TABLE} = process.env
 
@@ -17,15 +18,8 @@ const handler = async event => {
   const id = ulid.ulid()
   const timestamp = new Date().toJSON()
 
-  // get from Tweets
-  const getTweetResp = await DocumentClient.get({
-    TableName: TWEETS_TABLE,
-    Key: {
-      id: tweetId,
-    },
-  }).promise()
-
-  const tweet = getTweetResp.Item
+  // get from Tweets (we can use a helper)
+  const tweet = await getTweetById(tweetId)
 
   if (!tweet) {
     throw new Error('Tweet is not found')

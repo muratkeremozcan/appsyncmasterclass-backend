@@ -81,6 +81,7 @@ mappingTemplates:
     dataSource: unlikeMutation
 
   # (35.2) add a mapping template for the retweet mutation. Similar to (17.2.0)
+  # again we are working with multiple tables, therefore we need a lambda resolver
   - type: Mutation
     field: retweet
     dataSource: retweetFunction
@@ -89,9 +90,19 @@ mappingTemplates:
 
   # [39] Implement unretweet mutation
   # (39.0) add a mapping template for the unretweet mutation. Similar to (35.2)
+  # again we are working with multiple tables, therefore we need a lambda resolver
   - type: Mutation
     field: unretweet
     dataSource: unretweetFunction
+    request: false
+    response: false
+
+  # [42] Implement reply mutation
+  # (42.0) add a mapping template for the reply mutation. Similar to (35.2) (39.0)
+  # When replying we have to generate a new tweet, create an id for it (ulid) therefore we need a lambda function.
+  - type: Mutation
+    field: reply
+    dataSource: replyFunction
     request: false
     response: false
 
@@ -223,6 +234,11 @@ dataSources:
     name: unretweetFunction # (35.3) Define a data source for the mutation
     config:
       functionName: unretweet
+
+  - type: AWS_LAMBDA
+    name: replyFunction # (42.1) Define a data source for the mutation
+    config:
+      functionName: reply
 
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.

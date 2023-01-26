@@ -154,24 +154,43 @@ mappingTemplates:
     field: retweetOf
     dataSource: tweetsTable
 
-  # [42] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
+  # (38.0) add a nested resolver for reweeted
+  # similar to liked at (27.0)
+  - type: Tweet
+    field: retweeted
+    dataSource: retweetsTable
+
+  # [44] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
   # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
-  # (42.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
+  # (44.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
   - type: Reply
     field: profile
     dataSource: usersTable
     request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
     response: Tweet.profile.response.vtl
 
-  # (42.1) Create a nested resolver to get the inReplyToUsers on Reply (similar to 36.1)
+  # (44.1) Create a nested resolver to get the inReplyToUsers on Reply (similar to 36.1)
   - type: Reply
     field: inReplyToTweet
     dataSource: tweetsTable
 
-  # (42.4) Create a nested resolver to get the inReplyToUsers on Reply
+  # (44.4) Create a nested resolver to get the inReplyToUsers on Reply
   - type: Reply
     field: inReplyToUsers
     dataSource: usersTable
+
+  # (46.0) added during e2e when we realized we need to get the profile of the user who retweeted the tweet
+  - type: Reply
+    field: retweeted
+    dataSource: retweetsTable
+    request: Tweet.retweeted.request.vtl
+    response: Tweet.retweeted.response.vtl
+  # (46.0) added during e2e when we realized we need to get the profile of the user who liked the tweet
+  - type: Reply
+    field: liked
+    dataSource: likesTable
+    request: Tweet.liked.request.vtl
+    response: Tweet.liked.response.vtl
 
 dataSources:
   - type: NONE
@@ -193,6 +212,11 @@ dataSources:
     name: timelinesTable # (23.0) define a data source for the query
     config:
       tableName: !Ref TimelinesTable
+
+  - type: AMAZON_DYNAMODB
+    name: retweetsTable # (38.1) add a data source for the rested resolver
+    config:
+      tableName: !Ref RetweetsTable
 
   # (26.1) define a data source for the mutation, this one needs to be a chained data source
   # because we need likeMutation to have permissions to modify the 3 tables

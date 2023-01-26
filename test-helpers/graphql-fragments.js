@@ -60,6 +60,7 @@ fragment tweetFields on Tweet {
   replies
   likes
   retweets
+  retweeted
   liked
 }
 `
@@ -72,6 +73,10 @@ fragment iTweetFields on ITweet {
 
   ... on Retweet {
     ... retweetFields
+  }
+
+  ... on Reply {
+    ... replyFields
   }
 }
 `
@@ -87,6 +92,42 @@ fragment retweetFields on Retweet {
     ... on Tweet {
       ... tweetFields
     }
+
+    ... on Reply {
+      ... replyFields
+    }
+  }
+}
+`
+
+const replyFragment = `
+fragment replyFields on Reply {
+  id
+  profile {
+    ... iProfileFields
+  }
+  createdAt
+  text
+  replies
+  likes
+  retweets
+  retweeted
+  liked
+  inReplyToTweet {
+    id
+    profile {
+      ... iProfileFields
+    }
+    createdAt
+    ... on Tweet {
+      replies
+    }
+    ... on Reply {
+      replies
+    }
+  }
+  inReplyToUsers {
+    ... iProfileFields
   }
 }
 `
@@ -98,4 +139,5 @@ module.exports = {
   tweetFragment,
   iTweetFragment,
   retweetFragment,
+  replyFragment,
 }

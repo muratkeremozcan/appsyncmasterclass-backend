@@ -1,4 +1,4 @@
-// [43] Unit test Reply.inReplyToUsers.vtl
+// [45] Unit test Reply.inReplyToUsers.vtl
 // - Create an AppSync context
 // - Get the template
 // - Use `amplify-velocity-template` to render the template, given the context

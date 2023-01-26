@@ -3475,7 +3475,7 @@ module.exports = {
 
 Check out `__tests__/integration/reply.test.js`.
 
-## 42 Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
+## 44 Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
 
 In reply we have 3 properties that are a type of interfaces:
 
@@ -3505,7 +3505,7 @@ type Reply implements ITweet {
 
 ### `profile` nested resolver
 
-*(42.0)* Create a nested resolver to get the profile on Reply. Similar to (36.0) Retweet.profile.
+*(44.0)* Create a nested resolver to get the profile on Reply. Similar to (36.0) Retweet.profile.
 
 We can reuse the `vtl` files for `Tweet.profile`. 
 
@@ -3523,7 +3523,7 @@ mappingTemplates:
 
 ### `inReplyToTweet` nested resolver
 
-*(42.1)* Create a nested resolver to get the inReplyToUsers on Reply, similar to (36.1) Retweet.retweetOf.
+*(44.1)* Create a nested resolver to get the inReplyToUsers on Reply, similar to (36.1) Retweet.retweetOf.
 
 ```yml
 mappingTemplates:
@@ -3533,7 +3533,7 @@ mappingTemplates:
     dataSource: tweetsTable
 ```
 
-*(42.3)* Create the `vtl` files `Reply.inReplyToTweet.request.vtl`,  `Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet nested resolvers. 
+*(44.3)* Create the `vtl` files `Reply.inReplyToTweet.request.vtl`,  `Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet nested resolvers. 
 
 ```
 # Reply.inReplyToTweet.request.vtl
@@ -3554,7 +3554,7 @@ $util.toJson($context.result)
 
 ### `inReplyToUsers` nested resolver
 
-*(42.4)* Create a nested resolver to get the inReplyToUsers on Reply.
+*(44.4)* Create a nested resolver to get the inReplyToUsers on Reply. 
 
 ```yml
 mappingTemplates:
@@ -3562,9 +3562,24 @@ mappingTemplates:
   - type: Reply
     field: inReplyToUsers
     dataSource: usersTable
+    
+    
+  # (46.0) added during e2e when we realized we need to get the profile of the user who retweeted the tweet
+  - type: Reply
+    field: retweeted
+    dataSource: retweetsTable
+    request: Tweet.retweeted.request.vtl
+    reply: Tweet.retweeted.reply.vtl
+
+  # (46.0) added during e2e when we realized we need to get the profile of the user who liked the tweet
+  - type: Reply
+    field: liked
+    dataSource: likesTable
+    request: Tweet.liked.request.vtl
+    reply: Tweet.liked.reply.vtl
 ```
 
-*(42.5)* Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and `Reply.inReplyToUsers.response.vtl`.
+*(44.5)* Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and `Reply.inReplyToUsers.response.vtl`.
 
 ```
 #if ($context.source.inReplyToUsers.size() == 0)
@@ -3620,7 +3635,7 @@ mappingTemplates:
 $util.toJson($context.result.data.${UsersTable})
 ```
 
-### 43 Unit test `Reply.inReplyToUsers.vtl`
+### 45 Unit test `Reply.inReplyToUsers.vtl`
 
 Similar to `Tweet.profile.request` (21.0). 
 
@@ -3634,7 +3649,15 @@ Similar to `Tweet.profile.request` (21.0).
 
 Check out `__tests__/unit/Reply.inReplyToUsers.test.js`.
 
+### 46 E2e test reply mutation
 
+Arrange:  UserA tweet, UserB reply
+
+Action: call getTweets or getMyTimeline
+
+Assert: see the reply
+
+Check out `__tests__/e2e/tweet-e2e.test.js`
 
 
 

@@ -143,7 +143,7 @@ functions:
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
 
-  # (42.2) Add the lambda for reply
+  # (44.2) Add the lambda for reply
   # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines
   # Similar to (35.1) retweets without the retweet table
   reply:

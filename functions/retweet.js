@@ -110,7 +110,7 @@ const handler = async event => {
     TransactItems: transactItems,
   }).promise()
 
-  return true
+  return newTweet
 }
 
 module.exports = {

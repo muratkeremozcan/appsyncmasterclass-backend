@@ -24,6 +24,7 @@ const {
   tweetFragment,
   iTweetFragment,
   retweetFragment,
+  replyFragment,
 } = require('../../test-helpers/graphql-fragments')
 registerFragment('myProfileFields', myProfileFragment)
 registerFragment('otherProfileFields', otherProfileFragment)
@@ -31,6 +32,7 @@ registerFragment('iProfileFields', iProfileFragment)
 registerFragment('tweetFields', tweetFragment)
 registerFragment('iTweetFields', iTweetFragment)
 registerFragment('retweetFields', retweetFragment)
+registerFragment('replyFields', replyFragment)
 
 describe('Given an authenticated user', () => {
   let signedInUser

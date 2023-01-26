@@ -25,6 +25,7 @@ const {
   tweetFragment,
   iTweetFragment,
   retweetFragment,
+  replyFragment,
 } = require('../../test-helpers/graphql-fragments')
 registerFragment('myProfileFields', myProfileFragment)
 registerFragment('otherProfileFields', otherProfileFragment)
@@ -32,9 +33,10 @@ registerFragment('iProfileFields', iProfileFragment)
 registerFragment('tweetFields', tweetFragment)
 registerFragment('iTweetFields', iTweetFragment)
 registerFragment('retweetFields', retweetFragment)
+registerFragment('replyFields', replyFragment)
 
 describe('e2e test for tweet', () => {
-  let signedInUser, DynamoDB, tweetResp
+  let signedInUser, DynamoDB, tweetResp, userB, userBsReply
 
   const text = chance.string({length: 16})
 
@@ -250,7 +252,9 @@ describe('e2e test for tweet', () => {
   describe('[38] retweet,', () => {
     beforeAll(async () => {
       const retweet = `mutation retweet($tweetId: ID!) {
-        retweet(tweetId: $tweetId)
+        retweet(tweetId: $tweetId) {
+          ... retweetFields
+        }
       }`
 
       await axiosGraphQLQuery(
@@ -341,6 +345,77 @@ describe('e2e test for tweet', () => {
     })
   })
 
+  describe("[46] reply: userB replies to signedInUser's tweet", () => {
+    beforeAll(async () => {
+      userB = await signInUser()
+      const reply = `mutation reply($tweetId: ID!, $text: String!) {
+        reply(tweetId: $tweetId, text: $text) {
+          ... replyFields
+        }
+      }`
+      const text = chance.string({length: 16})
+      userBsReply = await axiosGraphQLQuery(
+        process.env.API_URL,
+        userB.accessToken,
+        reply,
+        {
+          tweetId: tweetResp.tweet.id,
+          text,
+        },
+      )
+    })
+
+    it('userB should see the reply when calling getTweets', async () => {
+      const getTweetsResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        userB.accessToken,
+        getTweets,
+        {userId: userB.username, limit: 25, nextToken: null},
+      )
+
+      expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
+        profile: {
+          id: userB.username,
+          tweetsCount: 1,
+        },
+        inReplyToTweet: {
+          id: tweetResp.tweet.id,
+          replies: 1,
+        },
+        inReplyToUsers: [
+          {
+            id: signedInUser.username,
+          },
+        ],
+      })
+    })
+
+    it('userB should not see the reply when calling getMyTimeline', async () => {
+      const getMyTimelineResp = await axiosGraphQLQuery(
+        process.env.API_URL,
+        userB.accessToken,
+        getMyTimeline,
+        {userId: userB.username, limit: 25, nextToken: null},
+      )
+
+      expect(getMyTimelineResp.getMyTimeline.tweets[0]).toMatchObject({
+        profile: {
+          id: userB.username,
+          tweetsCount: 1,
+        },
+        inReplyToTweet: {
+          id: tweetResp.tweet.id,
+          replies: 1,
+        },
+        inReplyToUsers: [
+          {
+            id: signedInUser.username,
+          },
+        ],
+      })
+    })
+  })
+
   afterAll(async () => {
     // clean up DynamoDB and Cognito
     await DynamoDB.delete({
@@ -369,6 +444,28 @@ describe('e2e test for tweet', () => {
       .adminDeleteUser({
         UserPoolId: signedInUser.userPoolId,
         Username: signedInUser.username,
+      })
+      .promise()
+
+    // userB
+    await DynamoDB.delete({
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        id: userB.username,
+      },
+    }).promise()
+
+    await DynamoDB.delete({
+      TableName: process.env.TWEETS_TABLE,
+      Key: {
+        id: userBsReply.reply.id,
+      },
+    }).promise()
+
+    await signedInUser.cognito
+      .adminDeleteUser({
+        UserPoolId: userB.userPoolId,
+        Username: userB.username,
       })
       .promise()
   })

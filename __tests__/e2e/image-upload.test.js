@@ -32,7 +32,6 @@ describe('getUploadUrl and upload an image', () => {
     const extension = '.png'
     const contentType = 'image/png'
     const data = await axiosGraphQLQuery(
-      process.env.API_URL,
       signedInUser.accessToken,
       getImageUploadUrl,
       {extension, contentType},

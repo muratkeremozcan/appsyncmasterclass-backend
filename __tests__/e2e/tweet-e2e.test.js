@@ -87,12 +87,7 @@ describe('e2e test for tweet', () => {
     }`
 
     // Make a graphQL request with the tweet mutation and its text argument
-    tweetResp = await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      tweet,
-      {text},
-    )
+    tweetResp = await axiosGraphQLQuery(signedInUser.accessToken, tweet, {text})
   })
 
   it('[19] mutation; should check the content of the response', async () => {
@@ -110,7 +105,6 @@ describe('e2e test for tweet', () => {
   it('[18] getTweets query', async () => {
     // make a graphQL request and check the response
     const getTweetsResp = await axiosGraphQLQuery(
-      process.env.API_URL,
       signedInUser.accessToken,
       getTweets,
       {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -120,12 +114,11 @@ describe('e2e test for tweet', () => {
     expect(getTweetsResp.getTweets.tweets[0]).toMatchObject(tweetResp.tweet)
 
     // cannot ask for more than 25
-    const get26Tweets = axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      getTweets,
-      {userId: signedInUser.username, limit: 26, nextToken: null},
-    )
+    const get26Tweets = axiosGraphQLQuery(signedInUser.accessToken, getTweets, {
+      userId: signedInUser.username,
+      limit: 26,
+      nextToken: null,
+    })
     await expect(get26Tweets).rejects.toMatchObject({
       message: expect.stringContaining('max limit is 25'),
     })
@@ -134,7 +127,6 @@ describe('e2e test for tweet', () => {
   it('[24] getTimeline query', async () => {
     // make a graphQL request and check the response
     const getMyTimelineResp = await axiosGraphQLQuery(
-      process.env.API_URL,
       signedInUser.accessToken,
       getMyTimeline,
       {limit: 25, nextToken: null},
@@ -147,7 +139,6 @@ describe('e2e test for tweet', () => {
 
     // cannot ask for more than 25
     const get26MyTimeline = axiosGraphQLQuery(
-      process.env.API_URL,
       signedInUser.accessToken,
       getMyTimeline,
       {limit: 26, nextToken: null},
@@ -173,17 +164,13 @@ describe('e2e test for tweet', () => {
       }`
     beforeAll(async () => {
       // [29] like the tweet
-      await axiosGraphQLQuery(
-        process.env.API_URL,
-        signedInUser.accessToken,
-        like,
-        {tweetId: tweetResp.tweet.id},
-      )
+      await axiosGraphQLQuery(signedInUser.accessToken, like, {
+        tweetId: tweetResp.tweet.id,
+      })
     })
 
     it('[29] like mutation, [33] getLikes query: should update the tweet to liked and check it', async () => {
       const getTweetsResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getTweets,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -191,7 +178,7 @@ describe('e2e test for tweet', () => {
       expect(getTweetsResp.getTweets.tweets[0].liked).toBe(true)
       // cannot like the same tweet twice
       await expect(
-        axiosGraphQLQuery(process.env.API_URL, signedInUser.accessToken, like, {
+        axiosGraphQLQuery(signedInUser.accessToken, like, {
           tweetId: tweetResp.tweet.id,
         }),
       ).rejects.toMatchObject({
@@ -201,7 +188,6 @@ describe('e2e test for tweet', () => {
       // [33] getLikes query
       // make a graphQL request and check the response
       const getLikesResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getLikes,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -223,14 +209,10 @@ describe('e2e test for tweet', () => {
       const unlike = `mutation unlike($tweetId: ID!) {
         unlike(tweetId: $tweetId)
       }`
-      await axiosGraphQLQuery(
-        process.env.API_URL,
-        signedInUser.accessToken,
-        unlike,
-        {tweetId: tweetResp.tweet.id},
-      )
+      await axiosGraphQLQuery(signedInUser.accessToken, unlike, {
+        tweetId: tweetResp.tweet.id,
+      })
       const getTweetsResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getTweets,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -239,7 +221,6 @@ describe('e2e test for tweet', () => {
 
       // [33] getLikes and ensure we do not get anything
       const getLikesResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getLikes,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -257,17 +238,13 @@ describe('e2e test for tweet', () => {
         }
       }`
 
-      await axiosGraphQLQuery(
-        process.env.API_URL,
-        signedInUser.accessToken,
-        retweet,
-        {tweetId: tweetResp.tweet.id},
-      )
+      await axiosGraphQLQuery(signedInUser.accessToken, retweet, {
+        tweetId: tweetResp.tweet.id,
+      })
     })
 
     it('Should see the retweet when calling getTweets', async () => {
       const getTweetsResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getTweets,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -306,7 +283,6 @@ describe('e2e test for tweet', () => {
 
     it('should not see the retweet when calling getMyTimeline', async () => {
       const getMyTimelineResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getMyTimeline,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -319,15 +295,11 @@ describe('e2e test for tweet', () => {
       unretweet(tweetId: $tweetId)
     }`
 
-      await axiosGraphQLQuery(
-        process.env.API_URL,
-        signedInUser.accessToken,
-        unretweet,
-        {tweetId: tweetResp.tweet.id},
-      )
+      await axiosGraphQLQuery(signedInUser.accessToken, unretweet, {
+        tweetId: tweetResp.tweet.id,
+      })
 
       const getTweetsResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         signedInUser.accessToken,
         getTweets,
         {userId: signedInUser.username, limit: 25, nextToken: null},
@@ -354,20 +326,14 @@ describe('e2e test for tweet', () => {
         }
       }`
       const text = chance.string({length: 16})
-      userBsReply = await axiosGraphQLQuery(
-        process.env.API_URL,
-        userB.accessToken,
-        reply,
-        {
-          tweetId: tweetResp.tweet.id,
-          text,
-        },
-      )
+      userBsReply = await axiosGraphQLQuery(userB.accessToken, reply, {
+        tweetId: tweetResp.tweet.id,
+        text,
+      })
     })
 
     it('userB should see the reply when calling getTweets', async () => {
       const getTweetsResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         userB.accessToken,
         getTweets,
         {userId: userB.username, limit: 25, nextToken: null},
@@ -392,7 +358,6 @@ describe('e2e test for tweet', () => {
 
     it('userB should not see the reply when calling getMyTimeline', async () => {
       const getMyTimelineResp = await axiosGraphQLQuery(
-        process.env.API_URL,
         userB.accessToken,
         getMyTimeline,
         {userId: userB.username, limit: 25, nextToken: null},

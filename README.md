@@ -3659,9 +3659,165 @@ Assert: see the reply
 
 Check out `__tests__/e2e/tweet-e2e.test.js`
 
+## 47 Implement follow mutation
 
+*(47.0)* We need a relationships table to track which user follows/blocks/etc. who. Add a `RelationshipsTable` to `serverless.yml`.
 
+```yml
+# serverless.yml
+resources:
+  Resources:
+  ## ...
+    RelationshipsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: sk # sk for sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: otherUserId
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byOtherUser
+            KeySchema:
+              - AttributeName: otherUserId
+                KeyType: HASH
+              - AttributeName: sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: relationships-table
+```
 
+*(47.1)* add a mapping template for follow mutation. Follow will use `vtl` templates.
 
+*(47.2)* add a data source for the follow mutation - write to RelationshipsTable, update UsersTable. Also add a data source for relationships table
 
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  ## ..
+  - type: Follow
+    field: follow
+    dataSource: followMutation
+    
+dataSources:
+ ##
+ # (47.2) datasource for follow mutation
+ - type: AMAZON_DYNAMODB
+    name: followMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:PutItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
+ # (47.2) add a datasource for relationshipsTable
+  - type: AMAZON_DYNAMODB
+    name: relationshipsTable
+    config:
+      tableName: !Ref RelationshipsTable
+          
+substitutions:
+  ##
+  RelationshipsTable: !Ref RelationshipsTable
+```
+
+*(47.3)* Create the vtl files for `Mutation.follow.request.vtl` & `Mutation.follow.response`.
+
+When a userA follows userB, we write to RelationshipsTable, where userB is the otherUserId.
+
+![UserA-follows-UserB](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/4j5o07zfyfbz5jn6xaky.png)
+
+At userA and userB, we also increment followersCount & followingCount accordingly. All these can be done in a transaction using vtl (it can be in a lambda too btw).
+
+> When do we use substitutions in `serverless.appsync-api.yml` ?
+>
+> Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.
+
+```
+// defining a variable in vtl
+#set ($sk = "FOLLOWS_" + $context.arguments.userId)
+
+{
+  "version": "2018-05-29",
+  "operation": "TransactWriteItems",
+  "transactItems": [
+    {
+      "table": "${RelationshipsTable}",
+      "operation": "PutItem",
+      "key": {
+        "userId": $util.dynamodb.toDynamoDBJson($context.identity.username),
+        "sk": $util.dynamodb.toDynamoDBJson($sk)
+      },
+      "attributeValues": {
+        "otherUserId": $util.dynamodb.toDynamoDBJson($context.arguments.userId),
+        "createdAt": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+      },
+      "condition": {
+        "expression": "attribute_not_exists(sk)"
+      }
+    },
+    {
+      "table":"${UsersTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.identity.username)
+      },
+      "update": {
+        "expression": "ADD followingCount :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    },
+    {
+      "table":"${UsersTable}",
+      "operation": "UpdateItem",
+      "key": {
+        "id": $util.dynamodb.toDynamoDBJson($context.arguments.userId)
+      },
+      "update": {
+        "expression": "ADD followersCount :one",
+        "expressionValues": {
+          ":one": $util.dynamodb.toDynamoDBJson(1)
+        }
+      },
+      "condition": {
+        "expression": "attribute_exists(id)"
+      }
+    }
+  ]
+}
+```
+
+```
+#if (!$util.isNull($context.result.cancellationReasons))
+  $util.error('DynamoDB transaction error')
+#end
+
+#if (!$util.isNull($context.error))
+  $util.error('Failed to execute DynamoDB transaction')
+#end
+
+true
+```
 

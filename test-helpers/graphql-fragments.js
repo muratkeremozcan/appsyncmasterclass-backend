@@ -1,4 +1,5 @@
 // [28] Refactor tests to use graphQL fragments
+
 const myProfileFragment = `
 fragment myProfileFields on MyProfile {
   id
@@ -34,6 +35,8 @@ fragment otherProfileFields on OtherProfile {
   followingCount
   tweetsCount
   likesCounts
+  following
+  followedBy
 }
 `
 
@@ -62,22 +65,6 @@ fragment tweetFields on Tweet {
   retweets
   retweeted
   liked
-}
-`
-
-const iTweetFragment = `
-fragment iTweetFields on ITweet {
-  ... on Tweet {
-    ... tweetFields
-  }
-
-  ... on Retweet {
-    ... retweetFields
-  }
-
-  ... on Reply {
-    ... replyFields
-  }
 }
 `
 
@@ -128,6 +115,22 @@ fragment replyFields on Reply {
   }
   inReplyToUsers {
     ... iProfileFields
+  }
+}
+`
+
+const iTweetFragment = `
+fragment iTweetFields on ITweet {
+  ... on Tweet {
+    ... tweetFields
+  }
+
+  ... on Retweet {
+    ... retweetFields
+  }
+
+  ... on Reply {
+    ... replyFields
   }
 }
 `

@@ -3821,3 +3821,225 @@ At userA and userB, we also increment followersCount & followingCount accordingl
 true
 ```
 
+## 48 Implement nested resolvers `Profile.following` & `Profile.followedBy`
+
+When userA views userB's profile, userA will see if they follow userB and if userB is following them.
+
+*(48.0)* add nested resolvers for OtherProfile.following and OtherProfile.followedBy. 
+
+```yml
+
+mappingTemplates:
+  # Queries
+  # Mutations
+  # Nested Resolvers
+  # [34] Implement Profile.tweets nested resolver
+  # (34.0) Create a nested resolver for MyProfile.tweets
+  - type: MyProfile
+    field: tweets
+    dataSource: tweetsTable
+  - type: OtherProfile
+    field: tweets
+    dataSource: tweetsTable
+    request: MyProfile.tweets.request.vtl
+    response: MyProfile.tweets.response.vtl
+
+  # [48] Implement nested resolvers `Profile.following` & `Profile.followedBy`
+  # (48.0) add nested resolvers for OtherProfile.following and OtherProfile.followedBy
+  - type: OtherProfile
+    field: following
+    dataSource: relationshipsTable
+  - type: OtherProfile
+    field: followedBy
+    dataSource: relationshipsTable
+```
+
+(48.1) create the `vtl` files for `OtherProfile.following` and `OtherProfile.followedBy`.
+
+```
+// OtherProfile.followedBy.request.vtl
+
+#set ($sk = "FOLLOWS_" + $context.identity.username)
+
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "userId" : $util.dynamodb.toDynamoDBJson($context.source.id),
+    "sk" : $util.dynamodb.toDynamoDBJson($sk)
+  }
+}
+```
+
+```
+// OtherProfile.followedBy.response.vtl
+
+#if ($util.isNull($context.result))
+  false
+#else
+  true
+#end
+```
+
+```
+// OtherProfile.following.request.vtl
+
+#set ($sk = "FOLLOWS_" + $context.source.id)
+
+{
+  "version" : "2018-05-29",
+  "operation" : "GetItem",
+  "key" : {
+    "userId" : $util.dynamodb.toDynamoDBJson($context.identity.username),
+    "sk" : $util.dynamodb.toDynamoDBJson($sk)
+  }
+}
+```
+
+```
+// OtherProfile.following.response.vtl
+
+#if ($util.isNull($context.result))
+  false
+#else
+  true
+#end
+```
+
+## 49 Implement `getProfile` query
+
+We are using the screen name and not user id for the sake of a nice url when viewing another user's profile
+
+```
+# schema.api.graphql
+
+type Query {
+	getProfile(screenName: String!): OtherProfile!	
+}
+```
+
+We need a way to get a user by screen name, and for that we need to add the global secondary index to UsersTable.
+
+*(49.0)* add the mapping template for the getProfile query.
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # ..
+  # (49.0) add the mapping template for the getProfile query
+  - type: Query
+    field: getProfile
+    dataSource: usersTable
+```
+
+*(49.1)* Add `screenName` as  global secondary index to `UsersTable`
+
+```yml
+# serverless.yml
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        # (49.1) Add `screenName` as  global secondary index to `UsersTable`  
+          - AttributeName: screenName
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byScreenName
+            KeySchema:
+              - AttributeName: screenName
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: users-table
+```
+
+*(49.2)* add the `vtl` files
+
+```
+// Query.getProfile.request.vtl
+
+{
+  "version" : "2018-05-29",
+  "operation" : "Query",
+  "query" : {
+    "expression" : "screenName = :screenName",
+    "expressionValues" : {
+      ":screenName" : $util.dynamodb.toDynamoDBJson($context.arguments.screenName)
+    }
+  },
+  "index": "byScreenName",
+  "limit" : 1,
+  "scanIndexForward" : false,
+  "consistentRead" : false,
+  "select" : "ALL_ATTRIBUTES"
+}
+```
+
+```
+// Query.getProfile.response.vtl
+
+#if ($context.result.items.size() == 0)
+  null
+#else
+  $util.toJson($context.result.items[0])
+#end
+```
+
+### 50 E2e test for follow mutation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -14,7 +14,7 @@ type Query {
   # (23.2) Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a `UnhydratedTweetsPage` instead of `TweetsPage`
   getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
   getMyProfile: MyProfile!
-  getProfile(screenName: String!): OtherProfile!
+  getProfile(screenName: String!): OtherProfile
   getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
   # (32.0) `getLikes` is very similar to `getMyTimeline` (23)
   # To get the tweets that a user likes, we just need to query the `LikesTable` against the user's `userId`.

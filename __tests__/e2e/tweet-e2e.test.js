@@ -36,7 +36,7 @@ registerFragment('retweetFields', retweetFragment)
 registerFragment('replyFields', replyFragment)
 
 describe('e2e test for tweet', () => {
-  let signedInUser, DynamoDB, tweetResp, userB, userBsReply
+  let userA, DynamoDB, tweetAResp, userB, userBsReply
 
   const text = chance.string({length: 16})
 
@@ -62,8 +62,37 @@ describe('e2e test for tweet', () => {
     }
   }`
 
+  // [50] E2e test for follow mutation
+  const getMyProfile = `query getMyProfile {
+    getMyProfile {
+      ... myProfileFields
+
+      tweets {
+        nextToken
+        tweets {
+          ... iTweetFields
+        }
+      }
+    }
+  }`
+
+  // [50] E2e test for follow mutation
+  const getProfile = `query getProfile($screenName: String!) {
+    getProfile(screenName: $screenName) {
+      ... otherProfileFields
+
+      tweets {
+        nextToken
+        tweets {
+          ... iTweetFields
+        }
+      }
+    }
+  }`
+
   beforeAll(async () => {
-    signedInUser = await signInUser()
+    userA = await signInUser()
+    userB = await signInUser()
     DynamoDB = new AWS.DynamoDB.DocumentClient()
 
     // [19] E2e test for tweet mutation
@@ -87,13 +116,13 @@ describe('e2e test for tweet', () => {
     }`
 
     // Make a graphQL request with the tweet mutation and its text argument
-    tweetResp = await axiosGraphQLQuery(signedInUser.accessToken, tweet, {text})
+    tweetAResp = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
   })
 
   it('[19] mutation; should check the content of the response', async () => {
     // Check the content of the response for the  mutation (no need to repeat the integration test DDB verifications,
     // so long as we got a response, DDB transactions already happened).
-    expect(tweetResp.tweet).toMatchObject({
+    expect(tweetAResp.tweet).toMatchObject({
       text,
       replies: 0,
       likes: 0,
@@ -105,17 +134,17 @@ describe('e2e test for tweet', () => {
   it('[18] getTweets query', async () => {
     // make a graphQL request and check the response
     const getTweetsResp = await axiosGraphQLQuery(
-      signedInUser.accessToken,
+      userA.accessToken,
       getTweets,
-      {userId: signedInUser.username, limit: 25, nextToken: null},
+      {userId: userA.username, limit: 25, nextToken: null},
     )
     expect(getTweetsResp.getTweets.nextToken).toBeNull()
     expect(getTweetsResp.getTweets.tweets).toHaveLength(1)
-    expect(getTweetsResp.getTweets.tweets[0]).toMatchObject(tweetResp.tweet)
+    expect(getTweetsResp.getTweets.tweets[0]).toMatchObject(tweetAResp.tweet)
 
     // cannot ask for more than 25
-    const get26Tweets = axiosGraphQLQuery(signedInUser.accessToken, getTweets, {
-      userId: signedInUser.username,
+    const get26Tweets = axiosGraphQLQuery(userA.accessToken, getTweets, {
+      userId: userA.username,
       limit: 26,
       nextToken: null,
     })
@@ -127,19 +156,19 @@ describe('e2e test for tweet', () => {
   it('[24] getTimeline query', async () => {
     // make a graphQL request and check the response
     const getMyTimelineResp = await axiosGraphQLQuery(
-      signedInUser.accessToken,
+      userA.accessToken,
       getMyTimeline,
       {limit: 25, nextToken: null},
     )
     expect(getMyTimelineResp.getMyTimeline.nextToken).toBeNull()
     expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
     expect(getMyTimelineResp.getMyTimeline.tweets[0]).toMatchObject(
-      tweetResp.tweet,
+      tweetAResp.tweet,
     )
 
     // cannot ask for more than 25
     const get26MyTimeline = axiosGraphQLQuery(
-      signedInUser.accessToken,
+      userA.accessToken,
       getMyTimeline,
       {limit: 26, nextToken: null},
     )
@@ -164,22 +193,22 @@ describe('e2e test for tweet', () => {
       }`
     beforeAll(async () => {
       // [29] like the tweet
-      await axiosGraphQLQuery(signedInUser.accessToken, like, {
-        tweetId: tweetResp.tweet.id,
+      await axiosGraphQLQuery(userA.accessToken, like, {
+        tweetId: tweetAResp.tweet.id,
       })
     })
 
     it('[29] like mutation, [33] getLikes query: should update the tweet to liked and check it', async () => {
       const getTweetsResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getTweets,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
       expect(getTweetsResp.getTweets.tweets[0].liked).toBe(true)
       // cannot like the same tweet twice
       await expect(
-        axiosGraphQLQuery(signedInUser.accessToken, like, {
-          tweetId: tweetResp.tweet.id,
+        axiosGraphQLQuery(userA.accessToken, like, {
+          tweetId: tweetAResp.tweet.id,
         }),
       ).rejects.toMatchObject({
         message: expect.stringContaining('DynamoDB transaction error'),
@@ -188,18 +217,18 @@ describe('e2e test for tweet', () => {
       // [33] getLikes query
       // make a graphQL request and check the response
       const getLikesResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getLikes,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
       expect(getLikesResp.getLikes.nextToken).toBeNull()
       expect(getLikesResp.getLikes.tweets).toHaveLength(1)
       expect(getLikesResp.getLikes.tweets[0]).toMatchObject({
-        ...tweetResp.tweet,
+        ...tweetAResp.tweet,
         liked: true,
         likes: 1,
         profile: {
-          ...tweetResp.tweet.profile,
+          ...tweetAResp.tweet.profile,
           likesCounts: 1,
         },
       })
@@ -209,21 +238,21 @@ describe('e2e test for tweet', () => {
       const unlike = `mutation unlike($tweetId: ID!) {
         unlike(tweetId: $tweetId)
       }`
-      await axiosGraphQLQuery(signedInUser.accessToken, unlike, {
-        tweetId: tweetResp.tweet.id,
+      await axiosGraphQLQuery(userA.accessToken, unlike, {
+        tweetId: tweetAResp.tweet.id,
       })
       const getTweetsResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getTweets,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
       expect(getTweetsResp.getTweets.tweets[0].liked).toBe(false)
 
       // [33] getLikes and ensure we do not get anything
       const getLikesResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getLikes,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
       expect(getLikesResp.getLikes.nextToken).toBeNull()
       expect(getLikesResp.getLikes.tweets).toHaveLength(0)
@@ -238,16 +267,16 @@ describe('e2e test for tweet', () => {
         }
       }`
 
-      await axiosGraphQLQuery(signedInUser.accessToken, retweet, {
-        tweetId: tweetResp.tweet.id,
+      await axiosGraphQLQuery(userA.accessToken, retweet, {
+        tweetId: tweetAResp.tweet.id,
       })
     })
 
     it('Should see the retweet when calling getTweets', async () => {
       const getTweetsResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getTweets,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
 
       expect(getTweetsResp.getTweets.tweets).toHaveLength(2)
@@ -255,14 +284,14 @@ describe('e2e test for tweet', () => {
       // TODO: (2) verify the console.log with an expect
       expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
         profile: {
-          id: signedInUser.username,
+          id: userA.username,
           tweetsCount: 2,
         },
         retweetOf: {
-          ...tweetResp.tweet,
+          ...tweetAResp.tweet,
           retweets: 1,
           profile: {
-            id: signedInUser.username,
+            id: userA.username,
             tweetsCount: 2,
           },
         },
@@ -270,7 +299,7 @@ describe('e2e test for tweet', () => {
 
       expect(getTweetsResp.getTweets.tweets[1]).toMatchObject({
         profile: {
-          id: signedInUser.username,
+          id: userA.username,
           tweetsCount: 2,
         },
         retweets: 1,
@@ -283,9 +312,9 @@ describe('e2e test for tweet', () => {
 
     it('should not see the retweet when calling getMyTimeline', async () => {
       const getMyTimelineResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getMyTimeline,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
       expect(getMyTimelineResp.getMyTimeline.tweets).toHaveLength(1)
     })
@@ -295,22 +324,22 @@ describe('e2e test for tweet', () => {
       unretweet(tweetId: $tweetId)
     }`
 
-      await axiosGraphQLQuery(signedInUser.accessToken, unretweet, {
-        tweetId: tweetResp.tweet.id,
+      await axiosGraphQLQuery(userA.accessToken, unretweet, {
+        tweetId: tweetAResp.tweet.id,
       })
 
       const getTweetsResp = await axiosGraphQLQuery(
-        signedInUser.accessToken,
+        userA.accessToken,
         getTweets,
-        {userId: signedInUser.username, limit: 25, nextToken: null},
+        {userId: userA.username, limit: 25, nextToken: null},
       )
 
       expect(getTweetsResp.getTweets.tweets).toHaveLength(1)
       expect(getTweetsResp.getTweets.tweets[0]).toMatchObject({
-        ...tweetResp.tweet,
+        ...tweetAResp.tweet,
         retweets: 0,
         profile: {
-          id: signedInUser.username,
+          id: userA.username,
           tweetsCount: 1,
         },
       })
@@ -319,7 +348,6 @@ describe('e2e test for tweet', () => {
 
   describe("[46] reply: userB replies to signedInUser's tweet", () => {
     beforeAll(async () => {
-      userB = await signInUser()
       const reply = `mutation reply($tweetId: ID!, $text: String!) {
         reply(tweetId: $tweetId, text: $text) {
           ... replyFields
@@ -327,7 +355,7 @@ describe('e2e test for tweet', () => {
       }`
       const text = chance.string({length: 16})
       userBsReply = await axiosGraphQLQuery(userB.accessToken, reply, {
-        tweetId: tweetResp.tweet.id,
+        tweetId: tweetAResp.tweet.id,
         text,
       })
     })
@@ -345,12 +373,12 @@ describe('e2e test for tweet', () => {
           tweetsCount: 1,
         },
         inReplyToTweet: {
-          id: tweetResp.tweet.id,
+          id: tweetAResp.tweet.id,
           replies: 1,
         },
         inReplyToUsers: [
           {
-            id: signedInUser.username,
+            id: userA.username,
           },
         ],
       })
@@ -369,14 +397,81 @@ describe('e2e test for tweet', () => {
           tweetsCount: 1,
         },
         inReplyToTweet: {
-          id: tweetResp.tweet.id,
+          id: tweetAResp.tweet.id,
           replies: 1,
         },
         inReplyToUsers: [
           {
-            id: signedInUser.username,
+            id: userA.username,
           },
         ],
+      })
+    })
+  })
+
+  describe('[50] userA follows UserB', () => {
+    let userAsProfile, userBsProfile
+    const follow = `mutation follow($userId: ID!) {
+      follow(userId: $userId)
+    }`
+    beforeAll(async () => {
+      await axiosGraphQLQuery(userA.accessToken, follow, {
+        userId: userB.username,
+      })
+
+      userAsProfile = await axiosGraphQLQuery(userA.accessToken, getMyProfile)
+      userBsProfile = await axiosGraphQLQuery(userB.accessToken, getMyProfile)
+    })
+
+    it("User A should see following as true when viewing user B's profile", async () => {
+      const getProfileResp = await axiosGraphQLQuery(
+        userA.accessToken,
+        getProfile,
+        {screenName: userBsProfile.getMyProfile.screenName},
+      )
+
+      expect(getProfileResp.getProfile.following).toBe(true)
+      expect(getProfileResp.getProfile.followedBy).toBe(false)
+    })
+
+    it("User B should see followedBy as true when viewing user A's profile", async () => {
+      const getProfileResp = await axiosGraphQLQuery(
+        userB.accessToken,
+        getProfile,
+        {screenName: userAsProfile.getMyProfile.screenName},
+      )
+
+      expect(getProfileResp.getProfile.following).toBe(false)
+      expect(getProfileResp.getProfile.followedBy).toBe(true)
+    })
+
+    describe('userB follows userA back', () => {
+      beforeAll(async () => {
+        await axiosGraphQLQuery(userB.accessToken, follow, {
+          userId: userA.username,
+        })
+      })
+
+      it("User A should see following as true when viewing user B's profile", async () => {
+        const getProfileResp = await axiosGraphQLQuery(
+          userA.accessToken,
+          getProfile,
+          {screenName: userBsProfile.getMyProfile.screenName},
+        )
+
+        expect(getProfileResp.getProfile.following).toBe(true)
+        expect(getProfileResp.getProfile.followedBy).toBe(true)
+      })
+
+      it("User B should see followedBy as true when viewing user A's profile", async () => {
+        const getProfileResp = await axiosGraphQLQuery(
+          userB.accessToken,
+          getProfile,
+          {screenName: userAsProfile.getMyProfile.screenName},
+        )
+
+        expect(getProfileResp.getProfile.following).toBe(true)
+        expect(getProfileResp.getProfile.followedBy).toBe(true)
       })
     })
   })
@@ -386,29 +481,29 @@ describe('e2e test for tweet', () => {
     await DynamoDB.delete({
       TableName: process.env.USERS_TABLE,
       Key: {
-        id: signedInUser.username,
+        id: userA.username,
       },
     }).promise()
 
     await DynamoDB.delete({
       TableName: process.env.TWEETS_TABLE,
       Key: {
-        id: tweetResp.tweet.id,
+        id: tweetAResp.tweet.id,
       },
     }).promise()
 
     await DynamoDB.delete({
       TableName: process.env.TIMELINES_TABLE,
       Key: {
-        userId: signedInUser.username,
-        tweetId: tweetResp.tweet.id,
+        userId: userA.username,
+        tweetId: tweetAResp.tweet.id,
       },
     }).promise()
 
-    await signedInUser.cognito
+    await userA.cognito
       .adminDeleteUser({
-        UserPoolId: signedInUser.userPoolId,
-        Username: signedInUser.username,
+        UserPoolId: userA.userPoolId,
+        Username: userA.username,
       })
       .promise()
 
@@ -427,7 +522,7 @@ describe('e2e test for tweet', () => {
       },
     }).promise()
 
-    await signedInUser.cognito
+    await userA.cognito
       .adminDeleteUser({
         UserPoolId: userB.userPoolId,
         Username: userB.username,

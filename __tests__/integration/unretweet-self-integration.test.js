@@ -62,12 +62,7 @@ describe('Given an authenticated user with a tweet and retweet', () => {
     }`
     const text = chance.string({length: 16})
     // Make a graphQL request with the tweet mutation and its text argument
-    tweetA = await axiosGraphQLQuery(
-      process.env.API_URL,
-      userA.accessToken,
-      tweet,
-      {text},
-    )
+    tweetA = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
     tweetId = tweetA.tweet.id
     userId = userA.username
 

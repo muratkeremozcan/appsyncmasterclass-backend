@@ -192,6 +192,13 @@ mappingTemplates:
     request: Tweet.liked.request.vtl
     response: Tweet.liked.response.vtl
 
+  # (47.1) add a mapping template for follow mutation
+  - type: Follow
+    field: follow
+    dataSource: followMutation
+    request: Mutation.follow.request.vtl
+    response: Mutation.follow.response.vtl
+
 dataSources:
   - type: NONE
     name: none
@@ -256,6 +263,25 @@ dataSources:
             - !GetAtt UsersTable.Arn
             - !GetAtt TweetsTable.Arn
 
+  # (47.2) add a datasource for relationshipsTable
+  - type: AMAZON_DYNAMODB
+    name: relationshipsTable
+    config:
+      tableName: !Ref RelationshipsTable
+  # (47.2) add a data source for the follow mutation
+  # write to RelationshipsTable, update UsersTable
+  - type: AMAZON_DYNAMODB
+    name: followMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:PutItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
+
   ## LAMBDA data sources
 
   - type: AWS_LAMBDA
@@ -283,6 +309,9 @@ dataSources:
     config:
       functionName: reply
 
+# When do we use substitutions in `serverless.appsync-api.yml` ?
+# Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.
+
 # (23.4) For the nested field to work we need another set of `vtl` files under `mapping-templates/`.
 # * We will have access to a list of tweets from Timelines table, which has userId and tweetId.
 # * We can use the tweetId to fetch the tweets from the Tweets table.
@@ -295,3 +324,4 @@ substitutions:
   # (26.1) when we want to refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions
   LikesTable: !Ref LikesTable
   UsersTable: !Ref UsersTable
+  RelationshipsTable: !Ref RelationshipsTable

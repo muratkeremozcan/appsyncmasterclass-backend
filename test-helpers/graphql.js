@@ -1,4 +1,5 @@
 // (9) bare bones http request
+require('dotenv').config()
 const http = require('axios')
 const _ = require('lodash')
 // [28] Refactor tests to use graphQL fragments
@@ -39,7 +40,7 @@ function* findUsedFragments(query, usedFragments = new Set()) {
   }
 }
 
-const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
+const axiosGraphQLQuery = async (auth, query, variables = {}) => {
   const headers = {}
   if (auth) {
     headers.Authorization = auth
@@ -53,7 +54,7 @@ const axiosGraphQLQuery = async (url, auth, query, variables = {}) => {
   try {
     const resp = await http({
       method: 'post',
-      url,
+      url: process.env.API_URL,
       headers,
       data: {
         query: [query, ...usedFragments].join('\n'), // (28.1) include the fragments as part of the request we send to AppSync

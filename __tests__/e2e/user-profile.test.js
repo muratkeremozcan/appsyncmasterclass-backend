@@ -55,11 +55,7 @@ describe('Given an authenticated user', () => {
         }
       }
     }`
-    const data = await axiosGraphQLQuery(
-      process.env.API_URL,
-      signedInUser.accessToken,
-      getMyProfile,
-    )
+    const data = await axiosGraphQLQuery(signedInUser.accessToken, getMyProfile)
     const profile = data.getMyProfile
 
     expect(profile).toMatchObject({
@@ -107,7 +103,6 @@ describe('Given an authenticated user', () => {
     // Make a graphQL request with the query and variables
     const newName = chance.first()
     const data = await axiosGraphQLQuery(
-      process.env.API_URL,
       signedInUser.accessToken,
       editMyProfile,
       {input: {name: newName}},

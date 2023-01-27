@@ -24,6 +24,12 @@ mappingTemplates:
     # Realize how it matches `mappingTemplates:type&field`
     # The convention Handles request:<fileName> and response:<fileName> that would be right here otherwise
 
+  # [49] Implement getProfile query
+  # (49.0) Add the mapping template for the getProfile query
+  - type: Query
+    field: getProfile
+    dataSource: usersTable
+
   # [20] Implement getTweets query
   # (20.0) Add the mapping template
   - type: Query
@@ -106,7 +112,13 @@ mappingTemplates:
     request: false
     response: false
 
+  # (47.1) add a mapping template for follow mutation
+  - type: Mutation
+    field: follow
+    dataSource: followMutation
+
   ## NESTED RESOLVERS
+
   # When do we need nested resolvers?
   # Oftentimes when we need to return another type, e.g. a Parent type might have a children property of type [Person].
   # A Customer type might have an orders array of type [Order] or a Person type might have a spouse property, also of type Person.
@@ -124,6 +136,12 @@ mappingTemplates:
     field: liked
     dataSource: likesTable
 
+  # (38.0) add a nested resolver for reweeted
+  # similar to liked at (27.0)
+  - type: Tweet
+    field: retweeted
+    dataSource: retweetsTable
+
   # (23.3) Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to.
   # We can have that resolver hydrate the data from a different table.
   # Create a nested field that uses the `tweets` field of the type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`
@@ -136,29 +154,22 @@ mappingTemplates:
   - type: MyProfile
     field: tweets
     dataSource: tweetsTable
+
   - type: OtherProfile
     field: tweets
     dataSource: tweetsTable
     request: MyProfile.tweets.request.vtl
     response: MyProfile.tweets.response.vtl
 
-  # [36] Implement Retweet nested resolver
-  # (36.0) Create a nested resolver to get the profile on Retweet
-  - type: Retweet
-    field: profile
-    dataSource: usersTable
-    request: Tweet.profile.request.vtl
-    response: Tweet.profile.response.vtl
-  # (36.1) Create a nested resolver to fetch the retweeted tweet on Retweet
-  - type: Retweet
-    field: retweetOf
-    dataSource: tweetsTable
+  # [48] Implement nested resolvers `Profile.following` & `Profile.followedBy`
+  # add a nested resolvers for OtherProfile.following and OtherProfile.followedBy
+  - type: OtherProfile
+    field: following
+    dataSource: relationshipsTable
 
-  # (38.0) add a nested resolver for reweeted
-  # similar to liked at (27.0)
-  - type: Tweet
-    field: retweeted
-    dataSource: retweetsTable
+  - type: OtherProfile
+    field: followedBy
+    dataSource: relationshipsTable
 
   # [44] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
   # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
@@ -192,12 +203,17 @@ mappingTemplates:
     request: Tweet.liked.request.vtl
     response: Tweet.liked.response.vtl
 
-  # (47.1) add a mapping template for follow mutation
-  - type: Follow
-    field: follow
-    dataSource: followMutation
-    request: Mutation.follow.request.vtl
-    response: Mutation.follow.response.vtl
+  # [36] Implement Retweet nested resolver
+  # (36.0) Create a nested resolver to get the profile on Retweet
+  - type: Retweet
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+  # (36.1) Create a nested resolver to fetch the retweeted tweet on Retweet
+  - type: Retweet
+    field: retweetOf
+    dataSource: tweetsTable
 
 dataSources:
   - type: NONE

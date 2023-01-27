@@ -181,6 +181,16 @@ resources:
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
+          # (49.1) Add `screenName` as  global secondary index to `UsersTable`
+          - AttributeName: screenName
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byScreenName
+            KeySchema:
+              - AttributeName: screenName
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
         Tags:
           - Key: Environment
             # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
@@ -385,6 +395,7 @@ resources:
 
     # [47] Implement follow mutation
     # (47.0) create a relationships table to track which user follows/blocks/etc. who
+    # sk for sort key
     RelationshipsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -392,7 +403,7 @@ resources:
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
-          - AttributeName: sk # sk for sort key
+          - AttributeName: sk
             KeyType: RANGE
         AttributeDefinitions:
           - AttributeName: userId

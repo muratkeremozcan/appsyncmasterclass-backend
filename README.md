@@ -4013,6 +4013,8 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 51 Distribute tweets to followers
 
+Add userA's tweet to their follower's timelines. We will use Dynamo Streams for that.
+
 
 
 

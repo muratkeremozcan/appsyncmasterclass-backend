@@ -4001,6 +4001,18 @@ resources:
 
 ### 50 E2e test for follow mutation
 
+Arrange: userA follows userB
+
+Act: userA views userBs profile
+
+Assert: following: true, followedBy: false
+
+After that, userB follows back userA, userA views userB again and followedBy shows true.
+
+Check out `__tests__/e2e/tweet-e2e.test.js`
+
+## 51 Distribute tweets to followers
+
 
 
 

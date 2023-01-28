@@ -23,6 +23,14 @@ const {
   getMyTimeline,
   getMyProfile,
   getProfile,
+  follow,
+  tweet,
+  like,
+  getLikes,
+  unlike,
+  retweet,
+  unretweet,
+  reply,
 } = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
@@ -56,20 +64,6 @@ describe('e2e test for tweet', () => {
     // we can copy the tweet mutation from Appsync console
     // we are taking a text argument, mirroring the type at schema.api.graphql
     // TODO: (4) move tweet L71 to outer scop
-    const tweet = `mutation tweet($text: String!) { 
-      tweet(text: $text) {
-        id
-        profile {
-          ... iProfileFields
-        }
-        createdAt
-        text
-        replies
-        likes
-        retweets
-        liked
-      }
-    }`
 
     // Make a graphQL request with the tweet mutation and its text argument
     tweetAResp = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
@@ -134,19 +128,6 @@ describe('e2e test for tweet', () => {
   })
 
   describe('[29] [33] [31] like, getLikes, unlike', () => {
-    const like = `mutation like($tweetId: ID!) {
-      like(tweetId: $tweetId)
-    }`
-    // [33] getLikes query
-    // create the query
-    const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String) {
-        getLikes(userId: $userId, limit: $limit, nextToken: $nextToken) {
-          nextToken
-          tweets {
-            ... iTweetFields
-          }
-        }
-      }`
     beforeAll(async () => {
       // [29] like the tweet
       await axiosGraphQLQuery(userA.accessToken, like, {
@@ -191,9 +172,6 @@ describe('e2e test for tweet', () => {
     })
 
     it('[31] unlike mutation, [33] getLikes query: should update the tweet to un-liked and check it', async () => {
-      const unlike = `mutation unlike($tweetId: ID!) {
-        unlike(tweetId: $tweetId)
-      }`
       await axiosGraphQLQuery(userA.accessToken, unlike, {
         tweetId: tweetAResp.tweet.id,
       })
@@ -217,12 +195,6 @@ describe('e2e test for tweet', () => {
 
   describe('[38] retweet,', () => {
     beforeAll(async () => {
-      const retweet = `mutation retweet($tweetId: ID!) {
-        retweet(tweetId: $tweetId) {
-          ... retweetFields
-        }
-      }`
-
       await axiosGraphQLQuery(userA.accessToken, retweet, {
         tweetId: tweetAResp.tweet.id,
       })
@@ -276,10 +248,6 @@ describe('e2e test for tweet', () => {
     })
 
     it('[41] Should not see the retweet upon unRetweeting', async () => {
-      const unretweet = `mutation unretweet($tweetId: ID!) {
-      unretweet(tweetId: $tweetId)
-    }`
-
       await axiosGraphQLQuery(userA.accessToken, unretweet, {
         tweetId: tweetAResp.tweet.id,
       })
@@ -304,11 +272,6 @@ describe('e2e test for tweet', () => {
 
   describe("[46] reply: userB replies to signedInUser's tweet", () => {
     beforeAll(async () => {
-      const reply = `mutation reply($tweetId: ID!, $text: String!) {
-        reply(tweetId: $tweetId, text: $text) {
-          ... replyFields
-        }
-      }`
       const text = chance.string({length: 16})
       userBsReply = await axiosGraphQLQuery(userB.accessToken, reply, {
         tweetId: tweetAResp.tweet.id,
@@ -367,9 +330,7 @@ describe('e2e test for tweet', () => {
 
   describe('[50] userA follows UserB', () => {
     let userAsProfile, userBsProfile
-    const follow = `mutation follow($userId: ID!) {
-      follow(userId: $userId)
-    }`
+
     beforeAll(async () => {
       await axiosGraphQLQuery(userA.accessToken, follow, {
         userId: userB.username,

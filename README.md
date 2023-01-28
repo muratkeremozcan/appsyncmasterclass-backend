@@ -4015,9 +4015,108 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 Add userA's tweet to their follower's timelines. We will use Dynamo Streams for that.
 
+*(51.0)* enable Dynamo stream specification on tweets table, to use to trigger a lambda function
 
+```yml
+# serverless.yml
 
+resources:
+  Resources:
+    TweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: #
+        KeySchema: #
+        AttributeDefinitions: #
+        GlobalSecondaryIndexes: #
+        Tags: #
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+```
 
+*(51.1)* Add a lambda function that will be triggered by the Dynamo stream.
+
+```yml
+# serverless.yml
+  distributeTweets:
+    handler: functions/distribute-tweets.handler
+    environment:
+      RELATIONSHIPS_TABLE: !Ref RelationshipsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+    events: # lambda triggered by a stream event
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:DeleteItem
+          - dynamodb:BatchWriteItem
+        Resource: !GetAtt TimelinesTable.Arn
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource: !Sub '${RelationshipsTable.Arn}/index/byOtherUser'
+```
+
+*(51.2)* add the lambda function to distribute tweets to followers.
+
+In case of a DDB update (write/modify) we get both NewImage and OldImage of that record in the DDB table. In case of remove, OldImage tells us the record that was deleted. In the case of an insert, the NewImage tests us the record that was added.
+
+![DDB-stream-1](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/wbdng6p18ssyjcl7gqwc.png)
+
+```js
+// functions/distribute-tweets.js
+
+const _ = require('lodash')
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+const Constants = require('../lib/constants')
+
+const {RELATIONSHIPS_TABLE, TIMELINES_TABLE} = process.env
+
+const handler = async event => {
+  // iterate through the array of Records, we only care about INSERT and REMOVE
+  for (const record of event.Records) {
+    if (record.eventName === 'INSERT') {
+      // get the tweet object out of the NewImage, insert into follower timelines
+      // unmarshall converts the DynamoDB record into a JS object
+      const tweet = DynamoDB.Converter.unmarshall(record.dynamodb.NewImage)
+      // find the followers of the tweet creator
+      const followers = await getFollowers(tweet.creator)
+      // insert tweet into follower timelines
+      await distribute(tweet, followers)
+    } else if (record.eventName === 'REMOVE') {
+      // do the opposite for remove
+      const tweet = DynamoDB.Converter.unmarshall(record.dynamodb.OldImage)
+      const followers = await getFollowers(tweet.creator)
+      await undistribute(tweet, followers)
+    }
+  }
+}
+async function getFollowers(userId) {}
+
+async function distribute(tweet, followers) {}
+
+async function undistribute(tweet, followers) {}
+
+module.exports = {handler}
+
+```
+
+### 52 Integration test for distribute-tweets function
+
+* Create an event object (this time we are getting it from json files), and modify it to match the test case
+
+* Feed it to the handler
+
+* Check that the result matches the expectation
+
+The main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB.
+
+Check out `__tests__/integration/distribute-tweets.test.js`
+
+### 53 E2e test for distribute-tweets function
 
 
 

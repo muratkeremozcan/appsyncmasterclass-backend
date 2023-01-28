@@ -18,6 +18,10 @@ const {
   registerFragment,
 } = require('../../test-helpers/graphql')
 const {
+  editMyProfile,
+  getMyProfile,
+} = require('../../test-helpers/queries-and-mutations')
+const {
   myProfileFragment,
   otherProfileFragment,
   iProfileFragment,
@@ -43,18 +47,7 @@ describe('Given an authenticated user', () => {
   it('The user can fetch his profile with getMyProfile', async () => {
     // as the signed in user, make a request
     // we can copy the query from the AppSync console
-    const getMyProfile = `query getMyProfile {
-      getMyProfile {
-        ... myProfileFields
-  
-        tweets {
-          nextToken
-          tweets {
-            ... iTweetFields
-          }
-        }
-      }
-    }`
+
     const data = await axiosGraphQLQuery(signedInUser.accessToken, getMyProfile)
     const profile = data.getMyProfile
 
@@ -87,18 +80,6 @@ describe('Given an authenticated user', () => {
     // we can copy the query from the AppSync console,
     // here we are taking an input as a parameter, mirroring the type at schema.api.graphql
     // editMyProfile(newProfile: ProfileInput!): MyProfile!
-    const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
-      editMyProfile(newProfile: $input) {
-        ... myProfileFields
-  
-        tweets {
-          nextToken
-          tweets {
-            ... iTweetFields
-          }
-        }
-      }
-    }`
 
     // Make a graphQL request with the query and variables
     const newName = chance.first()

@@ -48,9 +48,83 @@ const getProfile = `query getProfile($screenName: String!) {
     }
   }`
 
+const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
+      editMyProfile(newProfile: $input) {
+        ... myProfileFields
+  
+        tweets {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+      }
+    }`
+
+const follow = `mutation follow($userId: ID!) {
+      follow(userId: $userId)
+    }`
+
+const tweet = `mutation tweet($text: String!) { 
+      tweet(text: $text) {
+        id
+        profile {
+          ... iProfileFields
+        }
+        createdAt
+        text
+        replies
+        likes
+        retweets
+        liked
+      }
+    }`
+
+const retweet = `mutation retweet($tweetId: ID!) {
+        retweet(tweetId: $tweetId) {
+          ... retweetFields
+        }
+      }`
+
+const unretweet = `mutation unretweet($tweetId: ID!) {
+      unretweet(tweetId: $tweetId)
+    }`
+
+const reply = `mutation reply($tweetId: ID!, $text: String!) {
+        reply(tweetId: $tweetId, text: $text) {
+          ... replyFields
+        }
+      }`
+
+const like = `mutation like($tweetId: ID!) {
+      like(tweetId: $tweetId)
+    }`
+
+const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String) {
+        getLikes(userId: $userId, limit: $limit, nextToken: $nextToken) {
+          nextToken
+          tweets {
+            ... iTweetFields
+          }
+        }
+      }`
+
+const unlike = `mutation unlike($tweetId: ID!) {
+        unlike(tweetId: $tweetId)
+      }`
+
 module.exports = {
   getTweets,
   getMyTimeline,
   getMyProfile,
   getProfile,
+  editMyProfile,
+  follow,
+  tweet,
+  like,
+  getLikes,
+  unlike,
+  retweet,
+  unretweet,
+  reply,
 }

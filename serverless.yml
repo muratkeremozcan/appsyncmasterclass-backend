@@ -143,6 +143,28 @@ functions:
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
 
+  # [51] Distribute tweets to followers
+  # (51.1) add a new function for distributeTweets
+  distributeTweets:
+    handler: functions/distribute-tweets.handler
+    environment:
+      RELATIONSHIPS_TABLE: !Ref RelationshipsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+    events: # lambda triggered by a stream event
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:DeleteItem
+          - dynamodb:BatchWriteItem
+        Resource: !GetAtt TimelinesTable.Arn
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource: !Sub '${RelationshipsTable.Arn}/index/byOtherUser'
+
   # (44.2) Add the lambda for reply
   # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines
   # Similar to (35.1) retweets without the retweet table
@@ -243,6 +265,9 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+        # (51.0) enable Dynamo stream specification on tweets table, to use to trigger a lambda function
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
             # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod

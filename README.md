@@ -4124,19 +4124,182 @@ Check out `__tests__/integration/distribute-tweets.test.js`
 
 In contrast to the integration test where we performed the assertion by checking the DB, now we are checking the response to getMyTimeline. This process happens asynchronously, userB's tweet takes time to appear at userA's timeline. We need to a utility to retry the check so that the test works more reliably. We utilized async-retry library to do this.
 
+## 54 Implement add tweets to timeline when following someone
 
+*(54.0)* add the lambda config and enable streams on the table it's streaming from. 
 
+*(54.1)* add a global secondary index for the tweets distributed from the followed user.
 
+```yml
+# serverless.yml
 
+functions:
+  distributeTweetsToFollower:
+    handler: functions/distribute-tweets-to-follower.handler
+    environment:
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+      MAX_TWEETS: 100
+    events:  # lambda triggered by a stream event
+      - stream:
+          type: dynamodb
+          arn: !GetAtt RelationshipsTable.StreamArn
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource:
+          - !Sub '${TweetsTable.Arn}/index/byCreator'
+          - !Sub '${TimelinesTable.Arn}/index/byDistributedFrom'
+      - Effect: Allow
+        Action:
+          - dynamodb:BatchWriteItem
+          - dynamodb:PutItem
+          - dynamodb:DeleteItem
+        Resource: !GetAtt TimelinesTable.Arn
 
+resources:
+  Resources:
+  		    TimelinesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S            
+          # (54.1) add a global secondary index
+          # for the tweets distributed from the followed user
+          - AttributeName: distributedFrom
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byDistributedFrom
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: distributedFrom
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: timelines-table
+  
+      RelationshipsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: otherUserId
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byOtherUser
+            KeySchema:
+              - AttributeName: otherUserId
+                KeyType: HASH
+              - AttributeName: sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # (54.0) enable streams on the table it's streaming from.
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: relationships-table
+```
 
+(54.2) Add the lambda function
 
+Find the tweets for the user being followed. 
+Insert the recent n tweets to user's follower's timeline.
 
+```js
+// functions/distribute-tweets-to-follower.js
 
+// (54.2) Add the lambda function
+// Find the tweets for the user being followed.
+// Insert the recent n tweets to user's follower's timeline.
 
+const _ = require('lodash')
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+const Constants = require('../lib/constants')
 
+const {TWEETS_TABLE, TIMELINES_TABLE, MAX_TWEETS} = process.env
+const MaxTweets = parseInt(MAX_TWEETS)
 
+module.exports.handler = async event => {
+  // iterate through the array of Records, we only care about INSERT and REMOVE
+  for (const record of event.Records) {
+    if (record.eventName === 'INSERT') {
+      // get the relationship object out of the NewImage
+      // unmarshall converts the DynamoDB record into a JS object
+      const relationship = DynamoDB.Converter.unmarshall(
+        record.dynamodb.NewImage,
+      )
 
+      const [relType] = relationship.sk.split('_')
+      if (relType === 'FOLLOWS') {
+        // get the tweet object out of the NewImage, insert into follower timeline
+        const tweets = await getTweets(relationship.otherUserId)
+        await distribute(tweets, relationship.userId)
+      }
+    } else if (record.eventName === 'REMOVE') {
+      // do the opposite for remove
+      const relationship = DynamoDB.Converter.unmarshall(
+        record.dynamodb.OldImage,
+      )
+
+      const [relType] = relationship.sk.split('_')
+      if (relType === 'FOLLOWS') {
+        const tweets = await getTimelineEntriesBy(
+          relationship.otherUserId,
+          relationship.userId,
+        )
+        await undistribute(tweets, relationship.userId)
+      }
+    }
+  }
+}
+
+```
+
+### 55 Integration test for add tweets to timeline when following someone
+
+Similar to (52).
+
+* Create an event object (again we are getting it from json files), and modify it to match the test case
+
+* Feed it to the handler
+
+* Check that the result matches the expectation
+
+Again the main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level.
+
+Check out `__tests__/integration/distribute-tweets-to-follower.test.js`
+
+### 56 E2e test for add tweets to timeline when following someone
+
+Covered by (53).
 
 
 

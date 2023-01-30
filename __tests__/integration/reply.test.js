@@ -10,12 +10,13 @@ const {
   axiosGraphQLQuery,
   registerFragment,
 } = require('../../test-helpers/graphql')
+const {tweet} = require('../../test-helpers/queries-and-mutations')
+const chance = require('chance').Chance()
 const {
   myProfileFragment,
   otherProfileFragment,
   iProfileFragment,
 } = require('../../test-helpers/graphql-fragments')
-const chance = require('chance').Chance()
 registerFragment('myProfileFields', myProfileFragment)
 registerFragment('otherProfileFields', otherProfileFragment)
 registerFragment('iProfileFields', iProfileFragment)
@@ -46,20 +47,6 @@ describe('Given 2 authenticated users and a tweet', () => {
     DynamoDB = new AWS.DynamoDB.DocumentClient()
 
     // send a graphQL query request as the user
-    const tweet = `mutation tweet($text: String!) {
-      tweet(text: $text) {
-        id
-        profile {
-          ... iProfileFields
-        }
-        createdAt
-        text
-        replies
-        likes
-        retweets
-        liked
-      }
-    }`
     const text = chance.string({length: 16})
     // Make a graphQL request with the tweet mutation and its text argument
     tweetA = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
@@ -127,6 +114,13 @@ describe('Given 2 authenticated users and a tweet', () => {
       TableName: process.env.USERS_TABLE,
       Key: {
         id: userId,
+      },
+    }).promise()
+
+    await DynamoDB.delete({
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        id: userBId,
       },
     }).promise()
 

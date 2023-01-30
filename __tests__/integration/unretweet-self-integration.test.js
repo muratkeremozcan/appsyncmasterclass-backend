@@ -11,6 +11,7 @@ const {
   axiosGraphQLQuery,
   registerFragment,
 } = require('../../test-helpers/graphql')
+const {tweet} = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
   otherProfileFragment,
@@ -46,20 +47,7 @@ describe('Given an authenticated user with a tweet and retweet', () => {
 
     // as in (19) tweet mutation
     // send a graphQL query request as the user
-    const tweet = `mutation tweet($text: String!) {
-      tweet(text: $text) {
-        id
-        profile {
-          ... iProfileFields
-        }
-        createdAt
-        text
-        replies
-        likes
-        retweets
-        liked
-      }
-    }`
+
     const text = chance.string({length: 16})
     // Make a graphQL request with the tweet mutation and its text argument
     tweetA = await axiosGraphQLQuery(userA.accessToken, tweet, {text})

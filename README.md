@@ -4112,15 +4112,17 @@ module.exports = {handler}
 
 * Check that the result matches the expectation
 
-The main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB.
+The main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level
 
 Check out `__tests__/integration/distribute-tweets.test.js`
 
 ### 53 E2e test for distribute-tweets function
 
+* Arrange: userA follows userB 
+* Act: userB tweets
+* Assert: userB's tweet appears on userA's timeline
 
-
-
+In contrast to the integration test where we performed the assertion by checking the DB, now we are checking the response to getMyTimeline. This process happens asynchronously, userB's tweet takes time to appear at userA's timeline. We need to a utility to retry the check so that the test works more reliably. We utilized async-retry library to do this.
 
 
 

@@ -4301,13 +4301,50 @@ Check out `__tests__/integration/distribute-tweets-to-follower.test.js`
 
 Covered by (53).
 
+## 57 Implement unfollow mutation
 
+*(57.0)* add a mapping template for the unfollow mutation
 
+*(57.1)* add a data source for unfollow mutation.
 
+```yml
+# serverless.appsync-api.yml
 
+mappingTemplates:
+  # MUTATIONS
+  - type: AMAZON_DYNAMODB
+    name: unfollowMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:DeleteItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
 
+resources:
+	Resources:
+	
+  - type: AMAZON_DYNAMODB
+    name: unfollowMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:DeleteItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
+```
 
+*(57.2)* Implement the `vtl` files `Mutation.unfollow.request.vtl` and `Mutation.unfollow.response.vtl`
 
+### 58 E2e test for unfollow mutation
+
+Opposite of (50). Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 
 

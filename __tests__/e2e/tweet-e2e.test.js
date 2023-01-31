@@ -33,6 +33,7 @@ const {
   unretweet,
   reply,
   unfollow,
+  getFollowers,
 } = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
@@ -395,9 +396,24 @@ describe('e2e test for tweet', () => {
         expect(getProfileResp.getProfile.followedBy).toBe(true)
       })
 
-      // TODO:
-      // see tweets before, should be 1 each ( I think )
-      // have userB tweet, userA should show 2 tweets
+      it("[62] User A should see himself in user B's list of followers", async () => {
+        const getFollowersResp = await axiosGraphQLQuery(
+          userA.accessToken,
+          getFollowers,
+          {userId: userBId, limit: 25, nextToken: null},
+        )
+
+        expect(getFollowersResp.getFollowers.profiles).toHaveLength(1)
+        expect(getFollowersResp.getFollowers.profiles[0]).toMatchObject({
+          id: userAId,
+        })
+        expect(getFollowersResp.getFollowers.profiles[0]).not.toHaveProperty(
+          'following',
+        )
+        expect(getFollowersResp.getFollowers.profiles[0]).not.toHaveProperty(
+          'followedBy',
+        )
+      })
 
       describe('[53] [56] user B tweets', () => {
         let tweetBResp

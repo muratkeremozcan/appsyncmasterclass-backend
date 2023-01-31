@@ -4346,13 +4346,50 @@ resources:
 
 Opposite of (50). Check out `__tests__/e2e/tweet-e2e.test.js`.
 
+## 59 Implement getFollowers query
 
+(59.0) add a query for getFollowers. Configure the pipeline resolver and the (59.1) pipeline functions (they are not lambdas).
 
+https://docs.aws.amazon.com/appsync/latest/devguide/pipeline-resolvers.html
 
+```yml
+# serverless.appsync-api.yml
 
+mappingTemplates:
+  # QUERIES
+  - type: Query
+    field: getFollowers
+    kind: PIPELINE # configure the pipeline resolver
+    functions: # the pipeline fns we will call in order
+      - getFollowers
+      - hydrateFollowers
+    request: simplePipeline.request.vtl
+    response: simplePipeline.response.vtl
+    
+functionConfigurations:
+  - name: getFollowers
+    dataSource: relationshipsTable
+  - name: hydrateFollowers
+    dataSource: usersTable
+```
 
+(59.2) Add `vtl` files :
 
+* `getFollowers.request.vtl` & `getFollowers.response.vtl`
+* `hydrateFollowers.request.vtl` & `hydrateFollowers.response.vtl`
+* `simplePipeline.request.vtl` & `simplePipeline.response.vtl`
 
+### 61 Unit test hydrateFollowers.request template
+
+- Create an AppSync context
+- Get the template
+- Render the template (using the utility npm packages)
+
+Check out `__tests__/unit/hydrateFollowers.request.test.js`.
+
+### 62 E2e test getFollowers query
+
+Check out `__tests__/e2e/tweet-e2e.test.js`
 
 
 

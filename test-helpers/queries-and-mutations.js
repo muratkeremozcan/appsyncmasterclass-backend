@@ -117,6 +117,14 @@ const unlike = `mutation unlike($tweetId: ID!) {
         unlike(tweetId: $tweetId)
       }`
 
+const getFollowers = `query getFollowers($userId: ID!, $limit: Int!, $nextToken: String) {
+        getFollowers(userId: $userId, limit: $limit, nextToken: $nextToken) {
+          profiles {
+            ... iProfileFields
+          }
+        }
+      }`
+
 module.exports = {
   getTweets,
   getMyTimeline,
@@ -132,4 +140,5 @@ module.exports = {
   retweet,
   unretweet,
   reply,
+  getFollowers,
 }

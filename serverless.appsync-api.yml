@@ -58,6 +58,17 @@ mappingTemplates:
     field: getLikes
     dataSource: likesTable
 
+  # [59] Implement getFollowers query
+  # (59.0) add an entry to the mappingTemplates
+  - type: Query
+    field: getFollowers
+    kind: PIPELINE # configure the pipeline resolver
+    functions: # the pipeline fns we will call in order
+      - getFollowers
+      - hydrateFollowers
+    request: simplePipeline.request.vtl
+    response: simplePipeline.response.vtl
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -220,6 +231,13 @@ mappingTemplates:
   - type: Retweet
     field: retweetOf
     dataSource: tweetsTable
+
+# (59.1) configure the pipeline functions
+functionConfigurations:
+  - name: getFollowers
+    dataSource: relationshipsTable
+  - name: hydrateFollowers
+    dataSource: usersTable
 
 dataSources:
   - type: NONE

@@ -16,6 +16,7 @@ const generateAppSyncContext = ({
   result,
   source,
   info,
+  prev,
 } = {}) => {
   const util = velocityUtil.create([], new Date(), Object())
   const context = {
@@ -27,6 +28,7 @@ const generateAppSyncContext = ({
     result,
     source,
     info,
+    prev,
   }
   return {
     context,

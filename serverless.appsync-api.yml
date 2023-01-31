@@ -117,6 +117,12 @@ mappingTemplates:
     field: follow
     dataSource: followMutation
 
+  # [57] Implement unfollow mutation
+  # (57.0) add a mapping template for the unfollow mutation
+  - type: Mutation
+    field: unfollow
+    dataSource: unfollowMutation
+
   ## NESTED RESOLVERS
 
   # When do we need nested resolvers?
@@ -293,6 +299,19 @@ dataSources:
       iamRoleStatements:
         - Effect: Allow
           Action: dynamodb:PutItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
+
+  # (57.1) add a datasource for unfollowMutation
+  - type: AMAZON_DYNAMODB
+    name: unfollowMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:DeleteItem
           Resource: !GetAtt RelationshipsTable.Arn
         - Effect: Allow
           Action: dynamodb:UpdateItem

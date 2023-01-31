@@ -65,6 +65,10 @@ const follow = `mutation follow($userId: ID!) {
       follow(userId: $userId)
     }`
 
+const unfollow = `mutation unfollow($userId: ID!) {
+      unfollow(userId: $userId)
+    }`
+
 const tweet = `mutation tweet($text: String!) { 
       tweet(text: $text) {
         id
@@ -120,6 +124,7 @@ module.exports = {
   getProfile,
   editMyProfile,
   follow,
+  unfollow,
   tweet,
   like,
   getLikes,

@@ -32,6 +32,7 @@ const {
   retweet,
   unretweet,
   reply,
+  unfollow,
 } = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
@@ -446,6 +447,34 @@ describe('e2e test for tweet', () => {
               maxTimeout: 2000,
             },
           )
+        })
+      })
+
+      describe('[58] userA unfollows userB', () => {
+        beforeAll(async () => {
+          await axiosGraphQLQuery(userA.accessToken, unfollow, {
+            userId: userBId,
+          })
+        })
+
+        it("User A should see following as false when viewing user B's profile", async () => {
+          const getProfileResp = await axiosGraphQLQuery(
+            userA.accessToken,
+            getProfile,
+            {screenName: userBsProfile.getMyProfile.screenName},
+          )
+
+          expect(getProfileResp.getProfile.following).toBe(false)
+        })
+
+        it("User B should see followedBy as false when viewing user A's profile", async () => {
+          const getProfileResp = await axiosGraphQLQuery(
+            userB.accessToken,
+            getProfile,
+            {screenName: userAsProfile.getMyProfile.screenName},
+          )
+
+          expect(getProfileResp.getProfile.followedBy).toBe(false)
         })
       })
     })

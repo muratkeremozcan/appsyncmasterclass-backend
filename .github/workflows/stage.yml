@@ -1,8 +1,8 @@
-name: deploy to dev
+name: deploy to stage
 
 on:
   push:
-    branches: [main]
+    branches: [release/*]
 
 jobs:
   build:
@@ -45,7 +45,7 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
           npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
-          npm run sls -- deploy
+          npm run sls -- deploy -s stage
       - name:
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
@@ -54,6 +54,6 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
           jest tests
         run: |
-          npm run export:env
+          npm run export:env-stage
 
           npm t

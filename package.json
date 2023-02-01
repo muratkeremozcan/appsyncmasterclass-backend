@@ -7,6 +7,7 @@
     "sls": "sls",
     "deploy": "sls -- deploy",
     "export:env": "sls export-env && sls manifest",
+    "export:env-stage": "sls export-env -s stage && sls manifest -s stage",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|json|css|md|mdx|html)\"",
     "lint": "eslint . --cache-location node_modules/.cache/eslint",
     "test": "jest"

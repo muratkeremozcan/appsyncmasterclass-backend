@@ -125,6 +125,14 @@ const getFollowers = `query getFollowers($userId: ID!, $limit: Int!, $nextToken:
         }
       }`
 
+const getFollowing = `query getFollowing($userId: ID!, $limit: Int!, $nextToken: String) {
+        getFollowing(userId: $userId, limit: $limit, nextToken: $nextToken) {
+          profiles {
+            ... iProfileFields
+          }
+        }
+      }`
+
 module.exports = {
   getTweets,
   getMyTimeline,
@@ -141,4 +149,5 @@ module.exports = {
   unretweet,
   reply,
   getFollowers,
+  getFollowing,
 }

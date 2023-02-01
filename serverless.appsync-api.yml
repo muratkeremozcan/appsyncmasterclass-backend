@@ -69,6 +69,17 @@ mappingTemplates:
     request: simplePipeline.request.vtl
     response: simplePipeline.response.vtl
 
+  # [63] Implement getFollowing query
+  # (63.0) add an entry to the mappingTemplates
+  - type: Query
+    field: getFollowing
+    kind: PIPELINE # configure the pipeline resolver
+    functions: # the pipeline fns we will call in order
+      - getFollowing
+      - hydrateFollowing
+    request: simplePipeline.request.vtl
+    response: simplePipeline.response.vtl
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -237,6 +248,10 @@ functionConfigurations:
   - name: getFollowers
     dataSource: relationshipsTable
   - name: hydrateFollowers
+    dataSource: usersTable
+  - name: getFollowing
+    dataSource: relationshipsTable
+  - name: hydrateFollowing
     dataSource: usersTable
 
 dataSources:

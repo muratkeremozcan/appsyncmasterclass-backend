@@ -29,7 +29,7 @@ describe('hydrateFollowers.request template', () => {
     // use amplify-velocity-template to render the template, given the context
     const result = renderTemplate(template, context)
 
-    expect(result).toEqual([])
+    expect(result).toEqual({profiles: []})
   })
 
   it('Should convert relationships to BatchGetItem keys', () => {

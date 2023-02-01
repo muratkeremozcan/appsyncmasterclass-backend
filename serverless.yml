@@ -1,4 +1,3 @@
-org: muratkerem
 app: appsyncmasterclass-backend
 service: appsyncmasterclass-backend
 frameworkVersion: '2'

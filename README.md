@@ -4391,5 +4391,32 @@ Check out `__tests__/unit/hydrateFollowers.request.test.js`.
 
 Check out `__tests__/e2e/tweet-e2e.test.js`
 
+## 63 Implement getFollowing query
 
+(63.0) add a query for getFollowers. Configure the pipeline resolver and the (63.1) pipeline functions (they are not lambdas).
 
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # QUERIES
+  - type: Query
+    field: getFollowing
+    kind: PIPELINE  # configure the pipeline resolver
+    functions: # the pipeline fns we will call in order
+      - getFollowing
+      - hydrateFollowing
+    request: simplePipeline.request.vtl
+    response: simplePipeline.response.vtl
+    
+functionConfigurations:
+  - name: getFollowers
+    dataSource: relationshipsTable
+  - name: hydrateFollowers
+    dataSource: usersTable
+```
+
+(63.2) Add `vtl` files :
+
+* `getFollowing.request.vtl` & `getFollowing.response.vtl`
+* `hydrateFollowing.request.vtl` & `hydrateFollowing.response.vtl`

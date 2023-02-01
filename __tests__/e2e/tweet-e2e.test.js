@@ -34,6 +34,7 @@ const {
   reply,
   unfollow,
   getFollowers,
+  getFollowing,
 } = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
@@ -411,6 +412,25 @@ describe('e2e test for tweet', () => {
           'following',
         )
         expect(getFollowersResp.getFollowers.profiles[0]).not.toHaveProperty(
+          'followedBy',
+        )
+      })
+
+      it("[63] User A should see himself in user B's list of following", async () => {
+        const getFollowingResp = await axiosGraphQLQuery(
+          userA.accessToken,
+          getFollowing,
+          {userId: userBId, limit: 25, nextToken: null},
+        )
+
+        expect(getFollowingResp.getFollowing.profiles).toHaveLength(1)
+        expect(getFollowingResp.getFollowing.profiles[0]).toMatchObject({
+          id: userAId,
+        })
+        expect(getFollowingResp.getFollowing.profiles[0]).not.toHaveProperty(
+          'following',
+        )
+        expect(getFollowingResp.getFollowing.profiles[0]).not.toHaveProperty(
           'followedBy',
         )
       })

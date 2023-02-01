@@ -44,7 +44,7 @@ jobs:
           # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
-          npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID } --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
+          npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
           npm run sls -- deploy
       - name:
           # if you want to use the ci role, move this to below

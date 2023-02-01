@@ -39,11 +39,6 @@ jobs:
         id: branch-name
         uses: tj-actions/branch-names@v6
 
-      - name: Running on a pull request branch
-        if: steps.branch-name.outputs.is_default == 'false'
-        run: |
-          echo "Running on pr: ${{ steps.branch-name.outputs.current_branch }}"
-
       - name:
           deploy to ${{ steps.branch-name.outputs.current_branch }}
           # if you want to use the ci role, move this to below
@@ -53,7 +48,7 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
           npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
-          npm run sls -- deploy - ${{ steps.branch-name.outputs.current_branch }}
+          npm run sls -- deploy -s ${{ steps.branch-name.outputs.current_branch }}
       - name:
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`

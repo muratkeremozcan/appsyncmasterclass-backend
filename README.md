@@ -29,6 +29,28 @@ npm run format
 npm run sls -- package
 ```
 
+### Working on a branch
+
+```bash
+
+# deploy the temporary stack, the stack name can be anything
+# conventionally we match it to the branch name
+npm run sls -- deploy -s tmp   
+
+# export the new env vars to .env file 
+ npm run sls export-env -- -s tmp && npm run sls manifest -- -s tmp    
+
+# run tests (including e2e) against the temporary stack 
+npm t
+
+# destroy the branch
+npm run sls -- remove -s tmp
+```
+
+
+
+
+
 ## 1 Setup backend project
 
 Setup a GitHub repo.

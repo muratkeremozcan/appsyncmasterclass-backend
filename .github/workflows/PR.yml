@@ -1,8 +1,7 @@
-name: deploy to dev
+name: deploy to temp stack
 
 on:
-  push:
-    branches: [main]
+  pull_request:
 
 jobs:
   build:
@@ -27,15 +26,6 @@ jobs:
       - name: npm ci
         run: npm ci
 
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v6
-
-      - name: Output branch names
-        run: |
-          echo "Source branch name is ${{ steps.branch-name.outputs.head_ref_branch }}"
-          echo "Ref branch name is ${{ steps.branch-name.outputs.ref_branch }}"
-
       - name: install AWS CLI
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -45,8 +35,12 @@ jobs:
           rm awscliv2.zip
           rm -r ./aws
 
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+
       - name:
-          deploy to dev
+          deploy to ${{ steps.branch-name.outputs.current_branch }}
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
           # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
@@ -54,7 +48,7 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
           npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
-          npm run sls -- deploy
+          npm run sls -- deploy -s ${{ steps.branch-name.outputs.current_branch }}
       - name:
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
@@ -63,6 +57,10 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
           jest tests
         run: |
-          npm run export:env
-
+          npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
+          npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
           npm t
+
+      - name: get branch name
+        run: |
+          git log --merges origin/main --oneline --grep='^Merge pull request #\([0-9]\+\) from \(.\+\)' -1 | awk '{print $7}' | awk -F'/' '{print $2}'

@@ -27,15 +27,6 @@ jobs:
       - name: npm ci
         run: npm ci
 
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v6
-
-      - name: Output branch names
-        run: |
-          echo "Source branch name is ${{ steps.branch-name.outputs.head_ref_branch }}"
-          echo "Ref branch name is ${{ steps.branch-name.outputs.ref_branch }}"
-
       - name: install AWS CLI
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"

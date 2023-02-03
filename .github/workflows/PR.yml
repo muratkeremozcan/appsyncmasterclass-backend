@@ -61,6 +61,6 @@ jobs:
           npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
           npm t
 
-      - name: get branch name
+      - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
         run: |
-          git log --merges origin/main --oneline --grep='^Merge pull request #\([0-9]\+\) from \(.\+\)' -1 | awk '{print $7}' | awk -F'/' '{print $2}'
+          npm run sls -- remove -s ${{ steps.branch-name.outputs.current_branch }}

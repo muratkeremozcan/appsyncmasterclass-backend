@@ -3,14 +3,14 @@
 // - We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
 // - As a result we should see a DynamoDB table entry, confirm it.
 require('dotenv').config()
-const {signInUser} = require('../../test-helpers/cognito')
+const {signUpUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 
 describe('When a user signs up', () => {
   it("The user's profile should be saved in DynamoDB", async () => {
     // this time we are creating and signing up a user from scratch
     // it will cause a lambda handler trigger
-    const {name, username, cognito, userPoolId} = await signInUser()
+    const {name, username, cognito, userPoolId} = await signUpUser()
 
     // instead of creating a mock event and feeding it to the handler
     // we did a real sign up, which caused a write to DynamoDB

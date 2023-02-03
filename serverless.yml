@@ -232,3 +232,284 @@ resources:
           - AttributeName: id
             KeyType: HASH
         AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          # (49.1) Add `screenName` as  global secondary index to `UsersTable`
+          - AttributeName: screenName
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byScreenName
+            KeySchema:
+              - AttributeName: screenName
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+            # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: users-table
+
+    # [17] Implement tweet mutation
+    # (17.0) Create a DynamoDB table to store tweets
+    TweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          # to fetch the tweets for a particular user, we also need the DDB partition key
+          - AttributeName: creator # partition key
+            AttributeType: S
+          - AttributeName: id # sort key
+            AttributeType: S
+          - AttributeName: retweetOf # (39.2) add a new index for retweets
+            AttributeType: S
+          - AttributeName: inReplyToTweetId
+            AttributeType: S # (43.2) add a new index for replies
+        GlobalSecondaryIndexes:
+          - IndexName: byCreator
+            KeySchema:
+              - AttributeName: creator # partition key
+                KeyType: HASH
+              - AttributeName: id # sort key
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL # so that when we get the tweets, we get all items
+          - IndexName: retweetsByCreator # (39.2) add a new index for retweets
+            KeySchema:
+              - AttributeName: creator
+                KeyType: HASH
+              - AttributeName: retweetOf
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: repliesForTweet # (43.2) add a new index for replies
+            KeySchema:
+              - AttributeName: inReplyToTweetId
+                KeyType: HASH
+              - AttributeName: id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # (51.0) enable Dynamo stream specification on tweets table, to use to trigger a lambda function
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: tweets-table
+
+    # (17.1) Create a DynamoDB table to store tweet timelines
+    TimelinesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+          # (54.1) add a global secondary index
+          # for the tweets distributed from the followed user
+          - AttributeName: distributedFrom
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byDistributedFrom
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: distributedFrom
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: timelines-table
+
+    # [3] Configure Cognito User Pool
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: false
+            RequireNumbers: false
+            RequireUppercase: false
+            RequireSymbols: false
+        # (3.0) allows login via email
+        UsernameAttributes:
+          - email
+        # (3.0) we need to know the name and associate it with cognito user pool
+        # with this setting we can configure a name attribute
+        Schema:
+          - AttributeDataType: String
+            Name: name
+            Required: false
+            Mutable: true
+        # (4.3) Configure Cognito to call the lambda trigger function when a new user is registered.
+        # We can't use the lambda function's name, because that's something local to serverless framework
+        # instead we figure out the logical id sls generates for the lambda function, by using npm run sls -- package
+        # which generates cloudformation template under .serverless folder. There look for ConfirmUserSignupLambdaFunction
+        LambdaConfig:
+          PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction.Arn
+
+    # (4.4) We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any
+    # grants CognitoUserPool the lambda:invokeFunction permission for ConfirmUserSignupLambdaFunction
+    UserPoolInvokeConfirmUserSignupLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        FunctionName: !Ref ConfirmUserSignupLambdaFunction
+        Principal: cognito-idp.amazonaws.com
+        SourceArn: !GetAtt CognitoUserPool.Arn
+
+    # (3.5) We need to be logged in with Cognito to test AppSync queries.
+    # Create a cognito user by hand at *CognitoUserPool / Users and Groups*. (I used my email).
+    # We also need to configure a application client at *CognitoUserPool / App clients*
+    # to be able to interact with the Cognito User Pool.
+    # We do this by adding a resource here
+    WebUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ClientName: web
+        ExplicitAuthFlows:
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        # with this we get a "wrong pw" in case a user doesn't exist, makes it harder for attackers to find out if the user exists
+        PreventUserExistenceErrors: ENABLED
+
+    # (15.2) create the S3 bucket env var, to help make the s3 putObject request
+    AssetsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccelerateConfiguration:
+          AccelerationStatus: Enabled # because we used: const s3 = new S3({useAccelerateEndpoint: true})
+        CorsConfiguration: # because the UI client needs to make a request
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+
+    # [26] like mutation
+    # (26.0) create a new DDB table to track which user has liked which tweet
+    LikesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: likes-table
+
+    # [35] Implement retweet mutation
+    # (35.0) create a new DDB table to track which user has retweeted which tweet
+    RetweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: tweetId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: retweets-table
+
+    # [47] Implement follow mutation
+    # (47.0) create a relationships table to track which user follows/blocks/etc. who
+    # sk for sort key
+    RelationshipsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: otherUserId
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byOtherUser
+            KeySchema:
+              - AttributeName: otherUserId
+                KeyType: HASH
+              - AttributeName: sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # (54.0) add the lambda and enable streams on the table it's streaming from.
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: relationships-table
+
+  Outputs:
+    # (3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
+    # We get that value with !Ref
+    CognitoUserPoolId:
+      Value: !Ref CognitoUserPool
+
+    # (7) In order to work with cognito in the e2e test and simulate a user signup, we need `WebUserPoolClient` id.
+    # We capture that as an output in the `serverless.yml` Outputs section,
+    # similar to what we did to acquire COGNITO_USER_POOL_ID (3.1)
+    WebCognitoUserPoolClientId:
+      Value: !Ref WebUserPoolClient
+
+    # (6) add AWS_REGION as an env var
+    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
+    AwsRegion:
+      Value: ${self:custom.region}

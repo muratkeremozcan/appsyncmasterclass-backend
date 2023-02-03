@@ -1,5 +1,5 @@
-app: appsyncmasterclass-backend
-service: appsyncmasterclass-backend
+app: backend
+service: backend
 frameworkVersion: '2'
 
 # [1] exclude `package.json` files from being bundled.
@@ -49,6 +49,8 @@ functions:
     # the function needs the permission to write to the UsersTable
     # note: we don't want a global iamRoleStatements: under provider: , we just want permission for this function
     # (4.2) we use npm i -D serverless-iam-roles-per-function to do this
+    # auto generated role name for function too long
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-confirmUserSignup
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:PutItem # in DDB, Put means rest POST, and Update means rest PUT
@@ -60,6 +62,7 @@ functions:
     # (15.2) create the S3 bucket env var, to help make the s3 putObject request
     environment:
       BUCKET_NAME: !Ref AssetsBucket
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getImageUploadUrl
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -177,6 +180,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-distributeTweets
     iamRoleStatements:
       - Effect: Allow
         Action:

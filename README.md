@@ -455,6 +455,10 @@ dataSources:
 >
 > * With Lambda, AppSync provides a default request & response template so you don't have to write one.
 > * For pipeline functions, you can now also use JavaScript to create the request and response templates instead of VTL, see https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers. But the JavaScript support is only limited to pipeline functions right now, and in most cases, you probably don't need a pipeline function if your resolver just needs to do one thing.
+>
+> As for why VTL, it boils down to not having a Lambda function = faster (adding another service is always gonna add some overhead, plus cold starts!), cheaper (not paying for lambda invocation) and more scalable (lambda has regional concurrency limit, so another limit that comes into play, on top of the throughput limits on AppSync)
+>
+> So if you can have AppSync connect to say, DynamoDB directly, then you should use vtl. If you're doing more complex stuff, then consider bringing in a Lambda function, but if it's just a sequence of CRUD operations against DynamoDB, then you can do the same thing with pipeline resolvers, which nowadays, also supports javascript resolvers as well, so you don't have to use VTL (the javascript resolvers only work for pipeline resolvers for now)
 
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
 `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize

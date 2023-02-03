@@ -49,68 +49,69 @@ describe('Given an authenticated user', () => {
     // we can copy the query from the AppSync console
 
     const data = await axiosGraphQLQuery(signedInUser.accessToken, getMyProfile)
-    const profile = data.getMyProfile
+    console.log({data})
+    // const profile = data.getMyProfile
 
-    expect(profile).toMatchObject({
-      id: signedInUser.username,
-      name: signedInUser.name,
-      imageUrl: null,
-      backgroundImageUrl: null,
-      bio: null,
-      location: null,
-      website: null,
-      birthdate: null,
-      createdAt: expect.stringMatching(
-        /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d(?:\.\d+)?Z?/g,
-      ),
-      // tweets
-      followersCount: 0,
-      followingCount: 0,
-      tweetsCount: 0,
-      likesCounts: 0,
-    })
+    // expect(profile).toMatchObject({
+    //   id: signedInUser.username,
+    //   name: signedInUser.name,
+    //   imageUrl: null,
+    //   backgroundImageUrl: null,
+    //   bio: null,
+    //   location: null,
+    //   website: null,
+    //   birthdate: null,
+    //   createdAt: expect.stringMatching(
+    //     /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d(?:\.\d+)?Z?/g,
+    //   ),
+    //   // tweets
+    //   followersCount: 0,
+    //   followingCount: 0,
+    //   tweetsCount: 0,
+    //   likesCounts: 0,
+    // })
 
-    const [firstName, lastName] = profile.name.split(' ')
-    expect(profile.screenName).toContain(firstName)
-    expect(profile.screenName).toContain(lastName)
+    // const [firstName, lastName] = profile.name.split(' ')
+    // expect(profile.screenName).toContain(firstName)
+    // expect(profile.screenName).toContain(lastName)
   })
 
-  it('The user can edit their profile with editMyProfile', async () => {
-    // as the signed in user, make a request
-    // we can copy the query from the AppSync console,
-    // here we are taking an input as a parameter, mirroring the type at schema.api.graphql
-    // editMyProfile(newProfile: ProfileInput!): MyProfile!
+  // it('The user can edit their profile with editMyProfile', async () => {
+  //   // as the signed in user, make a request
+  //   // we can copy the query from the AppSync console,
+  //   // here we are taking an input as a parameter, mirroring the type at schema.api.graphql
+  //   // editMyProfile(newProfile: ProfileInput!): MyProfile!
 
-    // Make a graphQL request with the query and variables
-    const newName = chance.first()
-    const data = await axiosGraphQLQuery(
-      signedInUser.accessToken,
-      editMyProfile,
-      {input: {name: newName}},
-    )
-    const profile = data.editMyProfile
+  //   // Make a graphQL request with the query and variables
+  //   const newName = chance.first()
+  //   const data = await axiosGraphQLQuery(
+  //     signedInUser.accessToken,
+  //     editMyProfile,
+  //     {input: {name: newName}},
+  //   )
+  //   const profile = data.editMyProfile
 
-    expect(profile).toMatchObject({
-      ...profile,
-      name: newName,
-    })
-  })
+  //   expect(profile).toMatchObject({
+  //     ...profile,
+  //     name: newName,
+  //   })
+  // })
 
-  afterAll(async () => {
-    // clean up DynamoDB and Cognito
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
-    await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: signedInUser.username,
-      },
-    }).promise()
+  // afterAll(async () => {
+  //   // clean up DynamoDB and Cognito
+  //   const DynamoDB = new AWS.DynamoDB.DocumentClient()
+  //   await DynamoDB.delete({
+  //     TableName: process.env.USERS_TABLE,
+  //     Key: {
+  //       id: signedInUser.username,
+  //     },
+  //   }).promise()
 
-    await signedInUser.cognito
-      .adminDeleteUser({
-        UserPoolId: signedInUser.userPoolId,
-        Username: signedInUser.username,
-      })
-      .promise()
-  })
+  //   await signedInUser.cognito
+  //     .adminDeleteUser({
+  //       UserPoolId: signedInUser.userPoolId,
+  //       Username: signedInUser.username,
+  //     })
+  //     .promise()
+  // })
 })

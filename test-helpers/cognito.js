@@ -27,36 +27,72 @@ const generateUser = () => {
  * It also returns the cognito instance, userPoolId, clientId
  * @returns {Object} - {name, email, password, username, cognito}
  */
-const signUpUser = async () => {
+const signInUser = async () => {
   const {name, email, password} = generateUser()
   const userPoolId = process.env.COGNITO_USER_POOL_ID
   const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
   const cognito = new AWS.CognitoIdentityServiceProvider()
 
-  // we sign up and create a user
-  const signUpResp = await cognito
-    .signUp({
-      ClientId: clientId,
+  // we create a user as admin and set a password (no temporary passwords!)
+  const createUserResp = await cognito
+    .adminCreateUser({
+      UserPoolId: userPoolId,
       Username: email,
-      Password: password,
+      MessageAction: 'SUPPRESS',
       UserAttributes: [
         {
           Name: 'name',
           Value: name,
         },
+        {
+          Name: 'email',
+          Value: email,
+        },
+        {
+          Name: 'email_verified',
+          Value: 'true',
+        },
       ],
+      ClientMetadata: {
+        ClientId: clientId,
+      },
+      TemporaryPassword: 'Password-1Password-1',
     })
     .promise()
-  const username = signUpResp.UserSub
 
-  // we're not using a real email, we need a way to simulate the verification to confirmUserSignup
-  await cognito
-    .adminConfirmSignUp({
-      UserPoolId: userPoolId,
-      Username: username,
+  const username = createUserResp.User.Username
+
+  console.log(`[${email}] - confirmed sign up`)
+  console.log(`[${password}] - with password`)
+
+  const signinResult = await cognito
+    .initiateAuth({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: clientId,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: 'Password-1Password-1',
+      },
     })
     .promise()
-  console.log(`[${email}] - confirmed sign up`)
+
+  // Now need to ensure that new password is set in order that user status is set to CONFIRMED.
+  // respond to auth challenge (this is needed with adminCreateUser approach)
+  const challengeResp = await cognito
+    .adminRespondToAuthChallenge({
+      ClientId: clientId,
+      ChallengeName: 'NEW_PASSWORD_REQUIRED',
+      Session: signinResult.Session,
+      UserPoolId: userPoolId,
+      ChallengeResponses: {
+        USERNAME: username,
+        NEW_PASSWORD: password,
+      },
+    })
+    .promise()
+
+  console.log(`Id token: ${challengeResp.AuthenticationResult.IdToken}`)
+  console.log(`Access token: ${challengeResp.AuthenticationResult.AccessToken}`)
 
   return {
     username,
@@ -66,37 +102,8 @@ const signUpUser = async () => {
     cognito,
     userPoolId,
     clientId,
-  }
-}
-
-/**
- * Signs up a user, signs in that user and returns an authenticated user
- * @returns {Object} - {username, name, email, idToken, accessToken}
- */
-const signInUser = async () => {
-  const {name, email, password, username, cognito, clientId, userPoolId} =
-    await signUpUser()
-
-  // sign in a user with username and password
-  const auth = await cognito
-    .initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: clientId,
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-      },
-    })
-    .promise()
-
-  return {
-    username,
-    name,
-    email,
-    userPoolId,
-    cognito,
-    idToken: auth.AuthenticationResult.IdToken,
-    accessToken: auth.AuthenticationResult.AccessToken,
+    idToken: challengeResp.AuthenticationResult.IdToken,
+    accessToken: challengeResp.AuthenticationResult.AccessToken,
   }
 }
 
@@ -119,7 +126,6 @@ const cleanUpUser = async (username, cognito, userPoolId) => {
 
 module.exports = {
   generateUser,
-  signUpUser,
   signInUser,
   cleanUpUser,
 }

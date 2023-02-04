@@ -1,8 +1,6 @@
 # appsyncmasterclass-backend
 
-In order to deploy, you need an AWS account and have to configure serverless.
-After so, you may need to renew the authorization config periodically with the
-CLI command. Once authorized, you deploy and can run e2e tests.
+In order to deploy, you need an AWS account and have to configure serverless. After so, you may need to renew the authorization config periodically with the CLI command. Once authorized, you deploy and can run e2e tests.
 
 ```bash
 npm i
@@ -58,17 +56,14 @@ Setup a GitHub repo.
 
 Create a serverless project: `npm run sls -- create -t aws-nodejs`.
 
-Install serverless-appsync-plugin: `npm i -D serverless-appsync-plugin`. It
-allows to configure our AppSync api by adding a section to `serverless.yml` file
-with:
+Install serverless-appsync-plugin: `npm i -D serverless-appsync-plugin`. It allows to configure our AppSync api by adding a section to `serverless.yml` file with:
 
 ```yml
 custom:
   appSync:
 ```
 
-Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
-Reference it in the main `serverless.yml` file with:
+Create a separate `serverless.appsync-api.yml` file for AppSync configuration. Reference it in the main `serverless.yml` file with:
 
 ```yml
 custom:
@@ -90,22 +85,15 @@ Begin to configure the the file
 
 ## 2 Design the GraphQL schema
 
-[2] Create the file [schema.api.gaphql](./schema.api.graphql). (Take a look at
-the notes there).
+[2] Create the file [schema.api.graphql](./schema.api.graphql). It is very much like a TS file with types.
 
-It is very much like a TS file with types.
+Identify and implement the schema; Queries, Mutations, types and interfaces that will be used in the system.
 
-Identify and implement the schema; Queries, Mutations, types and interfaces that
-will be used in the system.
-
-Use interface to solidify the common properties between types (MyProfile vs
-OtherProfile).
+Use interface to solidify the common properties between types (MyProfile vs OtherProfile).
 
 ## 3 Configure Cognito User Pool
 
-_(3.0)_ Before the GraphQL schema can be deployed, we need to create a AWS
-Cognito User Pool and associate it with our AppSync API configuration. This is
-done under `resources` section of [serverless.yml](./serverless.yml):
+_(3.0)_ Before the GraphQL schema can be deployed, we need to create a AWS Cognito User Pool and associate it with our AppSync API configuration. This is done under `resources` section of [serverless.yml](./serverless.yml):
 
 ```yml
 resources:
@@ -113,8 +101,7 @@ resources:
     CognitoUserPool:
 ```
 
-(_3.1_) We need the CognitoUserPoolId of the CognitoUserPool as a cloud
-formation output.
+(_3.1_) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output.
 
 ```yml
 Outputs:
@@ -122,8 +109,7 @@ Outputs:
     Value: !Ref CognitoUserPool
 ```
 
-_(3.2)_ After configuring the Cognito User Pool, we need to configure the
-AppSync API to use it ([schema.api.gaphql](./schema.api.graphql)).
+_(3.2)_ After configuring the Cognito User Pool, we need to configure the AppSync API to use it ([schema.api.graphql](./schema.api.graphql)).
 
 ```yml
 name: appsyncmasterclass
@@ -136,8 +122,7 @@ userPoolConfig:
   userPoolId: !Ref CognitoUserPool
 ```
 
-_(3.4)_ Now it is time to deploy. You need to have a AWSAccessKeyId and
-AWSSecretKey to configure serverless framework to deploy.
+_(3.4)_ Now it is time to deploy. You need to have a AWSAccessKeyId and AWSSecretKey to configure serverless framework to deploy.
 
 ```text
 # rootkey.csv file
@@ -145,9 +130,7 @@ AWSAccessKeyId=*****
 AWSSecretKey=***
 ```
 
-There are a few ways to
-[configure serverless with aws creds](https://www.serverless.com/framework/docs/providers/aws/guide/credentials#create-an-iam-user-and-access-key).
-I used the below (mind that `--` passes args to the package.json script).
+There are a few ways to [configure serverless with aws creds](https://www.serverless.com/framework/docs/providers/aws/guide/credentials#create-an-iam-user-and-access-key). I used the below (mind that `--` passes args to the package.json script).
 
 ```bash
 npm run sls -- config credentials \
@@ -156,22 +139,13 @@ npm run sls -- config credentials \
   --secret ***
 ```
 
-> When testing integration or e2e, if you get a nonsense Jest timeout 5000 ms
-> error, the credentials must have expired. You have to renew them to get the
-> tests passing. The clue is when having to `npm run deploy` and that does not
-> succeed.
+> When testing integration or e2e, if you get a nonsense Jest timeout 5000 ms error, the credentials must have expired. You have to renew them to get the tests passing. The clue is when having to `npm run deploy` and that does not succeed.
 
-Then deploy with `npm run deploy`. In _AWS console / Cognito_ we find
-`appsyncmasterclass` as defined in
-[serverless.appsync-api.yml](./serverless.appsync-api.yml)
+Then deploy with `npm run deploy`. In _AWS console / Cognito_ we find `appsyncmasterclass` as defined in [serverless.appsync-api.yml](./serverless.appsync-api.yml)
 
-_(3.5)_ We need to be logged in with Cognito to test AppSync queries. Create a
-cognito user by hand at _CognitoUserPool / Users and Groups_. (I used my email).
+_(3.5)_ We need to be logged in with Cognito to test AppSync queries. Create a cognito user by hand at _CognitoUserPool / Users and Groups_. (I used my email).
 
-We also need to configure a application client at _CognitoUserPool / App
-clients_ to be able to interact with the Cognito User Pool. We do this by adding
-a resource to [serverless.yml](./serverless.yml) (as opposed to doing it by hand
-at AWS Console):
+We also need to configure a application client at _CognitoUserPool / App clients_ to be able to interact with the Cognito User Pool. We do this by adding a resource to [serverless.yml](./serverless.yml) (as opposed to doing it by hand at AWS Console):
 
 ```yml
 resources:
@@ -180,20 +154,17 @@ resources:
     WebUserPoolClient:
 ```
 
-_(3.6)_ At AWS AppSync, _Login via Cognito User Pools_ and test out some
-queries.
+_(3.6)_ At AWS AppSync, _Login via Cognito User Pools_ and test out some queries.
 
-## 4 Save user profile on `PostConfirmation`
+## 4 Implement save user profile on `PostConfirmation`
 
 - Capture the new user that gets created in Cognito.
 
 - Save the user in a DynamoDB table:
-  - (use a lambda trigger at _CognitoUserPool / Triggers_). After a user is
-    confirmed, send a message to a lambda function, and that function can save
-    the user in the DynamoDB table.
-- That will allow us to use AppSync query and mutations
+  - (use a lambda trigger at _CognitoUserPool / Triggers_). After a user is confirmed, send a message to a lambda function, and that function can save the user in the DynamoDB table.
+- That will allow us to use AppSync query and mutations.
 
-_(4.0)_ Create a DynamoDB table to store user profiles
+_(4.0)_ Create a DynamoDB table to store user profiles:
 
 ```yml
 resources:
@@ -216,14 +187,9 @@ resources:
 
 _(4.1)_ Add a functions block for the lambda trigger function
 
-The function needs to know the name of the UsersTable, which is generated by
-CloudFormation.
+The function needs to know the name of the UsersTable, which is generated by CloudFormation.
 
-_(4.2)_ Install `npm i -D serverless-iam-roles-per-function` , which allows
-custom permissions per function. The function needs the permission to write to
-the UsersTable. We do not want a global `iamRoleStatements:` under `provider:` ,
-we just want permission for this function. We use
-`npm i -D serverless-iam-roles-per-function` to do this.
+_(4.2)_ Install `npm i -D serverless-iam-roles-per-function` , which allows custom permissions per function. The function needs the permission to write to the UsersTable. We do not want a global `iamRoleStatements:` under `provider:` , we just want permission for this function. We use `npm i -D serverless-iam-roles-per-function` to do this.
 
 ```yml
 confirmUserSignup:
@@ -239,12 +205,7 @@ confirmUserSignup:
       Resource: !GetAtt UsersTable.Arn
 ```
 
-_(4.3)_ Configure Cognito to call the above lambda trigger function when a new
-user is registered. We can't use the lambda function's name, because that's
-something local to serverless framework. Instead we figure out the logical id
-sls generates for the lambda function, by using `npm run sls -- package`. Which
-generates cloudformation template under .serverless folder. There look for
-`ConfirmUserSignupLambdaFunction`
+_(4.3)_ Configure Cognito to call the above lambda trigger function when a new user is registered. We can't use the lambda function's name, because that's something local to serverless framework. Instead we figure out the logical id sls generates for the lambda function, by using `npm run sls -- package`. Which generates cloudformation template under .serverless folder. There look for `ConfirmUserSignupLambdaFunction`
 
 ```yml
 CognitoUserPool:
@@ -254,9 +215,7 @@ CognitoUserPool:
     PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction
 ```
 
-_(4.4)_ We also need to give Cognito additional permissions to call the lambda
-function, by default it doesn't have any. The below grants CognitoUserPool the
-lambda:invokeFunction permission for ConfirmUserSignupLambdaFunction.
+_(4.4)_ We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any. The below grants CognitoUserPool the `lambda:invokeFunction` permission for` ConfirmUserSignupLambdaFunction`.
 
 ```yml
 UserPoolInvokeConfirmUserSignupLambdaPermission:
@@ -268,42 +227,27 @@ UserPoolInvokeConfirmUserSignupLambdaPermission:
     SourceArn: !GetAtt CognitoUserPool.Arn
 ```
 
-_(4.5)_ Now we add the lambda function
-[./functions/confirm-user-signup.js](./functions/confirm-user-signup.js)
+_(4.5)_ Now we add the lambda function [./functions/confirm-user-signup.js](./functions/confirm-user-signup.js)
 
 ## 5 Testing overview
 
-With serverless apps, unit tests do not give enough confidence for the cost.
-Same cost & little value vs integration tests. Apply the test honeycomb, prefer
-integration tests over unit tests, and some e2e. All because many things can go
-wrong, none of which are related to our lambda code.
+With serverless apps, unit tests do not give enough confidence for the cost. Same cost & little value vs integration tests. Apply the test honeycomb, prefer integration tests over unit tests, and some e2e. All because many things can go wrong, none of which are related to our lambda code.
 
-Unit test covers the business
-logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
+Unit test covers the business logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
 
-Integration is the same cost, and more value than unit. Covers the business
-logic + DynamoDB
-interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)There
-are things integration tests cannot cover, but they are still a good bang for
-the
-buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
+Integration is the same cost, and more value than unit. Covers the business logic + DynamoDB interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)
 
-E2e can cover everything, highest confidence but also costly. We need
-some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
+There are things integration tests cannot cover, but they are still a good bang for the buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
+
+E2e can cover everything, highest confidence but also costly. We need some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
 
 ![e2e](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qjra5fzp7yr31r06dfzd.png)
 
 Prop-tips from Yan:
 
-- Avoid local simulation (e.g. LocalStack), they’re more work than is worth it,
-  and hides common failure modes such as misconfigured permissions and resource
-  policies.
-- In integration tests, only use mocks for AWS services to simulate
-  hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You
-  can mock your internal services/APIs.
-- Use temporary stacks for feature branches to avoid destabilizing shared
-  environments, and during CI/CD pipeline to run end-to-end tests to remove the
-  overhead of cleaning up test data.
+- Avoid local simulation (e.g. LocalStack), they’re more work than is worth it, and hides common failure modes such as **misconfigured permissions and resource policies**.
+- In integration tests, only use mocks for AWS services to simulate hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You can mock your internal services/APIs.
+- Use temporary stacks for feature branches to avoid destabilizing shared environments, and during CI/CD pipeline to run end-to-end tests to remove the overhead of cleaning up test data. `npm run sls -- deploy -s temp-stack` , `npm run sls -- remove -s tmp`
   https://theburningmonk.com/2019/09/why-you-should-use-temporary-stacks-when-you-do-serverless/
 
 ### 6 Integration testing `confirm-user-signup`
@@ -311,13 +255,10 @@ Prop-tips from Yan:
 The pattern is as follows:
 
 - Create an event: an object which includes user info.
-- Feed it to the handler (the handler causes a write to DDB, hence the
-  "integration")
-- Check that the result matches the expectation (by reading from DDB, hence
-  "integration")
+- Feed it to the handler (the handler causes a write to DDB, hence the "integration")
+- Check that the result matches the expectation (by reading from DDB, hence "integration")
 
-Use the `serverless-export-env` plugin to create a `.env` file with our env
-vars. It picks up a few values from `serverless.yml`.
+Use the `serverless-export-env` plugin to create a `.env` file with our env vars. It picks up a few values from `serverless.yml`.
 
 ```bash
 npm i -D jest @types/jest dotenv
@@ -328,9 +269,7 @@ npm i -D serverless-export-env@v1.4.0
 npm run sls -- export-env
 ```
 
-Add AWS_REGION and USER_POOL_ID to Outputs, so that they can also be acquired
-via the plugin. Use the `${self:custom.*}` trick for AWS_REGION, because we
-cannot use it as lambda function level since that is specific to sls.
+Add AWS_REGION and USER_POOL_ID to Outputs, so that they can also be acquired via the plugin. Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
 
 ```yml
 # serverless.yml
@@ -359,9 +298,7 @@ functions:
       Value: ${self:custom.region}
 ```
 
-After the `serversless.yml` change, we have to deploy and run
-`npm run sls -- export-env` again. Finally, we have an `.env` file with 5
-values:
+After the `serversless.yml` change, we have to deploy and run `npm run sls -- export-env` again. Finally, we have an `.env` file with 5 values:
 
 ```dotenv
 # .env
@@ -372,23 +309,17 @@ AWS_REGION=eu-west-1
 USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 ```
 
-Take a look at
-[./**tests**/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
+Take a look at [./**tests**/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
 
 ### 7 E2e test `confirm-user-signup`
 
 In the test there are 3 main things we do:
 
-- We create a user from scratch using `AWS.CognitoIdentityServiceProvider`
-  (cognito).
-- We are not using a real email, so we use `cognito.adminConfirmSignup` to
-  simulate the user sign up verification.
+- We create a user from scratch using `AWS.CognitoIdentityServiceProvider` (cognito).
+- We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
 - As a result we should see a DynamoDB table entry, confirm it.
 
-In order to work with cognito and simulate a user signup, we need
-`WebUserPoolClient` id. We capture that as an output in the `serverless.yml `
-`Outputs` section, similar to what we did to acquire _COGNITO_USER_POOL_ID
-(3.1)_.
+In order to work with cognito and simulate a user signup, we need `WebUserPoolClient` id. We capture that as an output in the `serverless.yml ` `Outputs` section, similar to what we did to acquire _COGNITO_USER_POOL_ID (3.1)_.
 
 ```yml
 Outputs:
@@ -400,9 +331,7 @@ Outputs:
     Value: !Ref WebUserPoolClient
 ```
 
-After the `serversless.yml` change, we have to deploy `npm run deploy` and
-export environment `npm run export:env`. Finally, we have an `.env` file with 6
-values:
+After the `serversless.yml` change, we have to deploy `npm run deploy` and export environment `npm run export:env`. Finally, we have an `.env` file with 6 values:
 
 ```dotenv
 # .env
@@ -419,13 +348,9 @@ Take a look at
 
 ## 8 Implement `getMyProfile` query (_setup an AppSync resolver and have it get an item from DDB_)
 
-After the user is signed up and confirmed, we can get the data from DynamoDB,
-similar to what we did in the integration and e2e tests.
+After the user is signed up and confirmed, we can get the data from DynamoDB, similar to what we did in the integration and e2e tests.
 
-We need to setup an AppSync resolver and have it get an item from DDB.
-
-_(8.1)_ Tell the serverless AppSync plugin where the Appsync templates are going
-to be, and how to map them to the graphQL query.
+We need to setup an AppSync resolver and have it get an item from DDB. _(8.1)_ Tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query.
 
 ```yml
 # serverless.appsync-api.yml
@@ -445,43 +370,20 @@ dataSources:
 
 > What is VTL, and why do we use it?
 >
-> VTL is the template language that you can use with all AppSync integrations,
-> including Lambda.
->
-> We need something to tell AppSync how to make a request to the thing it's
-> integrating with, be it a DynamoDB table, a Lambda function, an HTTP endpoint
-> or something else. We need to tell AppSync how to transform the response
-> because it's probably not in the right shape that the resolver needs to
-> return.
->
-> - With Lambda, AppSync provides a default request & response template so you
->   don't have to write one.
-> - For pipeline functions, you can now also use JavaScript to create the
->   request and response templates instead of VTL, see
->   https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers.
->   But the JavaScript support is only limited to pipeline functions right now,
->   and in most cases, you probably don't need a pipeline function if your
->   resolver just needs to do one thing.
->
-> As for why VTL, it boils down to not having a Lambda function = faster (adding
-> another service is always gonna add some overhead, plus cold starts!), cheaper
-> (not paying for lambda invocation) and more scalable (lambda has regional
-> concurrency limit, so another limit that comes into play, on top of the
-> throughput limits on AppSync)
->
-> So if you can have AppSync connect to say, DynamoDB directly, then you should
-> use vtl. If you're doing more complex stuff, then consider bringing in a
-> Lambda function, but if it's just a sequence of CRUD operations against
-> DynamoDB, then you can do the same thing with pipeline resolvers, which
-> nowadays, also supports javascript resolvers as well, so you don't have to use
-> VTL (the javascript resolvers only work for pipeline resolvers for now)
+> VTL is the template language that you can use with all AppSync integrations, including Lambda.
+> 
+>We need something to tell AppSync how to make a request to the thing it's integrating with, be it a DynamoDB table, a Lambda function, an HTTP endpoint or something else. We need to tell AppSync how to transform the response because it's probably not in the right shape that the resolver needs to return.
+> 
+> - With Lambda, AppSync provides a default request & response template so you don't have to write one.
+> - For pipeline functions, you can now also use JavaScript to create the request and response templates instead of VTL, see
+>   https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers. But the JavaScript support is only limited to pipeline functions right now, and in most cases, you probably don't need a pipeline function if your resolver just needs to do one thing.
+> 
+>As for why VTL, it boils down to not having a Lambda function = faster (adding another service is always gonna add some overhead, plus cold starts!), cheaper (not paying for lambda invocation) and more scalable (lambda has regional concurrency limit, so another limit that comes into play, on top of the throughput limits on AppSync)
+> 
+> So if you can have AppSync connect to say, DynamoDB directly, then you should use vtl. If you're doing more complex stuff, then consider bringing in a Lambda function, but if it's just a sequence of CRUD operations against DynamoDB, then you can do the same thing with pipeline resolvers, which nowadays, also supports javascript resolvers as well, so you don't have to use VTL (the javascript resolvers only work for pipeline resolvers for now)
 
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
-`Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize
-how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs
-to configure the `vtl` files
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+`Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
 
 - Take the identity of the user (available in `$context.identity`), take the
   username and turn it into a DDB structure.
@@ -505,48 +407,33 @@ to configure the `vtl` files
 $util.toJson($context.result)
 ```
 
-Deploy with `npm run deploy`. Verify that changes worked by looking for the
-string `GraphQlResolverQuerygetMyProfile` under the templates in `.serverless`
-folder
+Deploy with `npm run deploy`. Verify that changes worked by looking for the string `GraphQlResolverQuerygetMyProfile` under the templates in `.serverless` folder
 
-_(8.3)_ To test at the AWS console, we need a new Cognito user similar to the
-ones created in the integration and e2e tests before. We do not have access to
-those, so we use AWS CLI to create a cognito user.
+_(8.3)_ To test at the AWS console, we need a new Cognito user similar to the ones created in the integration and e2e tests before. We do not have access to those, so we use AWS CLI to create a cognito user.
 
 `aws cognito-idp --region eu-west-1 sign-up --client-id <yourEnvVarForWebCognitoUserPoolClientId> --username <yourEmail> --password <yourPw> --user-attributes Name=name,Value=<yourName>`
 
-Once the command goes through, we should have an unconfirmed user in the Cognito
-console. Confirm the user here, it will populate in DDB - make sure you never
-delete it or you have to do the steps again. Go to AppSync and sign in with the
-user. Create a query for `getMyProfile` and we should see results.
+Once the command goes through, we should have an unconfirmed user in the Cognito console. Confirm the user here, it will populate in DDB - make sure you never delete it or you have to do the steps again. Go to AppSync and sign in with the user. Create a query for `getMyProfile` and we should see results.
 
 ![AppSyncQuery](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7qxfzx1880j0670i33j5.png)
 
-Try asking for the tweets field. There is no resolver associated with it, so
-AppSync will return a null.
+Try asking for the tweets field. There is no resolver associated with it, so AppSync will return a null.
 
 ### 8 Unit test `getMyProfile` query
 
 We are going to test that `Query.getMyProfile.request.vtl` executes the template
 with `$context.identity.username` and turn it into a DDB json structure.
 
-- Create an AppSync context that contains the username (for
-  `$context.identity.username`).
+- Create an AppSync context that contains the username (for `$context.identity.username`).
 - Get the template (file `Query.getMyProfile.request.vtl`).
 - Render the template (using the utility npm packages).
 
-`npm i -D amplify-velocity-template amplify-appsync-simulator` will help with
-generating the AppSync context and rendering the `.vtl` template.
+`npm i -D amplify-velocity-template amplify-appsync-simulator` will help with generating the AppSync context and rendering the `.vtl` template.
 
 Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
 
-> Yan does not recommend to unit test the VTL template, because it
-> straightforward, and in real life things do not go wrong there. In most cases
-> we use AppSync to talk to DDB, and we are taking one of the examples from
-> resolver mapping references
-> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-> [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
-> Therefore , instead of unit, he recommends to focus on testing e2e.
+> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references
+> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)). Therefore , instead of unit, he recommends to focus on testing e2e.
 
 ### 9 & 10 E2e test `getMyProfile` query
 
@@ -558,13 +445,15 @@ As a signed in user, make a graphQL request with the query `getMyProfile`.
 
 Check out `__tests__/e2e/user-profile.test.js`.
 
-### Getting the GraphQL API_URL
+>Make sure to clean up
+>[DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and
+>[CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test, do not delete your user which is used in AppSync console tests.
 
-A crude way to get the GraphQLApiUrl is through the web console:
-`CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
+### Getting the GraphQL API_URL with `serverless-manifest-plugin`
 
-`serverless-export-env` looks at the `Outputs` property of the `serverless.yml`,
-it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
+A crude way to get the GraphQLApiUrl is through the web console: `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
+
+`serverless-export-env` looks at the `Outputs` property of the `serverless.yml`, it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
 
 ```yml
   Outputs:
@@ -582,12 +471,7 @@ it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
       Value: ${self:custom.region}
 ```
 
-[10] To get the GraphQL API_URL from `CognitoUserPoolArn` we can use
-`npm i -D serverless-manifest-plugin`. Run the command
-`npm run sls -- manifest`. As opposed to looking at `serverless.yml`'s `Output`,
-it looks at the CloudFormation stack that has been deployed. It outputs a
-succinct json at `./.serverless/manifest.json`. We could also get the value from
-there, but that's not automated.
+[10] To get the GraphQL API_URL from `CognitoUserPoolArn` we can use `npm i -D serverless-manifest-plugin`. Run the command `npm run sls -- manifest`. As opposed to looking at `serverless.yml`'s `Output`, it looks at the CloudFormation stack that has been deployed. It outputs a succinct json at `./.serverless/manifest.json`. We could also get the value from there, but that's not automated.
 
 Under `serverless.yml / custom` create a manifest section:
 
@@ -601,9 +485,7 @@ custom:
     silent: true
 ```
 
-Create the file `./processManifest.js`. This script is analyzes the
-`manifest.json` file, looks for `outputs/OutpuKey/GraphQlApiUrl` and puts it
-into the `.env` file.
+Create the file `./processManifest.js`. This script is analyzes the `manifest.json` file, looks for outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
 
 ```js
 const _ = require('lodash')
@@ -678,12 +560,7 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 API_URL=******
 ```
 
-> Make sure to clean up
-> [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5)
-> and
-> [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh)
-> at the end of the e2e test, do not delete your user which is used in AppSync
-> console tests.
+
 
 ## 12 Implement `editMyProfile` mutation (_setup an AppSync resolver and have it edit an item at DDB._)
 
@@ -701,21 +578,12 @@ mappingTemplates:
     dataSource: usersTable
 ```
 
-_(12.1)_ We are going to write a resolver that updates the DDB usersTable. Add
-the two files under `mapping-templates` folder
-`Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`.
-Take a look at PutItem reference from AWS AppSync docs
-([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)).
-For `key:id` we use the `$util` as we did in the `getMyProfile` query. For
-`attributeValues` be careful not to use
-[dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html),
-and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`.
+_(12.1)_ We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder
+`Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not to use
+[dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`.
 
-Replicate the fields from `schema.api.graphql` into `expression` and
-`expressionValues`, they will all be `$context.arguments.newProfile` because of
-our GraphQL schema that was defined. Add a `condition`
-`"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the
-operation fails.
+Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`, they will all be  $context.arguments.newProfile` because of our GraphQL schema that was defined. Add a `condition`
+`"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
 
 ```graphql
 # ./schema.api.graphql
@@ -772,33 +640,22 @@ input ProfileInput {
 $util.toJson($context.result)
 ```
 
-Deploy and test at AppSync web console. If getQuery is broken, you may have
-moved `chance` package to devDependencies. If Put is broken, you may have
-deleted the user from DDB, and you have to re-create it as in section 4.8 using
-`aws cognito-idp `.
+Deploy and test at AppSync web console. If getQuery is broken, you may have moved `chance` package to devDependencies. If Put is broken, you may have deleted the user from DDB, and you have to re-create it as in section 4.8 using `aws cognito-idp `.
 
 ![UpdateItem](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mp550m5vmaatz9mk0t0h.png)
 
 ### 13 Unit test `editMyProfile`
 
-We are going to test that `Mutation.editMyProfile.request.vtl` executes the
-template with `$context.identity.username` and turns it into a DDB json
-structure.
+We are going to test that `Mutation.editMyProfile.request.vtl` executes the template with `$context.identity.username` and turns it into a DDB json structure.
 
 - Create an AppSync context that contains the username (for
-  `$context.identity.username`). KEY: when generating the context we need to
-  give it an argument (`editMyProfile(newProfile: ProfileInput!): MyProfile!`).
+  `$context.identity.username`). KEY: when generating the context we need to give it an argument (`editMyProfile(newProfile: ProfileInput!): MyProfile!`).
 - Get the template (file `Mutation.editMyProfile.request.vtl`).
 - Render the template (using the utility npm packages).
 
 Check out `__tests__/unit/Mutation.editMyProfile.request.test.js`.
 
-> Yan does not recommend to unit test the VTL template, because it
-> straightforward, and in real life things do not go wrong there. In most cases
-> we use AppSync to talk to DDB, and we are taking one of the examples from
-> resolver mapping references
-> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-> [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
+> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
 > Therefore , instead of unit, he recommends to focus on testing e2e.
 
 ### 14 E2e test `editMyProfile
@@ -819,6 +676,16 @@ For the types, there are 3 key pieces of info:
 # schema.api.graphql
 type Mutation {
   editMyProfile(newProfile: ProfileInput!): MyProfile!
+  
+input ProfileInput {
+  name: String!
+  imageUrl: AWSURL
+  backgroundImageUrl: AWSURL
+  bio: String
+  location: String
+  website: AWSURL
+  birthdate: AWSDate
+}
 ```
 
 - At the AppSync web console we build an example
@@ -848,12 +715,7 @@ And the input can be just `input: {name: newName}`.
 
 ## 15 Implement getImageUploadUrl query (_use a lambda to upload a file to S3_)
 
-_(15.0)_ Add an entry to the mapping templates, and a dataSource. For lambda
-functions, Appsync has a direct resolver integration, so we do not need a custom
-request & response vtl template. Set request and response to false and
-`serverless-appsync-plugin` takes care of it. When dealing with DDB, we could
-leave them out because we specified the vtl files under `./mapping-templates`
-and the plugin took care of it.
+_(15.0)_ Add an entry to the mapping templates, and a dataSource. For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template. Set request and response to false and `serverless-appsync-plugin` takes care of it. When dealing with DDB, we could leave them out because we specified the vtl files under `./mapping-templates` and the plugin took care of it.
 
 ```yml
 # ./serverless.appsync-api.yml
@@ -906,14 +768,9 @@ Run `npm run sls --package` to test that it works so far.
 
 ### _(15.2)_ Implement the lambda function `functions/get-upload-url.js`.
 
-We need to make a `putObject` request to S3. From the graphQL schema
-`getImageUploadUrl(extension: String, contentType: String)` , we know that we
-need an extension and contentType as args, both of which are optional. We can
-get them from `event.arguments`. For S3 `putObject` we need `key`, `contentType`
-and the bucket env var.
+We need to make a `putObject` request to S3. From the graphQL schema `getImageUploadUrl(extension: String, contentType: String)` , we know that we need an extension and contentType as args, both of which are optional. We can get them from `event.arguments`. For S3 `putObject` we need `key`, `contentType` and the bucket env var.
 
-_(14.2.1)_ To construct the `key` for S3, we can use `event.identity.username`
-(Lumigo screenshot)
+_(14.2.1)_ To construct the `key` for S3, we can use `event.identity.username` (Lumigo screenshot)
 
 ![construct-s3-key](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/v9m1cqkpuwuo9gck2u55.png)
 
@@ -921,8 +778,7 @@ _(15.2.2)_ To get the `contentType` we use `event.arguments.contentType `.
 
 _(15.2.3)_ create the S3 bucket env var, to help make the s3 putObject request.
 
-For the bucket env var, we have to add an entry to `serverless.yml` `resources`
-section:
+For the bucket env var, we have to add an entry to `serverless.yml` `resources` section:
 
 ```yml
 # ./serverless.yml
@@ -931,7 +787,7 @@ functions:
 
   getImageUploadUrl:
     handler: functions/getImageUploadUrl.handler
-    environment: # (14.2)
+    environment: # (15.2)
       BUCKET_NAME: !Ref AssetsBucket
     iamRoleStatements:
       - Effect: Allow
@@ -970,25 +826,15 @@ resources:
 
 Other notes:
 
-- When creating urls for the user to upload content, use S3 Transfer
-  Acceleration.
-
-- `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids.
-  Problem with `chance` is the random ids are not sortable, ulid generates
-  sortable keys.
-- If we need to customize the file upload (ex: file size limit) we can use
-  `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles'
-  post on S3 presigned URLs vs presigned POSTs
-  [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932),
-  and the
-  [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html)
-  on creating POST policies (including a list of conditions you can apply).
+- When creating urls for the user to upload content, use S3 Transfer Acceleration.
+  
+- `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids. Problem with `chance` is the random ids are not sortable, ulid generates sortable keys.
+- If we need to customize the file upload (ex: file size limit) we can use `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles' post on S3 presigned URLs vs presigned POSTs [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932), and the [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html) on creating POST policies (including a list of conditions you can apply).
 
 ```js
 // ./functions/get-upload-url.js
 
-// [14.2] Implement the lambda function. We need to make a `putObject` request to S3.
-// We need to make a `putObject` request to S3.
+// [15.2] Implement the lambda function. We need to make a `putObject` request to S3.
 // From the graphQL schema `getImageUploadUrl(extension: String, contentType: String)` ,
 /// we know that we need an extension and contentType as args, both of which are optional.
 /// We can get them from `event.arguments`.
@@ -999,7 +845,7 @@ const s3 = new S3({useAccelerateEndpoint: true})
 const ulid = require('ulid')
 
 const handler = async event => {
-  // (14.2.1) construct the key for S3 putObject request
+  // (15.2.1) construct the key for S3 putObject request
   // use ulid to create a randomized, but sorted id (chance is not sorted when we create multiple ids)
   const id = ulid.ulid()
   // construct a S3 key using the event.identity.username (got it from Lumigo)
@@ -1015,16 +861,16 @@ const handler = async event => {
     }
   }
 
-  // (14.2.2) get the contentType from event.arguments.contentType
+  // (15.2.2) get the contentType from event.arguments.contentType
   // get the contentType from graphQL schema as well, it is optional so we give it a default value
   const contentType = event.arguments.contentType || 'image/jpeg'
   if (!contentType.startsWith('image/')) {
     throw new Error('contentType must start be an image')
   }
 
-  // [14.2] use S3 to upload an image to S3. The operation is `putObject`
+  // (15.3) use S3 to upload an image to S3. The operation is `putObject`
   const params = {
-    Bucket: process.env.BUCKET_NAME, // (14.2.3) get the bucket env var (settings in serverless.yml file)
+    Bucket: process.env.BUCKET_NAME, // (15.2.3) get the bucket env var (settings in serverless.yml file)
     Key: key,
     ACL: 'public-read',
     ContentType: contentType,
@@ -1038,8 +884,7 @@ module.exports = {
 }
 ```
 
-`npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in
-the `.env` file.
+`npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in the `.env` file.
 
 ### 15 Unit test `getImageUploadUrl`
 
@@ -1050,8 +895,7 @@ Similar to section 4.6 `confirm-user-signup-integration.test.js`, we need to:
 - Check that the result matches the expectation (the handler creates a certain
   S3 url)
 
-Since there is no DDB interaction as in 4.6, or any interaction with the S3
-bucket, this one is a unit test.
+Since there is no DDB interaction as in 4.6, or any interaction with the S3 bucket, this one is a unit test.
 
 Check out `__tests__/unit/get-upload-url.test.js`.
 
@@ -1163,20 +1007,11 @@ resources:
             Value: timelines-table
 ```
 
-When we create a new tweet, it gets written to the `TweetsTable` and
-`TimelinesTable`. We also have to update `tweetsCount` for user profile page
-(part of the `IProfile` from graphQL schema), which we track in `UsersTable`.
-Having to transact with 3 tables, we could do these 3 operations in one DDB
-transaction. However, what we cannot do in a DDB resolver is we cannot generate
-the `ulid`s for the tweets, and for that we need to use a lambda resolver
-instead.
+When we create a new tweet, it gets written to the `TweetsTable` and `TimelinesTable`. We also have to update `tweetsCount` for user profile page (part of the `IProfile` from graphQL schema), which we track in `UsersTable`. Having to transact with 3 tables, we could do these 3 operations in one DDB transaction. However, what we cannot do in a DDB resolver is we cannot generate the `ulid`s for the tweets, and for that we need to use a lambda resolver instead.
 
-_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to
-`TweetsTable`, `TimelinesTable` and update `UsersTable`.
+_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
 
-_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers
-when we are transacting with DDB. We want AppSync to invoke the lambda function
-directly without going through a custom mapping template.
+_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers when we are transacting with DDB. We want AppSync to invoke the lambda function directly without going through a custom mapping template.
 
 ```yml
 # serverless.appsync-api.yml
@@ -1278,9 +1113,7 @@ module.exports = {
 }
 ```
 
-_(15.2.2)_ Add the JS for the lambda function that will generate a tweet `ulid`
-for the 3 DDB tables, write to Tweets and Timelines tables, and update Users
-table.
+_(15.2.2)_ Add the JS for the lambda function that will generate a tweet `ulid` for the 3 DDB tables, write to Tweets and Timelines tables, and update Users table.
 
 ```javascript
 // ./functions/tweet.js
@@ -1360,8 +1193,7 @@ module.exports = {
 }
 ```
 
-`npm run deploy` and test the mutation at Appsync. Remember to
-`npm run export:env` also.
+`npm run deploy` and test the mutation at Appsync. Remember to `npm run export:env` also.
 
 ![tweet-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z0ezr67acgvjhw10a5vj.png)
 
@@ -1373,12 +1205,9 @@ Verify the 3 tables at DDB.
 
 The pattern is as follows:
 
-- Create an event: an object which includes `identity.username` and
-  `arguments.text`.
-- Feed it to the handler (the handler causes 2 writes and update to DDB, hence
-  the "integration")
-- Check that the result matches the expectation (by reading the 3 tables from
-  DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and `arguments.text`.
+- Feed it to the handler (the handler causes 2 writes and update to DDB, hence the "integration")
+- Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
 
 We have to have a real user for this integration test, but it is still an
 integration test given that we are feeding an event object to the handler.
@@ -1387,9 +1216,7 @@ Check out `__tests__/integration/tweet-integration.test.js`.
 
 ### 19 E2e test for tweet mutation
 
-As a signed in user, make a graphQL request with the mutation `tweet`. This will
-cause 3 db interactions. We do not have to repeat the same DB verifications as
-the integration test, but we canverify the response from the mutation.
+As a signed in user, make a graphQL request with the mutation `tweet`. This will  cause 3 db interactions. We do not have to repeat the same DB verifications as  the integration test, but we can verify the response from the mutation.
 
 - Sign in
 - Make a graphQL request with the tweet mutation and its text argument.

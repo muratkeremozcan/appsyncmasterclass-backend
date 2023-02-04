@@ -52,6 +52,10 @@ fragment iProfileFields on IProfile {
 }
 `
 
+const getImageUploadUrl = `query getImageUploadUrl($extension: String, $contentType: String) {
+  getImageUploadUrl(extension: $extension, contentType: $contentType)
+}`
+
 const tweetFragment = `
 fragment tweetFields on Tweet {
   id
@@ -143,4 +147,5 @@ module.exports = {
   iTweetFragment,
   retweetFragment,
   replyFragment,
+  getImageUploadUrl,
 }

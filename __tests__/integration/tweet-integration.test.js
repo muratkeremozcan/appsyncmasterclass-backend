@@ -27,14 +27,18 @@ const generateTweetEvent = (username, text) => {
 }
 
 describe('Given an authenticated user', () => {
-  let signedInUser
+  const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
+
+  let signedInUser, userId
+
   beforeAll(async () => {
     signedInUser = await signInUser()
+    userId = signedInUser.username
   })
 
   it('should write the tweet to the Tweets, Timelines tables, and update Users table', async () => {
     // create a mock event and feed it to the handler
-    const event = generateTweetEvent(signedInUser.username, 'Hello world!')
+    const event = generateTweetEvent(userId, 'Hello world!')
     const context = {}
     const tweet = await handler(event, context)
 
@@ -42,7 +46,7 @@ describe('Given an authenticated user', () => {
     const DynamoDB = new AWS.DynamoDB.DocumentClient()
 
     const tweetsTableResp = await DynamoDB.get({
-      TableName: process.env.TWEETS_TABLE,
+      TableName: TWEETS_TABLE,
       Key: {
         id: tweet.id,
       },
@@ -50,18 +54,18 @@ describe('Given an authenticated user', () => {
     expect(tweetsTableResp.Item).toBeTruthy()
 
     const timelinesTableResp = await DynamoDB.get({
-      TableName: process.env.TIMELINES_TABLE,
+      TableName: TIMELINES_TABLE,
       Key: {
-        userId: signedInUser.username,
+        userId,
         tweetId: tweet.id,
       },
     }).promise()
     expect(timelinesTableResp.Item).toBeTruthy()
 
     const usersTableResp = await DynamoDB.get({
-      TableName: process.env.USERS_TABLE,
+      TableName: USERS_TABLE,
       Key: {
-        id: signedInUser.username,
+        id: userId,
       },
     }).promise()
     expect(usersTableResp.Item).toBeTruthy()
@@ -69,16 +73,16 @@ describe('Given an authenticated user', () => {
 
     // clean up
     await DynamoDB.delete({
-      TableName: process.env.TWEETS_TABLE,
+      TableName: TWEETS_TABLE,
       Key: {
         id: tweet.id,
       },
     }).promise()
 
     await DynamoDB.delete({
-      TableName: process.env.TIMELINES_TABLE,
+      TableName: TIMELINES_TABLE,
       Key: {
-        userId: signedInUser.username,
+        userId,
         tweetId: tweet.id,
       },
     }).promise()
@@ -88,16 +92,16 @@ describe('Given an authenticated user', () => {
     // clean up DynamoDB and Cognito
     const DynamoDB = new AWS.DynamoDB.DocumentClient()
     await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
+      TableName: USERS_TABLE,
       Key: {
-        id: signedInUser.username,
+        id: userId,
       },
     }).promise()
 
     await signedInUser.cognito
       .adminDeleteUser({
         UserPoolId: signedInUser.userPoolId,
-        Username: signedInUser.username,
+        Username: userId,
       })
       .promise()
   })

@@ -7,6 +7,7 @@
 
 require('dotenv').config()
 const {signInUser} = require('../../test-helpers/cognito')
+const {getImageUploadUrl} = require('../../test-helpers/graphql-fragments')
 const AWS = require('aws-sdk')
 const path = require('path')
 const fs = require('fs')
@@ -24,9 +25,6 @@ describe('getUploadUrl and upload an image', () => {
     // we can copy the query from the AppSync console,
     // here we are taking 2 inputs as a parameters, mirroring the type at schema.api.graphql
     // getImageUploadUrl(extension: String, contentType: String): AWSURL!
-    const getImageUploadUrl = `query getImageUploadUrl($extension: String, $contentType: String) {
-      getImageUploadUrl(extension: $extension, contentType: $contentType)
-    }`
 
     // Make a graphQL request with the query and variables
     const extension = '.png'

@@ -46,7 +46,7 @@ input ProfileInput {
   birthdate: AWSDate
 }
 
-# use interface to solidify the common properties between types (MyProfile vs OtherProfile)
+# [2] use interface to solidify the common properties between types (MyProfile vs OtherProfile)
 interface IProfile {
   id: ID!
   name: String!

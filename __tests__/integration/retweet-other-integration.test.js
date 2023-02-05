@@ -6,10 +6,7 @@ require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/cognito')
 const handler = require('../../functions/retweet').handler
-const {
-  axiosGraphQLQuery,
-  registerFragment,
-} = require('../../test-helpers/graphql')
+const {graphQLQuery, registerFragment} = require('../../test-helpers/graphql')
 const {tweet} = require('../../test-helpers/queries-and-mutations')
 const {
   myProfileFragment,
@@ -50,7 +47,7 @@ describe('Given 2 authenticated users and a tweet', () => {
 
     const text = chance.string({length: 16})
     // Make a graphQL request with the tweet mutation and its text argument
-    tweetA = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
+    tweetA = await graphQLQuery(userA.accessToken, tweet, {text})
     tweetId = tweetA.tweet.id
     userId = userA.username
     userBId = userB.username

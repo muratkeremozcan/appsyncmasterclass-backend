@@ -6,10 +6,7 @@ require('dotenv').config()
 const AWS = require('aws-sdk')
 const {signInUser} = require('../../test-helpers/cognito')
 const handler = require('../../functions/reply').handler
-const {
-  axiosGraphQLQuery,
-  registerFragment,
-} = require('../../test-helpers/graphql')
+const {graphQLQuery, registerFragment} = require('../../test-helpers/graphql')
 const {tweet} = require('../../test-helpers/queries-and-mutations')
 const chance = require('chance').Chance()
 const {
@@ -30,7 +27,7 @@ registerFragment('iProfileFields', iProfileFragment)
 const generateReplyEvent = (username, tweetId, text) => {
   return {
     identity: {
-      username: username,
+      username,
     },
     arguments: {
       tweetId,
@@ -38,6 +35,8 @@ const generateReplyEvent = (username, tweetId, text) => {
     },
   }
 }
+
+const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
 
 describe('Given 2 authenticated users and a tweet', () => {
   let userA, tweetA, userId, tweetId, userB, userBId, DynamoDB
@@ -49,7 +48,7 @@ describe('Given 2 authenticated users and a tweet', () => {
     // send a graphQL query request as the user
     const text = chance.string({length: 16})
     // Make a graphQL request with the tweet mutation and its text argument
-    tweetA = await axiosGraphQLQuery(userA.accessToken, tweet, {text})
+    tweetA = await graphQLQuery(userA.accessToken, tweet, {text})
     tweetId = tweetA.tweet.id
     userId = userA.username
     userBId = userB.username
@@ -65,7 +64,7 @@ describe('Given 2 authenticated users and a tweet', () => {
     // save the reply in Tweets
     // increment the count in Tweets table
     const tweetsTableResp = await DynamoDB.get({
-      TableName: process.env.TWEETS_TABLE,
+      TableName: TWEETS_TABLE,
       Key: {
         id: tweetId,
       },
@@ -74,7 +73,7 @@ describe('Given 2 authenticated users and a tweet', () => {
 
     // increment the count in Users table
     const usersTableResp = await DynamoDB.get({
-      TableName: process.env.USERS_TABLE,
+      TableName: USERS_TABLE,
       Key: {
         id: userId,
       },
@@ -84,7 +83,7 @@ describe('Given 2 authenticated users and a tweet', () => {
 
     // save to timelines table
     const timelinesTableResp = await DynamoDB.get({
-      TableName: process.env.TIMELINES_TABLE,
+      TableName: TIMELINES_TABLE,
       Key: {
         userId,
         tweetId,
@@ -96,14 +95,14 @@ describe('Given 2 authenticated users and a tweet', () => {
   afterAll(async () => {
     // clean up DynamoDB and Cognito
     await DynamoDB.delete({
-      TableName: process.env.TWEETS_TABLE,
+      TableName: TWEETS_TABLE,
       Key: {
         id: tweetId,
       },
     }).promise()
 
     await DynamoDB.delete({
-      TableName: process.env.TIMELINES_TABLE,
+      TableName: TIMELINES_TABLE,
       Key: {
         userId: userId,
         tweetId: tweetId,
@@ -111,14 +110,14 @@ describe('Given 2 authenticated users and a tweet', () => {
     }).promise()
 
     await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
+      TableName: USERS_TABLE,
       Key: {
         id: userId,
       },
     }).promise()
 
     await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
+      TableName: USERS_TABLE,
       Key: {
         id: userBId,
       },

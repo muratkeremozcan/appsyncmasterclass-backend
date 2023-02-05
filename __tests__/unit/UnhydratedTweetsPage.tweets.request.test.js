@@ -21,7 +21,7 @@ describe('UnhydratedTweetsPage.tweets.request template', () => {
     expect(result).toEqual([])
   })
 
-  it('Should return empty array if source.tweets is empty', () => {
+  it('Should return an array if source.tweets is not empty', () => {
     // create an appsync context (for $context.source.tweets))
     const username = chance.guid()
     const tweetId = chance.guid()

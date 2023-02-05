@@ -1,6 +1,11 @@
 # appsyncmasterclass-backend
 
-In order to deploy, you need an AWS account and have to configure serverless. After so, you may need to renew the authorization config periodically with the CLI command. Once authorized, you deploy and can run e2e tests.
+Backend for a Twitter Clone built with Serverless Framework, JS, AWS AppSyc,
+Lambda, DynamoDB & Cognito.
+
+In order to deploy, you need an AWS account and have to configure serverless.
+After so, you may need to renew the authorization config periodically with the
+CLI command. Once authorized, you deploy and can run e2e tests.
 
 ```bash
 npm i
@@ -56,14 +61,17 @@ Setup a GitHub repo.
 
 Create a serverless project: `npm run sls -- create -t aws-nodejs`.
 
-Install serverless-appsync-plugin: `npm i -D serverless-appsync-plugin`. It allows to configure our AppSync api by adding a section to `serverless.yml` file with:
+Install serverless-appsync-plugin: `npm i -D serverless-appsync-plugin`. It
+allows to configure our AppSync api by adding a section to `serverless.yml` file
+with:
 
 ```yml
 custom:
   appSync:
 ```
 
-Create a separate `serverless.appsync-api.yml` file for AppSync configuration. Reference it in the main `serverless.yml` file with:
+Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
+Reference it in the main `serverless.yml` file with:
 
 ```yml
 custom:
@@ -85,15 +93,20 @@ Begin to configure the the file
 
 ## 2 Design the GraphQL schema
 
-[2] Create the file [schema.api.graphql](./schema.api.graphql). It is very much like a TS file with types.
+[2] Create the file [schema.api.graphql](./schema.api.graphql). It is very much
+like a TS file with types.
 
-Identify and implement the schema; Queries, Mutations, types and interfaces that will be used in the system.
+Identify and implement the schema; Queries, Mutations, types and interfaces that
+will be used in the system.
 
-Use interface to solidify the common properties between types (MyProfile vs OtherProfile).
+Use interface to solidify the common properties between types (MyProfile vs
+OtherProfile).
 
 ## 3 Configure Cognito User Pool
 
-_(3.0)_ Before the GraphQL schema can be deployed, we need to create a AWS Cognito User Pool and associate it with our AppSync API configuration. This is done under `resources` section of [serverless.yml](./serverless.yml):
+_(3.0)_ Before the GraphQL schema can be deployed, we need to create a AWS
+Cognito User Pool and associate it with our AppSync API configuration. This is
+done under `resources` section of [serverless.yml](./serverless.yml):
 
 ```yml
 resources:
@@ -101,7 +114,8 @@ resources:
     CognitoUserPool:
 ```
 
-(_3.1_) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output.
+(_3.1_) We need the CognitoUserPoolId of the CognitoUserPool as a cloud
+formation output.
 
 ```yml
 Outputs:
@@ -109,7 +123,8 @@ Outputs:
     Value: !Ref CognitoUserPool
 ```
 
-_(3.2)_ After configuring the Cognito User Pool, we need to configure the AppSync API to use it ([schema.api.graphql](./schema.api.graphql)).
+_(3.2)_ After configuring the Cognito User Pool, we need to configure the
+AppSync API to use it ([schema.api.graphql](./schema.api.graphql)).
 
 ```yml
 name: appsyncmasterclass
@@ -122,7 +137,8 @@ userPoolConfig:
   userPoolId: !Ref CognitoUserPool
 ```
 
-_(3.4)_ Now it is time to deploy. You need to have a AWSAccessKeyId and AWSSecretKey to configure serverless framework to deploy.
+_(3.4)_ Now it is time to deploy. You need to have a AWSAccessKeyId and
+AWSSecretKey to configure serverless framework to deploy.
 
 ```text
 # rootkey.csv file
@@ -130,7 +146,9 @@ AWSAccessKeyId=*****
 AWSSecretKey=***
 ```
 
-There are a few ways to [configure serverless with aws creds](https://www.serverless.com/framework/docs/providers/aws/guide/credentials#create-an-iam-user-and-access-key). I used the below (mind that `--` passes args to the package.json script).
+There are a few ways to
+[configure serverless with aws creds](https://www.serverless.com/framework/docs/providers/aws/guide/credentials#create-an-iam-user-and-access-key).
+I used the below (mind that `--` passes args to the package.json script).
 
 ```bash
 npm run sls -- config credentials \
@@ -139,13 +157,22 @@ npm run sls -- config credentials \
   --secret ***
 ```
 
-> When testing integration or e2e, if you get a nonsense Jest timeout 5000 ms error, the credentials must have expired. You have to renew them to get the tests passing. The clue is when having to `npm run deploy` and that does not succeed.
+> When testing integration or e2e, if you get a nonsense Jest timeout 5000 ms
+> error, the credentials must have expired. You have to renew them to get the
+> tests passing. The clue is when having to `npm run deploy` and that does not
+> succeed.
 
-Then deploy with `npm run deploy`. In _AWS console / Cognito_ we find `appsyncmasterclass` as defined in [serverless.appsync-api.yml](./serverless.appsync-api.yml)
+Then deploy with `npm run deploy`. In _AWS console / Cognito_ we find
+`appsyncmasterclass` as defined in
+[serverless.appsync-api.yml](./serverless.appsync-api.yml)
 
-_(3.5)_ We need to be logged in with Cognito to test AppSync queries. Create a cognito user by hand at _CognitoUserPool / Users and Groups_. (I used my email).
+_(3.5)_ We need to be logged in with Cognito to test AppSync queries. Create a
+cognito user by hand at _CognitoUserPool / Users and Groups_. (I used my email).
 
-We also need to configure a application client at _CognitoUserPool / App clients_ to be able to interact with the Cognito User Pool. We do this by adding a resource to [serverless.yml](./serverless.yml) (as opposed to doing it by hand at AWS Console):
+We also need to configure a application client at _CognitoUserPool / App
+clients_ to be able to interact with the Cognito User Pool. We do this by adding
+a resource to [serverless.yml](./serverless.yml) (as opposed to doing it by hand
+at AWS Console):
 
 ```yml
 resources:
@@ -154,14 +181,17 @@ resources:
     WebUserPoolClient:
 ```
 
-_(3.6)_ At AWS AppSync, _Login via Cognito User Pools_ and test out some queries.
+_(3.6)_ At AWS AppSync, _Login via Cognito User Pools_ and test out some
+queries.
 
 ## 4 Implement save user profile on `PostConfirmation`
 
 - Capture the new user that gets created in Cognito.
 
 - Save the user in a DynamoDB table:
-  - (use a lambda trigger at _CognitoUserPool / Triggers_). After a user is confirmed, send a message to a lambda function, and that function can save the user in the DynamoDB table.
+  - (use a lambda trigger at _CognitoUserPool / Triggers_). After a user is
+    confirmed, send a message to a lambda function, and that function can save
+    the user in the DynamoDB table.
 - That will allow us to use AppSync query and mutations.
 
 _(4.0)_ Create a DynamoDB table to store user profiles:
@@ -187,9 +217,14 @@ resources:
 
 _(4.1)_ Add a functions block for the lambda trigger function
 
-The function needs to know the name of the UsersTable, which is generated by CloudFormation.
+The function needs to know the name of the UsersTable, which is generated by
+CloudFormation.
 
-_(4.2)_ Install `npm i -D serverless-iam-roles-per-function` , which allows custom permissions per function. The function needs the permission to write to the UsersTable. We do not want a global `iamRoleStatements:` under `provider:` , we just want permission for this function. We use `npm i -D serverless-iam-roles-per-function` to do this.
+_(4.2)_ Install `npm i -D serverless-iam-roles-per-function` , which allows
+custom permissions per function. The function needs the permission to write to
+the UsersTable. We do not want a global `iamRoleStatements:` under `provider:` ,
+we just want permission for this function. We use
+`npm i -D serverless-iam-roles-per-function` to do this.
 
 ```yml
 confirmUserSignup:
@@ -205,7 +240,12 @@ confirmUserSignup:
       Resource: !GetAtt UsersTable.Arn
 ```
 
-_(4.3)_ Configure Cognito to call the above lambda trigger function when a new user is registered. We can't use the lambda function's name, because that's something local to serverless framework. Instead we figure out the logical id sls generates for the lambda function, by using `npm run sls -- package`. Which generates cloudformation template under .serverless folder. There look for `ConfirmUserSignupLambdaFunction`
+_(4.3)_ Configure Cognito to call the above lambda trigger function when a new
+user is registered. We can't use the lambda function's name, because that's
+something local to serverless framework. Instead we figure out the logical id
+sls generates for the lambda function, by using `npm run sls -- package`. Which
+generates cloudformation template under .serverless folder. There look for
+`ConfirmUserSignupLambdaFunction`
 
 ```yml
 CognitoUserPool:
@@ -215,7 +255,9 @@ CognitoUserPool:
     PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction
 ```
 
-_(4.4)_ We also need to give Cognito additional permissions to call the lambda function, by default it doesn't have any. The below grants CognitoUserPool the `lambda:invokeFunction` permission for` ConfirmUserSignupLambdaFunction`.
+_(4.4)_ We also need to give Cognito additional permissions to call the lambda
+function, by default it doesn't have any. The below grants CognitoUserPool the
+`lambda:invokeFunction` permission for` ConfirmUserSignupLambdaFunction`.
 
 ```yml
 UserPoolInvokeConfirmUserSignupLambdaPermission:
@@ -227,27 +269,44 @@ UserPoolInvokeConfirmUserSignupLambdaPermission:
     SourceArn: !GetAtt CognitoUserPool.Arn
 ```
 
-_(4.5)_ Now we add the lambda function [./functions/confirm-user-signup.js](./functions/confirm-user-signup.js)
+_(4.5)_ Now we add the lambda function
+[./functions/confirm-user-signup.js](./functions/confirm-user-signup.js)
 
 ## 5 Testing overview
 
-With serverless apps, unit tests do not give enough confidence for the cost. Same cost & little value vs integration tests. Apply the test honeycomb, prefer integration tests over unit tests, and some e2e. All because many things can go wrong, none of which are related to our lambda code.
+With serverless apps, unit tests do not give enough confidence for the cost.
+Same cost & little value vs integration tests. Apply the test honeycomb, prefer
+integration tests over unit tests, and some e2e. All because many things can go
+wrong, none of which are related to our lambda code.
 
-Unit test covers the business logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
+Unit test covers the business
+logic.![unit-test](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ckgcm75wpg1ezpk5cqpr.png)
 
-Integration is the same cost, and more value than unit. Covers the business logic + DynamoDB interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)
+Integration is the same cost, and more value than unit. Covers the business
+logic + DynamoDB
+interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)
 
-There are things integration tests cannot cover, but they are still a good bang for the buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
+There are things integration tests cannot cover, but they are still a good bang
+for the
+buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)
 
-E2e can cover everything, highest confidence but also costly. We need some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
+E2e can cover everything, highest confidence but also costly. We need
+some.![e2e-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1vtufpqa62fdgprlqt6c.png)
 
 ![e2e](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qjra5fzp7yr31r06dfzd.png)
 
 Prop-tips from Yan:
 
-- Avoid local simulation (e.g. LocalStack), they’re more work than is worth it, and hides common failure modes such as **misconfigured permissions and resource policies**.
-- In integration tests, only use mocks for AWS services to simulate hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You can mock your internal services/APIs.
-- Use temporary stacks for feature branches to avoid destabilizing shared environments, and during CI/CD pipeline to run end-to-end tests to remove the overhead of cleaning up test data. `npm run sls -- deploy -s temp-stack` , `npm run sls -- remove -s tmp`
+- Avoid local simulation (e.g. LocalStack), they’re more work than is worth it,
+  and hides common failure modes such as **misconfigured permissions and
+  resource policies**.
+- In integration tests, only use mocks for AWS services to simulate
+  hard-to-reproduce **failure cases**. If it's happy path, do not mock AWS. You
+  can mock your internal services/APIs.
+- Use temporary stacks for feature branches to avoid destabilizing shared
+  environments, and during CI/CD pipeline to run end-to-end tests to remove the
+  overhead of cleaning up test data. `npm run sls -- deploy -s temp-stack` ,
+  `npm run sls -- remove -s tmp`
   https://theburningmonk.com/2019/09/why-you-should-use-temporary-stacks-when-you-do-serverless/
 
 ### 6 Integration testing `confirm-user-signup`
@@ -255,10 +314,13 @@ Prop-tips from Yan:
 The pattern is as follows:
 
 - Create an event: an object which includes user info.
-- Feed it to the handler (the handler causes a write to DDB, hence the "integration")
-- Check that the result matches the expectation (by reading from DDB, hence "integration")
+- Feed it to the handler (the handler causes a write to DDB, hence the
+  "integration")
+- Check that the result matches the expectation (by reading from DDB, hence
+  "integration")
 
-Use the `serverless-export-env` plugin to create a `.env` file with our env vars. It picks up a few values from `serverless.yml`.
+Use the `serverless-export-env` plugin to create a `.env` file with our env
+vars. It picks up a few values from `serverless.yml`.
 
 ```bash
 npm i -D jest @types/jest dotenv
@@ -269,7 +331,9 @@ npm i -D serverless-export-env@v1.4.0
 npm run sls -- export-env
 ```
 
-Add AWS_REGION and USER_POOL_ID to Outputs, so that they can also be acquired via the plugin. Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
+Add AWS_REGION and USER_POOL_ID to Outputs, so that they can also be acquired
+via the plugin. Use the `${self:custom.*}` trick for AWS_REGION, because we
+cannot use it as lambda function level since that is specific to sls.
 
 ```yml
 # serverless.yml
@@ -298,7 +362,9 @@ functions:
       Value: ${self:custom.region}
 ```
 
-After the `serversless.yml` change, we have to deploy and run `npm run sls -- export-env` again. Finally, we have an `.env` file with 5 values:
+After the `serversless.yml` change, we have to deploy and run
+`npm run sls -- export-env` again. Finally, we have an `.env` file with 5
+values:
 
 ```dotenv
 # .env
@@ -309,17 +375,23 @@ AWS_REGION=eu-west-1
 USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 ```
 
-Take a look at [./**tests**/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
+Take a look at
+[./**tests**/confirm-user-signup-integration.test.js](./__tests__/confirm-user-signup-integration.test.js).
 
 ### 7 E2e test `confirm-user-signup`
 
 In the test there are 3 main things we do:
 
-- We create a user from scratch using `AWS.CognitoIdentityServiceProvider` (cognito).
-- We are not using a real email, so we use `cognito.adminConfirmSignup` to simulate the user sign up verification.
+- We create a user from scratch using `AWS.CognitoIdentityServiceProvider`
+  (cognito).
+- We are not using a real email, so we use `cognito.adminConfirmSignup` to
+  simulate the user sign up verification.
 - As a result we should see a DynamoDB table entry, confirm it.
 
-In order to work with cognito and simulate a user signup, we need `WebUserPoolClient` id. We capture that as an output in the `serverless.yml ` `Outputs` section, similar to what we did to acquire _COGNITO_USER_POOL_ID (3.1)_.
+In order to work with cognito and simulate a user signup, we need
+`WebUserPoolClient` id. We capture that as an output in the `serverless.yml `
+`Outputs` section, similar to what we did to acquire _COGNITO_USER_POOL_ID
+(3.1)_.
 
 ```yml
 Outputs:
@@ -331,7 +403,9 @@ Outputs:
     Value: !Ref WebUserPoolClient
 ```
 
-After the `serversless.yml` change, we have to deploy `npm run deploy` and export environment `npm run export:env`. Finally, we have an `.env` file with 6 values:
+After the `serversless.yml` change, we have to deploy `npm run deploy` and
+export environment `npm run export:env`. Finally, we have an `.env` file with 6
+values:
 
 ```dotenv
 # .env
@@ -348,9 +422,12 @@ Take a look at
 
 ## 8 Implement `getMyProfile` query (_setup an AppSync resolver and have it get an item from DDB_)
 
-After the user is signed up and confirmed, we can get the data from DynamoDB, similar to what we did in the integration and e2e tests.
+After the user is signed up and confirmed, we can get the data from DynamoDB,
+similar to what we did in the integration and e2e tests.
 
-We need to setup an AppSync resolver and have it get an item from DDB. _(8.1)_ Tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query.
+We need to setup an AppSync resolver and have it get an item from DDB. _(8.1)_
+Tell the serverless AppSync plugin where the Appsync templates are going to be,
+and how to map them to the graphQL query.
 
 ```yml
 # serverless.appsync-api.yml
@@ -370,20 +447,43 @@ dataSources:
 
 > What is VTL, and why do we use it?
 >
-> VTL is the template language that you can use with all AppSync integrations, including Lambda.
-> 
->We need something to tell AppSync how to make a request to the thing it's integrating with, be it a DynamoDB table, a Lambda function, an HTTP endpoint or something else. We need to tell AppSync how to transform the response because it's probably not in the right shape that the resolver needs to return.
-> 
-> - With Lambda, AppSync provides a default request & response template so you don't have to write one.
-> - For pipeline functions, you can now also use JavaScript to create the request and response templates instead of VTL, see
->   https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers. But the JavaScript support is only limited to pipeline functions right now, and in most cases, you probably don't need a pipeline function if your resolver just needs to do one thing.
-> 
->As for why VTL, it boils down to not having a Lambda function = faster (adding another service is always gonna add some overhead, plus cold starts!), cheaper (not paying for lambda invocation) and more scalable (lambda has regional concurrency limit, so another limit that comes into play, on top of the throughput limits on AppSync)
-> 
-> So if you can have AppSync connect to say, DynamoDB directly, then you should use vtl. If you're doing more complex stuff, then consider bringing in a Lambda function, but if it's just a sequence of CRUD operations against DynamoDB, then you can do the same thing with pipeline resolvers, which nowadays, also supports javascript resolvers as well, so you don't have to use VTL (the javascript resolvers only work for pipeline resolvers for now)
+> VTL is the template language that you can use with all AppSync integrations,
+> including Lambda.
+>
+> We need something to tell AppSync how to make a request to the thing it's
+> integrating with, be it a DynamoDB table, a Lambda function, an HTTP endpoint
+> or something else. We need to tell AppSync how to transform the response
+> because it's probably not in the right shape that the resolver needs to
+> return.
+>
+> - With Lambda, AppSync provides a default request & response template so you
+>   don't have to write one.
+> - For pipeline functions, you can now also use JavaScript to create the
+>   request and response templates instead of VTL, see
+>   https://aws.amazon.com/blogs/aws/aws-appsync-graphql-apis-supports-javascript-resolvers.
+>   But the JavaScript support is only limited to pipeline functions right now,
+>   and in most cases, you probably don't need a pipeline function if your
+>   resolver just needs to do one thing.
+>
+> As for why VTL, it boils down to not having a Lambda function = faster (adding
+> another service is always gonna add some overhead, plus cold starts!), cheaper
+> (not paying for lambda invocation) and more scalable (lambda has regional
+> concurrency limit, so another limit that comes into play, on top of the
+> throughput limits on AppSync)
+>
+> So if you can have AppSync connect to say, DynamoDB directly, then you should
+> use vtl. If you're doing more complex stuff, then consider bringing in a
+> Lambda function, but if it's just a sequence of CRUD operations against
+> DynamoDB, then you can do the same thing with pipeline resolvers, which
+> nowadays, also supports javascript resolvers as well, so you don't have to use
+> VTL (the javascript resolvers only work for pipeline resolvers for now)
 
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
-`Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+`Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize
+how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs
+to configure the `vtl` files
+[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
+[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
 
 - Take the identity of the user (available in `$context.identity`), take the
   username and turn it into a DDB structure.
@@ -407,33 +507,47 @@ _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
 $util.toJson($context.result)
 ```
 
-Deploy with `npm run deploy`. Verify that changes worked by looking for the string `GraphQlResolverQuerygetMyProfile` under the templates in `.serverless` folder
+Deploy with `npm run deploy`. Verify that changes worked by looking for the
+string `GraphQlResolverQuerygetMyProfile` under the templates in `.serverless`
+folder
 
-_(8.3)_ To test at the AWS console, we need a new Cognito user similar to the ones created in the integration and e2e tests before. We do not have access to those, so we use AWS CLI to create a cognito user.
+_(8.3)_ To test at the AWS console, we need a new Cognito user similar to the
+ones created in the integration and e2e tests before. We do not have access to
+those, so we use AWS CLI to create a cognito user.
 
 `aws cognito-idp --region eu-west-1 sign-up --client-id <yourEnvVarForWebCognitoUserPoolClientId> --username <yourEmail> --password <yourPw> --user-attributes Name=name,Value=<yourName>`
 
-Once the command goes through, we should have an unconfirmed user in the Cognito console. Confirm the user here, it will populate in DDB - make sure you never delete it or you have to do the steps again. Go to AppSync and sign in with the user. Create a query for `getMyProfile` and we should see results.
+Once the command goes through, we should have an unconfirmed user in the Cognito
+console. Confirm the user here, it will populate in DDB - make sure you never
+delete it or you have to do the steps again. Go to AppSync and sign in with the
+user. Create a query for `getMyProfile` and we should see results.
 
 ![AppSyncQuery](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7qxfzx1880j0670i33j5.png)
 
-Try asking for the tweets field. There is no resolver associated with it, so AppSync will return a null.
+Try asking for the tweets field. There is no resolver associated with it, so
+AppSync will return a null.
 
 ### 8 Unit test `getMyProfile` query
 
 We are going to test that `Query.getMyProfile.request.vtl` executes the template
 with `$context.identity.username` and turn it into a DDB json structure.
 
-- Create an AppSync context that contains the username (for `$context.identity.username`).
+- Create an AppSync context that contains the username (for
+  `$context.identity.username`).
 - Get the template (file `Query.getMyProfile.request.vtl`).
 - Render the template (using the utility npm packages).
 
-`npm i -D amplify-velocity-template amplify-appsync-simulator` will help with generating the AppSync context and rendering the `.vtl` template.
+`npm i -D amplify-velocity-template amplify-appsync-simulator` will help with
+generating the AppSync context and rendering the `.vtl` template.
 
 Check out `__tests__/unit/Query.getMyProfile.request.test.js`.
 
-> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references
-> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)). Therefore , instead of unit, he recommends to focus on testing e2e.
+> Yan does not recommend to unit test the VTL template, because it
+> straightforward, and in real life things do not go wrong there. In most cases
+> we use AppSync to talk to DDB, and we are taking one of the examples from
+> resolver mapping references
+> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
+> Therefore , instead of unit, he recommends to focus on testing e2e.
 
 ### 9 & 10 E2e test `getMyProfile` query
 
@@ -445,15 +559,20 @@ As a signed in user, make a graphQL request with the query `getMyProfile`.
 
 Check out `__tests__/e2e/user-profile.test.js`.
 
->Make sure to clean up
->[DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5) and
->[CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh) at the end of the e2e test, do not delete your user which is used in AppSync console tests.
+> Make sure to clean up
+> [DDB](https://eu-west-1.console.aws.amazon.com/dynamodbv2/home?region=eu-west-1#item-explorer?initialTagKey=&table=appsyncmasterclass-backend-dev-UsersTable-YMVROSIOQDW5)
+> and
+> [CognitoUserPool](https://eu-west-1.console.aws.amazon.com/cognito/users/?region=eu-west-1#/pool/eu-west-1_LYIK8FuXA/users?_k=zqpvnh)
+> at the end of the e2e test, do not delete your user which is used in AppSync
+> console tests.
 
 ### Getting the GraphQL API_URL with `serverless-manifest-plugin`
 
-A crude way to get the GraphQLApiUrl is through the web console: `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
+A crude way to get the GraphQLApiUrl is through the web console:
+`CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
 
-`serverless-export-env` looks at the `Outputs` property of the `serverless.yml`, it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
+`serverless-export-env` looks at the `Outputs` property of the `serverless.yml`,
+it cannot acquire `.Arn` from our AWS stack(comes as [Object object])
 
 ```yml
   Outputs:
@@ -471,7 +590,12 @@ A crude way to get the GraphQLApiUrl is through the web console: `CloudFormation
       Value: ${self:custom.region}
 ```
 
-[10] To get the GraphQL API_URL from `CognitoUserPoolArn` we can use `npm i -D serverless-manifest-plugin`. Run the command `npm run sls -- manifest`. As opposed to looking at `serverless.yml`'s `Output`, it looks at the CloudFormation stack that has been deployed. It outputs a succinct json at `./.serverless/manifest.json`. We could also get the value from there, but that's not automated.
+[10] To get the GraphQL API_URL from `CognitoUserPoolArn` we can use
+`npm i -D serverless-manifest-plugin`. Run the command
+`npm run sls -- manifest`. As opposed to looking at `serverless.yml`'s `Output`,
+it looks at the CloudFormation stack that has been deployed. It outputs a
+succinct json at `./.serverless/manifest.json`. We could also get the value from
+there, but that's not automated.
 
 Under `serverless.yml / custom` create a manifest section:
 
@@ -485,7 +609,9 @@ custom:
     silent: true
 ```
 
-Create the file `./processManifest.js`. This script is analyzes the `manifest.json` file, looks for outputs/OutpuKey/GraphQlApiUrl` and puts it into the `.env` file.
+Create the file `./processManifest.js`. This script is analyzes the
+`manifest.json` file, looks for
+outputs/OutpuKey/GraphQlApiUrl`and puts it into the`.env` file.
 
 ```js
 const _ = require('lodash')
@@ -560,8 +686,6 @@ USERS_TABLE=appsyncmasterclass-backend-dev-UsersTable-***
 API_URL=******
 ```
 
-
-
 ## 12 Implement `editMyProfile` mutation (_setup an AppSync resolver and have it edit an item at DDB._)
 
 _(12.0)_ Add an entry to the mapping templates
@@ -578,12 +702,21 @@ mappingTemplates:
     dataSource: usersTable
 ```
 
-_(12.1)_ We are going to write a resolver that updates the DDB usersTable. Add the two files under `mapping-templates` folder
-`Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`. Take a look at PutItem reference from AWS AppSync docs ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)). For `key:id` we use the `$util` as we did in the `getMyProfile` query. For `attributeValues` be careful not to use
-[dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html), and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`.
+_(12.1)_ We are going to write a resolver that updates the DDB usersTable. Add
+the two files under `mapping-templates` folder
+`Mutation.editMyProfile.request.vtl` and `Mutation.editMyProfile.response.vtl`.
+Take a look at PutItem reference from AWS AppSync docs
+([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html)).
+For `key:id` we use the `$util` as we did in the `getMyProfile` query. For
+`attributeValues` be careful not to use
+[dynamo db reserved words](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html),
+and if so, use an expressionNames; `name` -> `#name`, `location` -> `#location`.
 
-Replicate the fields from `schema.api.graphql` into `expression` and `expressionValues`, they will all be  $context.arguments.newProfile` because of our GraphQL schema that was defined. Add a `condition`
-`"expression" : "attribute_exists(id)"`, so if the user's id does not exist, the operation fails.
+Replicate the fields from `schema.api.graphql` into `expression` and
+`expressionValues`, they will all be
+$context.arguments.newProfile`because of our GraphQL schema that was defined. Add a`condition` `"expression"
+: "attribute_exists(id)"`, so if the user's id does not exist, the operation
+fails.
 
 ```graphql
 # ./schema.api.graphql
@@ -640,22 +773,33 @@ input ProfileInput {
 $util.toJson($context.result)
 ```
 
-Deploy and test at AppSync web console. If getQuery is broken, you may have moved `chance` package to devDependencies. If Put is broken, you may have deleted the user from DDB, and you have to re-create it as in section 4.8 using `aws cognito-idp `.
+Deploy and test at AppSync web console. If getQuery is broken, you may have
+moved `chance` package to devDependencies. If Put is broken, you may have
+deleted the user from DDB, and you have to re-create it as in section 4.8 using
+`aws cognito-idp `.
 
 ![UpdateItem](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mp550m5vmaatz9mk0t0h.png)
 
 ### 13 Unit test `editMyProfile`
 
-We are going to test that `Mutation.editMyProfile.request.vtl` executes the template with `$context.identity.username` and turns it into a DDB json structure.
+We are going to test that `Mutation.editMyProfile.request.vtl` executes the
+template with `$context.identity.username` and turns it into a DDB json
+structure.
 
 - Create an AppSync context that contains the username (for
-  `$context.identity.username`). KEY: when generating the context we need to give it an argument (`editMyProfile(newProfile: ProfileInput!): MyProfile!`).
+  `$context.identity.username`). KEY: when generating the context we need to
+  give it an argument (`editMyProfile(newProfile: ProfileInput!): MyProfile!`).
 - Get the template (file `Mutation.editMyProfile.request.vtl`).
 - Render the template (using the utility npm packages).
 
 Check out `__tests__/unit/Mutation.editMyProfile.request.test.js`.
 
-> Yan does not recommend to unit test the VTL template, because it straightforward, and in real life things do not go wrong there. In most cases we use AppSync to talk to DDB, and we are taking one of the examples from resolver mapping references ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
+> Yan does not recommend to unit test the VTL template, because it
+> straightforward, and in real life things do not go wrong there. In most cases
+> we use AppSync to talk to DDB, and we are taking one of the examples from
+> resolver mapping references
+> ([1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
+> [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html)).
 > Therefore , instead of unit, he recommends to focus on testing e2e.
 
 ### 14 E2e test `editMyProfile
@@ -676,7 +820,7 @@ For the types, there are 3 key pieces of info:
 # schema.api.graphql
 type Mutation {
   editMyProfile(newProfile: ProfileInput!): MyProfile!
-  
+
 input ProfileInput {
   name: String!
   imageUrl: AWSURL
@@ -715,7 +859,12 @@ And the input can be just `input: {name: newName}`.
 
 ## 15 Implement getImageUploadUrl query (_use a lambda to upload a file to S3_)
 
-_(15.0)_ Add an entry to the mapping templates, and a dataSource. For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template. Set request and response to false and `serverless-appsync-plugin` takes care of it. When dealing with DDB, we could leave them out because we specified the vtl files under `./mapping-templates` and the plugin took care of it.
+_(15.0)_ Add an entry to the mapping templates, and a dataSource. For lambda
+functions, Appsync has a direct resolver integration, so we do not need a custom
+request & response vtl template. Set request and response to false and
+`serverless-appsync-plugin` takes care of it. When dealing with DDB, we could
+leave them out because we specified the vtl files under `./mapping-templates`
+and the plugin took care of it.
 
 ```yml
 # ./serverless.appsync-api.yml
@@ -768,9 +917,14 @@ Run `npm run sls --package` to test that it works so far.
 
 ### _(15.2)_ Implement the lambda function `functions/get-upload-url.js`.
 
-We need to make a `putObject` request to S3. From the graphQL schema `getImageUploadUrl(extension: String, contentType: String)` , we know that we need an extension and contentType as args, both of which are optional. We can get them from `event.arguments`. For S3 `putObject` we need `key`, `contentType` and the bucket env var.
+We need to make a `putObject` request to S3. From the graphQL schema
+`getImageUploadUrl(extension: String, contentType: String)` , we know that we
+need an extension and contentType as args, both of which are optional. We can
+get them from `event.arguments`. For S3 `putObject` we need `key`, `contentType`
+and the bucket env var.
 
-_(14.2.1)_ To construct the `key` for S3, we can use `event.identity.username` (Lumigo screenshot)
+_(14.2.1)_ To construct the `key` for S3, we can use `event.identity.username`
+(Lumigo screenshot)
 
 ![construct-s3-key](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/v9m1cqkpuwuo9gck2u55.png)
 
@@ -778,7 +932,8 @@ _(15.2.2)_ To get the `contentType` we use `event.arguments.contentType `.
 
 _(15.2.3)_ create the S3 bucket env var, to help make the s3 putObject request.
 
-For the bucket env var, we have to add an entry to `serverless.yml` `resources` section:
+For the bucket env var, we have to add an entry to `serverless.yml` `resources`
+section:
 
 ```yml
 # ./serverless.yml
@@ -826,10 +981,18 @@ resources:
 
 Other notes:
 
-- When creating urls for the user to upload content, use S3 Transfer Acceleration.
-  
-- `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids. Problem with `chance` is the random ids are not sortable, ulid generates sortable keys.
-- If we need to customize the file upload (ex: file size limit) we can use `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles' post on S3 presigned URLs vs presigned POSTs [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932), and the [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html) on creating POST policies (including a list of conditions you can apply).
+- When creating urls for the user to upload content, use S3 Transfer
+  Acceleration.
+- `npm i -D ulid`, and use `ulid` to create a randomized, but sorted ids.
+  Problem with `chance` is the random ids are not sortable, ulid generates
+  sortable keys.
+- If we need to customize the file upload (ex: file size limit) we can use
+  `s3.createPresignedPost` instead of `s3.getSignedUrl`. Check out Zac Charles'
+  post on S3 presigned URLs vs presigned POSTs
+  [here](https://medium.com/@zaccharles/s3-uploads-proxies-vs-presigned-urls-vs-presigned-posts-9661e2b37932),
+  and the
+  [official AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html)
+  on creating POST policies (including a list of conditions you can apply).
 
 ```js
 // ./functions/get-upload-url.js
@@ -884,7 +1047,8 @@ module.exports = {
 }
 ```
 
-`npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in the `.env` file.
+`npm run deploy` and `npm run export:env` to see the `BUCKET_NAME` populate in
+the `.env` file.
 
 ### 15 Unit test `getImageUploadUrl`
 
@@ -895,7 +1059,8 @@ Similar to section 4.6 `confirm-user-signup-integration.test.js`, we need to:
 - Check that the result matches the expectation (the handler creates a certain
   S3 url)
 
-Since there is no DDB interaction as in 4.6, or any interaction with the S3 bucket, this one is a unit test.
+Since there is no DDB interaction as in 4.6, or any interaction with the S3
+bucket, this one is a unit test.
 
 Check out `__tests__/unit/get-upload-url.test.js`.
 
@@ -1007,11 +1172,20 @@ resources:
             Value: timelines-table
 ```
 
-When we create a new tweet, it gets written to the `TweetsTable` and `TimelinesTable`. We also have to update `tweetsCount` for user profile page (part of the `IProfile` from graphQL schema), which we track in `UsersTable`. Having to transact with 3 tables, we could do these 3 operations in one DDB transaction. However, what we cannot do in a DDB resolver is we cannot generate the `ulid`s for the tweets, and for that we need to use a lambda resolver instead.
+When we create a new tweet, it gets written to the `TweetsTable` and
+`TimelinesTable`. We also have to update `tweetsCount` for user profile page
+(part of the `IProfile` from graphQL schema), which we track in `UsersTable`.
+Having to transact with 3 tables, we could do these 3 operations in one DDB
+transaction. However, what we cannot do in a DDB resolver is we cannot generate
+the `ulid`s for the tweets, and for that we need to use a lambda resolver
+instead.
 
-_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to `TweetsTable`, `TimelinesTable` and update `UsersTable`.
+_(17.2)_ Create a lambda resolver to generate a tweet `ulid`, write to
+`TweetsTable`, `TimelinesTable` and update `UsersTable`.
 
-_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers when we are transacting with DDB. We want AppSync to invoke the lambda function directly without going through a custom mapping template.
+_(17.2.0)_ Add the mapping template to `mappingTemplates`, we need resolvers
+when we are transacting with DDB. We want AppSync to invoke the lambda function
+directly without going through a custom mapping template.
 
 ```yml
 # serverless.appsync-api.yml
@@ -1113,7 +1287,9 @@ module.exports = {
 }
 ```
 
-_(15.2.2)_ Add the JS for the lambda function that will generate a tweet `ulid` for the 3 DDB tables, write to Tweets and Timelines tables, and update Users table.
+_(15.2.2)_ Add the JS for the lambda function that will generate a tweet `ulid`
+for the 3 DDB tables, write to Tweets and Timelines tables, and update Users
+table.
 
 ```javascript
 // ./functions/tweet.js
@@ -1193,7 +1369,8 @@ module.exports = {
 }
 ```
 
-`npm run deploy` and test the mutation at Appsync. Remember to `npm run export:env` also.
+`npm run deploy` and test the mutation at Appsync. Remember to
+`npm run export:env` also.
 
 ![tweet-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z0ezr67acgvjhw10a5vj.png)
 
@@ -1205,9 +1382,12 @@ Verify the 3 tables at DDB.
 
 The pattern is as follows:
 
-- Create an event: an object which includes `identity.username` and `arguments.text`.
-- Feed it to the handler (the handler causes 2 writes and update to DDB, hence the "integration")
-- Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and
+  `arguments.text`.
+- Feed it to the handler (the handler causes 2 writes and update to DDB, hence
+  the "integration")
+- Check that the result matches the expectation (by reading the 3 tables from
+  DDB, hence "integration")
 
 We have to have a real user for this integration test, but it is still an
 integration test given that we are feeding an event object to the handler.
@@ -1216,7 +1396,9 @@ Check out `__tests__/integration/tweet-integration.test.js`.
 
 ### 19 E2e test for tweet mutation
 
-As a signed in user, make a graphQL request with the mutation `tweet`. This will  cause 3 db interactions. We do not have to repeat the same DB verifications as  the integration test, but we can verify the response from the mutation.
+As a signed in user, make a graphQL request with the mutation `tweet`. This will
+cause 3 db interactions. We do not have to repeat the same DB verifications as
+the integration test, but we can verify the response from the mutation.
 
 - Sign in
 - Make a graphQL request with the tweet mutation and its text argument.
@@ -1274,7 +1456,8 @@ type Query{
 }
 ```
 
-We are going to get the tweets from DDB, therefore we need the usual Appsync mapping-template yml and the vtl files query request and response.
+We are going to get the tweets from DDB, therefore we need the usual Appsync
+mapping-template yml and the vtl files query request and response.
 
 (20.0) Add a mapping template to the yml.
 
@@ -1334,12 +1517,20 @@ mappingTemplates:
       tableName: !Ref TweetsTable
 ```
 
-_(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and response.
+_(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and
+response.
 
-In _(15.0)_ we created a table for the tweets, and we identified a `GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
-We can get userId (the first argument of the query) by ` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
-argument, `nextToken`, we can similarly use `$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous
-to ascending order (latest tweet last), we want latest tweet first so this is set to `false`. We limit the number of tweets returned to be less than 25.
+In _(15.0)_ we created a table for the tweets, and we identified a
+`GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize
+the mapping template reference for DDB at
+[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
+[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
+We can get userId (the first argument of the query) by
+` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
+argument, `nextToken`, we can similarly use
+`$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous
+to ascending order (latest tweet last), we want latest tweet first so this is
+set to `false`. We limit the number of tweets returned to be less than 25.
 
 ```
 // Query.getTweets.request.vtl
@@ -1384,7 +1575,10 @@ type TweetsPage {
 }
 ```
 
-Because `tweets` will be an array, we extract that with `.items` in ` $util.toJson($context.result.items)`. For `nextToken`, if the token is an empty string we want to turn it into null, so we use `defaultIfNullOrBlank`. `nexToken` maps to `nextToken`.
+Because `tweets` will be an array, we extract that with `.items` in
+` $util.toJson($context.result.items)`. For `nextToken`, if the token is an
+empty string we want to turn it into null, so we use `defaultIfNullOrBlank`.
+`nexToken` maps to `nextToken`.
 
 ```
 // Query.getTweets.response.vtl
@@ -1395,7 +1589,9 @@ Because `tweets` will be an array, we extract that with `.items` in ` $util.toJs
 }
 ```
 
-At the moment we do not have the Profile structure in the Tweet object, if we look at DDB. Per the schema, that is something we want. What we have is `creator`, which is the id of the user that created the tweet.
+At the moment we do not have the Profile structure in the Tweet object, if we
+look at DDB. Per the schema, that is something we want. What we have is
+`creator`, which is the id of the user that created the tweet.
 
 ```
 // schema.api.graphql
@@ -1433,7 +1629,10 @@ interface IProfile {
 
 ![tweet-object](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2q83kl4cwejudeame5xr.png)
 
-_(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`, so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers. Create a nested resolver in mapping Templates.
+_(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
+the user information from `UsersTable`, so that we can populate the user profile
+in the Tweet type of our schema. We do that by using nested resolvers. Create a
+nested resolver in mapping Templates.
 
 > When do we need nested resolvers?
 >
@@ -1446,7 +1645,7 @@ _(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read th
 > array of type [Order].
 >
 > In all these examples, it's a relationship, which we can avoid eagerly loading
-> the related item unless the caller asks for them. 
+> the related item unless the caller asks for them.
 
 ```yml
 # serverless.appsync-api.yml
@@ -1464,9 +1663,11 @@ mappingTemplates:
     dataSource: usersTable
 ```
 
-_(20.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`, `Tweet.profile.response.vtl` under `./mapping-templates/`
+_(20.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`,
+`Tweet.profile.response.vtl` under `./mapping-templates/`
 
-Since we have `creator` field in the `Tweet`, we can reference the nesting parent with `$context.source` .
+Since we have `creator` field in the `Tweet`, we can reference the nesting
+parent with `$context.source` .
 
 > Nested resolvers can only be implemented for graphQL types, not interfaces.
 
@@ -1482,7 +1683,8 @@ Since we have `creator` field in the `Tweet`, we can reference the nesting paren
 }
 ```
 
-From `schema.api.graphql` we see that `Profile` interface is implemented by both `MyProfile` and `OtherProfile`. We need to differentiate between the two.
+From `schema.api.graphql` we see that `Profile` interface is implemented by both
+`MyProfile` and `OtherProfile`. We need to differentiate between the two.
 
 ```
 // Tweet.profile.response.vtl
@@ -1498,7 +1700,8 @@ From `schema.api.graphql` we see that `Profile` interface is implemented by both
 $util.toJson($context.result)
 ```
 
-Deploy with `npm run deploy`. Test an AppSync query. We need a confirmed user from Cognito.
+Deploy with `npm run deploy`. Test an AppSync query. We need a confirmed user
+from Cognito.
 
 ```
 query MyQuery {
@@ -1628,7 +1831,9 @@ type Query{
 }
 ```
 
-We are going to get the timeline from DDB `timelinesTable`, therefore we need theusual Appsync mapping-template yml and the vtl files query request and response.
+We are going to get the timeline from DDB `timelinesTable`, therefore we need
+theusual Appsync mapping-template yml and the vtl files query request and
+response.
 
 (23.0) Add a mapping template to the yml.
 
@@ -1660,7 +1865,13 @@ mappingTemplates:
 
 ```
 
-_(23.1)_ Add the .vtl files under `./mapping-templates/` for the request and response. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html). Very similar to (20.1). `userId` instead of `creatorId`, and the current user is the value which we get from `$context.identity.username`. We do not need `"index" : "byCreator"`. The response is identical to 20.1 as well.
+_(23.1)_ Add the .vtl files under `./mapping-templates/` for the request and
+response. We utilize the mapping template reference for DDB at
+[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
+[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
+Very similar to (20.1). `userId` instead of `creatorId`, and the current user is
+the value which we get from `$context.identity.username`. We do not need
+`"index" : "byCreator"`. The response is identical to 20.1 as well.
 
 ```
 // Query.getMyTimeline.request.vtl
@@ -1694,7 +1905,13 @@ $util.validate($isValidLimit, "max limit is 25")
 }
 ```
 
-After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table. We can use pipeline functions for that. Pipeline functions tell AppSync to perform multiple steps for a resolver; get a page of tweets from the timelines table and hydrate them by doing a batch get against Tweets table. But for now we can play with the types at `schema.api.graphql`. _(23.2)_ Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a `UnhydratedTweetsPage` instead of `TweetsPage`.
+After we fetch the tweetId for the tweets on our timeline, we have to hydrate
+them from the Tweets table. We can use pipeline functions for that. Pipeline
+functions tell AppSync to perform multiple steps for a resolver; get a page of
+tweets from the timelines table and hydrate them by doing a batch get against
+Tweets table. But for now we can play with the types at `schema.api.graphql`.
+_(23.2)_ Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a
+`UnhydratedTweetsPage` instead of `TweetsPage`.
 
 ```
 # schema.api.graphql
@@ -1708,20 +1925,32 @@ type UnhydratedTweetsPage {
 }
 ```
 
-_(23.3)_ Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested resolver that uses the `tweets` field of the type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`.
+_(23.3)_ Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can
+attach a nested resolver to. We can have that resolver hydrate the data from a
+different table. Create a nested resolver that uses the `tweets` field of the
+type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`.
 
-_(23.4)_ For the nested resolver to work we need another set of `vtl` files under `mapping-templates/`.
+_(23.4)_ For the nested resolver to work we need another set of `vtl` files
+under `mapping-templates/`.
 
-- We will have access to a list of tweets from Timelines table, which has userId and tweetId.
+- We will have access to a list of tweets from Timelines table, which has userId
+  and tweetId.
 - We can use the tweetId to fetch the tweets from the Tweets table.
-- We are going the take the source tweets array from the `UnhydratedTweetsPage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
+- We are going the take the source tweets array from the `UnhydratedTweetsPage`,
+  which are the items that we would fetch from Timelines table
+  `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just
+  the id, Json serialize it, pass it to the BatchGetItem operation.
 
-To add each tweet object into the array, use `$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to
-ignore the return value of the `$tweets.add` operation, otherwise the vtl interpreter will fail.
+To add each tweet object into the array, use
+`$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to
+ignore the return value of the `$tweets.add` operation, otherwise the vtl
+interpreter will fail.
 
-For the `tables` > TweetsTable > keys, after we're done populating the tweets array use `$util.toJson($tweets)` to serialize it.
+For the `tables` > TweetsTable > keys, after we're done populating the tweets
+array use `$util.toJson($tweets)` to serialize it.
 
-_(23.5)_ We need the value of the TweetsTable we are going to BatchGetItem from. To get this value we add a block to the `serverless.appsync-api.yml`
+_(23.5)_ We need the value of the TweetsTable we are going to BatchGetItem from.
+To get this value we add a block to the `serverless.appsync-api.yml`
 
 ```yml
 substitutions:
@@ -1792,9 +2021,11 @@ query MyQuery {
 
 ### 24 Test `getMyTimeline` query
 
-The unit test for `getMyTimeline` would be duplicating the `getTweets`, because the vtl templates are near identical.
+The unit test for `getMyTimeline` would be duplicating the `getTweets`, because
+the vtl templates are near identical.
 
-We can write a test for `UnhydratedTweetsPage.tweets.request.vtl` since there is plenty going on there.
+We can write a test for `UnhydratedTweetsPage.tweets.request.vtl` since there is
+plenty going on there.
 
 Check out `__tests__/unit/UnhydratedTweetsPage.tweets.request.test.js`.
 
@@ -1869,7 +2100,9 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 25 Use `context.info` to remove unnecessary DDB calls
 
-Add some logic to our request template `Tweet.profile.request.vtl` to check what fields the query is actually asking for. If it is only asking for the for the id, return early without making a request to DDB.
+Add some logic to our request template `Tweet.profile.request.vtl` to check what
+fields the query is actually asking for. If it is only asking for the for the
+id, return early without making a request to DDB.
 
 ```
 {
@@ -1916,7 +2149,8 @@ When we like a tweet:
 
 - Increment the like count in the Users table.
 - For the tweet, in Tweetstable increment the number of likes received.
-- Introduce a new table (LikesTable) for which user has liked which tweet, and update that too.
+- Introduce a new table (LikesTable) for which user has liked which tweet, and
+  update that too.
 
 _(26.0)_ create a new DDB table to track which user has liked which tweet.
 
@@ -1945,7 +2179,10 @@ resources:
             Value: likes-table
 ```
 
-We have to update 3 tables when the like mutation happens. We can do this in a DDB transaction. (In _(17.1)_ we also updated 3 tables, but used a lambda resolver because we had to generate a `ulid`). As usual, we have to create a mapping template, dataSource and `vtl` files.
+We have to update 3 tables when the like mutation happens. We can do this in a
+DDB transaction. (In _(17.1)_ we also updated 3 tables, but used a lambda
+resolver because we had to generate a `ulid`). As usual, we have to create a
+mapping template, dataSource and `vtl` files.
 
 In the vtl files we will:
 
@@ -1953,7 +2190,11 @@ In the vtl files we will:
 - Update TweetsTable with `tweetId`.
 - Update UsersTable with `userId`.
 
-_(26.1)_ Create a mapping template for `like`, dataSource for `likesTable` and for `likeMutation` . When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation (`likeMutation`). When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions.
+_(26.1)_ Create a mapping template for `like`, dataSource for `likesTable` and
+for `likeMutation` . When we need to do multiple transactions in an AppSync
+resolver, we need to create a dataSource for the mutation (`likeMutation`). When
+we want to use refer to the resources in a vtl file with ${resourceName}, we
+need to add it to the substitutions.
 
 ```yml
 # serverless.appsync-api.yml
@@ -2072,15 +2313,18 @@ true
 
 ![4-DDB-tables](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ap1uq047f04q3i3ieyvp.png)
 
-Grab a `tweetId` from `TweetsTable`, create an AppSync mutation to like the tweet.
+Grab a `tweetId` from `TweetsTable`, create an AppSync mutation to like the
+tweet.
 
 ![like-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fn1hebhj1qp65nqhlql5.png)
 
-After the like, the `LikesTable` should populate.![likes-table](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qvcdtgayse3i4a5tc958.png)
+After the like, the `LikesTable` should
+populate.![likes-table](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qvcdtgayse3i4a5tc958.png)
 
 ### 27 Implement `Tweet.liked` nested resolver
 
-We can now implement the `liked: Boolean!` since we have the like mutation. It is going to be nested resolver as in `Tweet.profile`
+We can now implement the `liked: Boolean!` since we have the like mutation. It
+is going to be nested resolver as in `Tweet.profile`
 
 ```
 # schema.api.graphql
@@ -2152,11 +2396,14 @@ _(27.1)_ Create vtl files `liked` request and response.
 
 ### 28 Refactor tests to use graphQL fragments
 
-GraphQL fragments is a utility to reduce duplication in queries. Check out `test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`, `__tests__/e2e/tweet-e2e.test.js`.
+GraphQL fragments is a utility to reduce duplication in queries. Check out
+`test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`,
+`__tests__/e2e/tweet-e2e.test.js`.
 
 ### 29 E2e Tests for `like` mutation
 
-We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time,
+get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 30 Implement `unlike` mutation
 
@@ -2168,7 +2415,13 @@ type Mutation {
   unlike(tweetId: ID!): Boolean!
 ```
 
-_(30.0)_ Create a mapping template for `unlike`, dataSource for `unlikeMutation`. When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation AND we already have the dataSource for `likesTable` from 26.1. When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions, and we already have the `LikesTable` in the substitutions from (26.1).
+_(30.0)_ Create a mapping template for `unlike`, dataSource for
+`unlikeMutation`. When we need to do multiple transactions in an AppSync
+resolver, we need to create a dataSource for the mutation AND we already have
+the dataSource for `likesTable` from 26.1. When we want to use refer to the
+resources in a vtl file with ${resourceName}, we need to add it to the
+substitutions, and we already have the `LikesTable` in the substitutions from
+(26.1).
 
 ```yml
 # serverless.appsync-api.yml
@@ -2278,15 +2531,23 @@ true
 
 ### 31 E2e test for `unlike` mutation
 
-We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time,
+get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 32 Implement `getLikes` query
 
-`getLikes` is very similar to `getMyTimeline` (23); the schemas are the same with `userId` as the partition key, and `tweetId` as sort key. To get the tweets that a user likes, we just need to query the `LikesTable` against the user's `userId`. We have the same challenge we had in (23) with `getMyTimeline`; we don't have everything about the tweet itself and we need to hydrate it afterward.
+`getLikes` is very similar to `getMyTimeline` (23); the schemas are the same
+with `userId` as the partition key, and `tweetId` as sort key. To get the tweets
+that a user likes, we just need to query the `LikesTable` against the user's
+`userId`. We have the same challenge we had in (23) with `getMyTimeline`; we
+don't have everything about the tweet itself and we need to hydrate it
+afterward.
 
 ![32-beginning](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/vxd0ofgqvuco7voxc46h.png)
 
-We can use the same trick in (23); instead of returning a `TweetsPage`, we can return a `UnhydratedTweetsPage`. After we fetch the tweetId for the tweets on our timeline, we can hydrate them from the Tweets table.
+We can use the same trick in (23); instead of returning a `TweetsPage`, we can
+return a `UnhydratedTweetsPage`. After we fetch the tweetId for the tweets on
+our timeline, we can hydrate them from the Tweets table.
 
 ```
 # schema.api.graphql
@@ -2379,11 +2640,12 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 > When do we need nested resolvers?
 >
-> Think of its as a utility to avoid over-fetching. 
-> 
+> Think of its as a utility to avoid over-fetching.
+>
 > We need nested resolvers when our types are returning other types.
 
-In this case we only want to query the `tweets` field of a `IProfile` (`MyProfile`, `OtherProfile`).
+In this case we only want to query the `tweets` field of a `IProfile`
+(`MyProfile`, `OtherProfile`).
 
 _(34.0)_ Create a nested resolver for MyProfile.tweet.
 
@@ -2434,7 +2696,10 @@ _(34.1)_ Add the `vtl` files. These are similar to `getTweets` (20).
 
 ### E2e testing for `Profile.tweets`
 
-For testing we have to be careful about an infinite loop situation when querying or mutation `myProfileFields`. `MyProfile.tweet` returns a `TweetsPage`, which in turn returns a `tweets` field, which in turn returns an `ITweet`, which in turn returns another `IProfile`.
+For testing we have to be careful about an infinite loop situation when querying
+or mutation `myProfileFields`. `MyProfile.tweet` returns a `TweetsPage`, which
+in turn returns a `tweets` field, which in turn returns an `ITweet`, which in
+turn returns another `IProfile`.
 
 ```
 // schema.api.graphql
@@ -2468,7 +2733,8 @@ interface ITweet {
 }
 ```
 
-Make sure to not include `tweets` in `myProfileFragment ` being used in e2e tests
+Make sure to not include `tweets` in `myProfileFragment ` being used in e2e
+tests
 
 ```js
 // test-helpers/graphql-fragments.js
@@ -2499,7 +2765,10 @@ fragment myProfileFields on MyProfile {
 `
 ```
 
-Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This way when we make the calls, we're going to get the first page of tweets back. But, when we fetch the profiles for these tweets, it will not go into an infinite loop.
+Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This
+way when we make the calls, we're going to get the first page of tweets back.
+But, when we fetch the profiles for these tweets, it will not go into an
+infinite loop.
 
 ```js
 // __tests__/e2e/user-profile.test.js
@@ -2532,9 +2801,13 @@ const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
 
 ## 35 Implement `retweet` mutation
 
-_(35.0)_ create a new DDB table to track which user has retweeted which tweet. Similar to (26.0)
+_(35.0)_ create a new DDB table to track which user has retweeted which tweet.
+Similar to (26.0)
 
-_(35.1)_ We need to add an entry to the `TweetsTable` for the retweet, which means we need a tweetId, which is a `ulid` and requires us to use a lambda resolver. Similar to (17.2). `retweet` function will need the additional `iamRoleStatemements`.
+_(35.1)_ We need to add an entry to the `TweetsTable` for the retweet, which
+means we need a tweetId, which is a `ulid` and requires us to use a lambda
+resolver. Similar to (17.2). `retweet` function will need the additional
+`iamRoleStatemements`.
 
 ```yml
 # serverless.yml
@@ -2590,7 +2863,9 @@ resources:
             Value: retweets-table
 ```
 
-_(35.2)_ add a mapping template for the retweet mutation. Similar to (17.2.0), we want AppSync to invoke the lambda function directly without going through a custom mapping template.
+_(35.2)_ add a mapping template for the retweet mutation. Similar to (17.2.0),
+we want AppSync to invoke the lambda function directly without going through a
+custom mapping template.
 
 _(35.3)_ Define a data source for the mutation
 
@@ -2752,7 +3027,8 @@ module.exports = {
 
 ## 36 Implement Retweet nested resolvers
 
-_(36.0)_ Create a nested resolver to get the profile on Retweet. We need the profile field, and we already have the vtl files for that in (20.3) for
+_(36.0)_ Create a nested resolver to get the profile on Retweet. We need the
+profile field, and we already have the vtl files for that in (20.3) for
 `getTweets`.
 
 _(36.1)_ Create a nested resolver to fetch the retweeted tweet on Retweet
@@ -2800,20 +3076,28 @@ $util.toJson($context.result)
 
 The pattern is as follows:
 
-- Create an event: an object which includes `identity.username` and `arguments.tweetId`.
-- Feed it to the handler (the handler causes writes and updates to 4 DDB tables, hence the "integration")
-- Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and
+  `arguments.tweetId`.
+- Feed it to the handler (the handler causes writes and updates to 4 DDB tables,
+  hence the "integration")
+- Check that the result matches the expectation (by reading the 4 tables from
+  DDB, hence "integration")
 
-We have to have a real user for this integration test, but it is still an integration test given that we are feeding an event object to the handler.
+We have to have a real user for this integration test, but it is still an
+integration test given that we are feeding an event object to the handler.
 
 Check out `__tests__/integration/retweet-self-integration.test.js`,
 `__tests__/integration/retweet-other-integration.test.js`.
 
 ### 38 E2e test for retweet mutation
 
-_(38.0)_ When a user reweets their own tweet, and get their tweets, we want to get the information about the retweet (reweetOf). The `retweeted` boolean is on the `type Tweet`, so we need to add a nested resolver for that.
+_(38.0)_ When a user reweets their own tweet, and get their tweets, we want to
+get the information about the retweet (reweetOf). The `retweeted` boolean is on
+the `type Tweet`, so we need to add a nested resolver for that.
 
-(38.1) To enable that, although this is the test section, we added to the `serverless.appsync-api.yml` to increase retweet capabilities, and we added 2 vtl files. Reweets are similar to likes.
+(38.1) To enable that, although this is the test section, we added to the
+`serverless.appsync-api.yml` to increase retweet capabilities, and we added 2
+vtl files. Reweets are similar to likes.
 
 ```yml
 # serverless.appsync-api.yml
@@ -2859,7 +3143,9 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 39 Implement unretweet mutation
 
-_(39.0)_ add a mapping template for the unretweet mutation. Similar to (35.2) retweet mutation and (17.2.0) tweet mutation, we want AppSync to invoke the lambda function directly without going through a custom mapping template.
+_(39.0)_ add a mapping template for the unretweet mutation. Similar to (35.2)
+retweet mutation and (17.2.0) tweet mutation, we want AppSync to invoke the
+lambda function directly without going through a custom mapping template.
 
 _(39.1)_ Define a data source for the mutation (similar to 35.3)
 
@@ -2956,7 +3242,8 @@ resources:
 
 (39.3) Implement the unretweet function.
 
-- Delete the tweet from the TweetsTable, the RetweetsTable, and the TimelinesTable if it's not the same user
+- Delete the tweet from the TweetsTable, the RetweetsTable, and the
+  TimelinesTable if it's not the same user
 - Decrement the count on the UsersTable and the TweetsTable
 
 ```js
@@ -3086,11 +3373,12 @@ module.exports = {
 
 ### 40 Integration test unreweet mutation
 
-- Create an event: an object which includes `identity.username` and `arguments.tweetId`.
-  
-- Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
-  
-- Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and
+  `arguments.tweetId`.
+- Feed it to the handler (the handler causes writes and updates to DDB, hence
+  the "integration")
+- Check that the result matches the expectation (by reading the 4 tables from
+  DDB, hence "integration")
 
 Check out `__tests__/integration/unretweet-self-integration.test.js`
 
@@ -3113,9 +3401,11 @@ type Mutation {
 
 ```
 
-_(42.0)_ add a mapping template for the reply mutation. Similar to (35.2) (39.0).
+_(42.0)_ add a mapping template for the reply mutation. Similar to (35.2)
+(39.0).
 
-When replying we have to generate a new tweet, create an id for it (ulid) therefore we need a lambda function.
+When replying we have to generate a new tweet, create an id for it (ulid)
+therefore we need a lambda function.
 
 _(42.1)_ Define a data source for the mutation
 
@@ -3329,11 +3619,12 @@ module.exports = {
 
 ### 43 Integration test for reply mutation
 
-- Create an event: an object which includes `identity.username` and `arguments.tweetId` and `arguments.text`.
-  
-- Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
-  
-- Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and
+  `arguments.tweetId` and `arguments.text`.
+- Feed it to the handler (the handler causes writes and updates to DDB, hence
+  the "integration")
+- Check that the result matches the expectation (by reading the 3 tables from
+  DDB, hence "integration")
 
 Check out `__tests__/integration/reply.test.js`.
 
@@ -3347,7 +3638,8 @@ In reply we have 3 properties that are a type of interfaces:
   inReplyToUsers: [IProfile!]
 ```
 
-As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
+As explained in _(20.2)_, we need nested resolvers when our types are returning
+other types.
 
 ```
 type Reply implements ITweet {
@@ -3367,7 +3659,8 @@ type Reply implements ITweet {
 
 ### `profile` nested resolver
 
-_(44.0)_ Create a nested resolver to get the profile on Reply. Similar to (36.0) Retweet.profile.
+_(44.0)_ Create a nested resolver to get the profile on Reply. Similar to (36.0)
+Retweet.profile.
 
 We can reuse the `vtl` files for `Tweet.profile`.
 
@@ -3385,7 +3678,8 @@ mappingTemplates:
 
 ### `inReplyToTweet` nested resolver
 
-_(44.1)_ Create a nested resolver to get the inReplyToUsers on Reply, similar to (36.1) Retweet.retweetOf.
+_(44.1)_ Create a nested resolver to get the inReplyToUsers on Reply, similar to
+(36.1) Retweet.retweetOf.
 
 ```yml
 mappingTemplates:
@@ -3395,7 +3689,8 @@ mappingTemplates:
 ```
 
 _(44.3)_ Create the `vtl` files `Reply.inReplyToTweet.request.vtl`,
-`Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet nested resolvers.
+`Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet
+nested resolvers.
 
 ```
 # Reply.inReplyToTweet.request.vtl
@@ -3439,7 +3734,8 @@ mappingTemplates:
     reply: Tweet.liked.reply.vtl
 ```
 
-_(44.5)_ Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and `Reply.inReplyToUsers.response.vtl`.
+_(44.5)_ Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and
+`Reply.inReplyToUsers.response.vtl`.
 
 ```
 #if ($context.source.inReplyToUsers.size() == 0)
@@ -3521,7 +3817,8 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 47 Implement follow mutation
 
-_(47.0)_ We need a relationships table to track which user follows/blocks/etc who. Add a `RelationshipsTable` to `serverless.yml`.
+_(47.0)_ We need a relationships table to track which user follows/blocks/etc
+who. Add a `RelationshipsTable` to `serverless.yml`.
 
 ```yml
 # serverless.yml
@@ -3560,9 +3857,11 @@ resources:
             Value: relationships-table
 ```
 
-_(47.1)_ add a mapping template for follow mutation. Follow will use `vtl`templates.
+_(47.1)_ add a mapping template for follow mutation. Follow will use
+`vtl`templates.
 
-_(47.2)_ add a data source for the follow mutation - write to RelationshipsTable, update UsersTable. Also add a data source for relationships
+_(47.2)_ add a data source for the follow mutation - write to
+RelationshipsTable, update UsersTable. Also add a data source for relationships
 table
 
 ```yml
@@ -3599,18 +3898,22 @@ substitutions:
   RelationshipsTable: !Ref RelationshipsTable
 ```
 
-_(47.3)_ Create the vtl files for `Mutation.follow.request.vtl` & `Mutation.follow.response`.
+_(47.3)_ Create the vtl files for `Mutation.follow.request.vtl` &
+`Mutation.follow.response`.
 
-When a userA follows userB, we write to RelationshipsTable, where userB is the otherUserId.
+When a userA follows userB, we write to RelationshipsTable, where userB is the
+otherUserId.
 
 ![UserA-follows-UserB](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/4j5o07zfyfbz5jn6xaky.png)
 
-At userA and userB, we also increment followersCount & followingCount accordingly. All these can be done in a transaction using vtl (it can be in a lambda too btw, but vtl is cheaper).
+At userA and userB, we also increment followersCount & followingCount
+accordingly. All these can be done in a transaction using vtl (it can be in a
+lambda too btw, but vtl is cheaper).
 
 > When do we use substitutions in `serverless.appsync-api.yml` ?
 >
-> Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}" 
-> we have to define it in substitutions.
+> Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}" we
+> have to define it in substitutions.
 
 ```
 // defining a variable in vtl
@@ -3685,9 +3988,11 @@ true
 
 ## 48 Implement nested resolvers `Profile.following` & `Profile.followedBy`
 
-When userA views userB's profile, userA will see if they follow userB and if userB is following them.
+When userA views userB's profile, userA will see if they follow userB and if
+userB is following them.
 
-_(48.0)_ add nested resolvers for OtherProfile.following and OtherProfile.followedBy.
+_(48.0)_ add nested resolvers for OtherProfile.following and
+OtherProfile.followedBy.
 
 ```yml
 mappingTemplates:
@@ -3770,7 +4075,8 @@ mappingTemplates:
 
 ## 49 Implement `getProfile` query
 
-We are using the screen name and not user id for the sake of a nice url when viewing another user's profile.
+We are using the screen name and not user id for the sake of a nice url when
+viewing another user's profile.
 
 ```
 # schema.api.graphql
@@ -3780,7 +4086,8 @@ type Query {
 }
 ```
 
-We need a way to get a user by screen name, and for that we need to add the global secondary index to UsersTable.
+We need a way to get a user by screen name, and for that we need to add the
+global secondary index to UsersTable.
 
 _(49.0)_ add the mapping template for the getProfile query.
 
@@ -3869,15 +4176,18 @@ Act: userA views userBs profile
 
 Assert: following: true, followedBy: false
 
-After that, userB follows back userA, userA views userB again and followedBy shows true.
+After that, userB follows back userA, userA views userB again and followedBy
+shows true.
 
 Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 51 Distribute tweets to followers
 
-Add userA's tweet to their follower's timelines. We will use Dynamo Streams for that.
+Add userA's tweet to their follower's timelines. We will use Dynamo Streams for
+that.
 
-_(51.0)_ enable Dynamo stream specification on tweets table, to use to trigger a lambda function
+_(51.0)_ enable Dynamo stream specification on tweets table, to use to trigger a
+lambda function
 
 ```yml
 # serverless.yml
@@ -3923,9 +4233,10 @@ distributeTweets:
 
 _(51.2)_ add the lambda function to distribute tweets to followers.
 
-In case of a DDB update (write/modify) we get both NewImage and OldImage of that record in the DDB table.
+In case of a DDB update (write/modify) we get both NewImage and OldImage of that
+record in the DDB table.
 
-In case of remove, OldImage tells us the record that was deleted. 
+In case of remove, OldImage tells us the record that was deleted.
 
 In the case of an insert, the NewImage tests us the record that was added.
 
@@ -3971,13 +4282,16 @@ module.exports = {handler}
 
 ### 52 Integration test for distribute-tweets function
 
-- Create an event object (this time we are getting it from json files), and modify it to match the test case
-  
+- Create an event object (this time we are getting it from json files), and
+  modify it to match the test case
 - Feed it to the handler
 
 - Check that the result matches the expectation
 
-The main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level
+The main idea is that we invoke the lambda handler locally and pass an event
+object to it. Shaping that object can be in any way; our own object or json, as
+long as it looks like it's coming from DDB. We are asserting the result at DDB
+level
 
 Check out `__tests__/integration/distribute-tweets.test.js`
 
@@ -3987,13 +4301,19 @@ Check out `__tests__/integration/distribute-tweets.test.js`
 - Act: userB tweets
 - Assert: userB's tweet appears on userA's timeline
 
-In contrast to the integration test where we performed the assertion by checking the DB, now we are checking the response to getMyTimeline. This process happens asynchronously, userB's tweet takes time to appear at userA's timeline. We need to a utility to retry the check so that the test works more reliably. We utilized async-retry library to do this.
+In contrast to the integration test where we performed the assertion by checking
+the DB, now we are checking the response to getMyTimeline. This process happens
+asynchronously, userB's tweet takes time to appear at userA's timeline. We need
+to a utility to retry the check so that the test works more reliably. We
+utilized async-retry library to do this.
 
 ## 54 Implement add tweets to timeline when following someone
 
-_(54.0)_ add the lambda config and enable streams on the table it's streaming from.
+_(54.0)_ add the lambda config and enable streams on the table it's streaming
+from.
 
-_(54.1)_ add a global secondary index for the tweets distributed from the followed user.
+_(54.1)_ add a global secondary index for the tweets distributed from the
+followed user.
 
 ```yml
 # serverless.yml
@@ -4094,7 +4414,8 @@ resources:
 
 (54.2) Add the lambda function
 
-Find the tweets for the user being followed. Insert the recent n tweets to user's follower's timeline.
+Find the tweets for the user being followed. Insert the recent n tweets to
+user's follower's timeline.
 
 ```js
 // functions/distribute-tweets-to-follower.js
@@ -4150,13 +4471,16 @@ module.exports.handler = async event => {
 
 Similar to (52).
 
-- Create an event object (again we are getting it from json files), and modify it to match the test case
-  
+- Create an event object (again we are getting it from json files), and modify
+  it to match the test case
 - Feed it to the handler
 
 - Check that the result matches the expectation
 
-Again the main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level.
+Again the main idea is that we invoke the lambda handler locally and pass an
+event object to it. Shaping that object can be in any way; our own object or
+json, as long as it looks like it's coming from DDB. We are asserting the result
+at DDB level.
 
 Check out `__tests__/integration/distribute-tweets-to-follower.test.js`
 
@@ -4203,7 +4527,8 @@ resources:
           Resource: !GetAtt UsersTable.Arn
 ```
 
-_(57.2)_ Implement the `vtl` files `Mutation.unfollow.request.vtl` and `Mutation.unfollow.response.vtl`
+_(57.2)_ Implement the `vtl` files `Mutation.unfollow.request.vtl` and
+`Mutation.unfollow.response.vtl`
 
 ### 58 E2e test for unfollow mutation
 
@@ -4211,7 +4536,8 @@ Opposite of (50). Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 59 Implement getFollowers query
 
-(59.0) add a query for getFollowers. Configure the pipeline resolver and the (59.1) pipeline functions (they are not lambdas).
+(59.0) add a query for getFollowers. Configure the pipeline resolver and the
+(59.1) pipeline functions (they are not lambdas).
 
 https://docs.aws.amazon.com/appsync/latest/devguide/pipeline-resolvers.html
 
@@ -4256,7 +4582,8 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 63 Implement getFollowing query
 
-(63.0) add a query for getFollowers. Configure the pipeline resolver and the (63.1) pipeline functions (they are not lambdas).
+(63.0) add a query for getFollowers. Configure the pipeline resolver and the
+(63.1) pipeline functions (they are not lambdas).
 
 ```yml
 # serverless.appsync-api.yml

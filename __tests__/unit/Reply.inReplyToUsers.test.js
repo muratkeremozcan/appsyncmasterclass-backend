@@ -12,8 +12,7 @@ const {
 
 describe('Reply.inReplyToUsers.request template', () => {
   it("Should not short-circuit if selectionSetList has more than just 'id'", () => {
-    // create an appsync context (for $context.identity.username)
-    // the 3rd argument is result, which is the result of the previous resolver, needed with nested resolvers
+    // create an appsync context
     const username = chance.guid()
     const info = {
       selectionSetList: ['id', 'bio'],
@@ -30,7 +29,6 @@ describe('Reply.inReplyToUsers.request template', () => {
     // use amplify-velocity-template to render the template, given the context
     const result = renderTemplate(template, context)
 
-    result //?
     // check the result
     expect(result).toEqual({
       version: '2018-05-29',

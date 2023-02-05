@@ -12,7 +12,7 @@ const AWS = require('aws-sdk')
 const path = require('path')
 const fs = require('fs')
 const http = require('axios')
-const {axiosGraphQLQuery} = require('../../test-helpers/graphql')
+const {graphQLQuery} = require('../../test-helpers/graphql')
 
 describe('getUploadUrl and upload an image', () => {
   let signedInUser
@@ -29,7 +29,7 @@ describe('getUploadUrl and upload an image', () => {
     // Make a graphQL request with the query and variables
     const extension = '.png'
     const contentType = 'image/png'
-    const data = await axiosGraphQLQuery(
+    const data = await graphQLQuery(
       signedInUser.accessToken,
       getImageUploadUrl,
       {extension, contentType},

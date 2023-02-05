@@ -40,7 +40,7 @@ function* findUsedFragments(query, usedFragments = new Set()) {
   }
 }
 
-const axiosGraphQLQuery = async (auth, query, variables = {}) => {
+const graphQLQuery = async (auth, query, variables = {}) => {
   const headers = {}
   if (auth) {
     headers.Authorization = auth
@@ -75,6 +75,6 @@ const axiosGraphQLQuery = async (auth, query, variables = {}) => {
 }
 
 module.exports = {
-  axiosGraphQLQuery,
+  graphQLQuery,
   registerFragment,
 }

@@ -13,10 +13,7 @@ const {signInUser} = require('../../test-helpers/cognito')
 const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
 // (28.2) import the fragments we will use in the test and register them
-const {
-  axiosGraphQLQuery,
-  registerFragment,
-} = require('../../test-helpers/graphql')
+const {graphQLQuery, registerFragment} = require('../../test-helpers/graphql')
 const {
   editMyProfile,
   getMyProfile,
@@ -48,7 +45,7 @@ describe('Given an authenticated user', () => {
     // as the signed in user, make a request
     // we can copy the query from the AppSync console
 
-    const data = await axiosGraphQLQuery(signedInUser.accessToken, getMyProfile)
+    const data = await graphQLQuery(signedInUser.accessToken, getMyProfile)
     const profile = data.getMyProfile
 
     expect(profile).toMatchObject({
@@ -83,11 +80,9 @@ describe('Given an authenticated user', () => {
 
     // Make a graphQL request with the query and variables
     const newName = chance.first()
-    const data = await axiosGraphQLQuery(
-      signedInUser.accessToken,
-      editMyProfile,
-      {input: {name: newName}},
-    )
+    const data = await graphQLQuery(signedInUser.accessToken, editMyProfile, {
+      input: {name: newName},
+    })
     const profile = data.editMyProfile
 
     expect(profile).toMatchObject({

@@ -40,7 +40,7 @@ describe('Given 2 authenticated users and userA follows B', () => {
     userAId = userA.username
     userBId = userB.username
     // we could use the tweet mutation to have userA follow userB as we did in the e2e
-    // await axiosGraphQLQuery(userA.accessToken, follow, {
+    // await graphQLQuery(userA.accessToken, follow, {
     // 	userId: userB.username,
     // })
     // but using the DynamoDB client is less expensive

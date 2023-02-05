@@ -36,7 +36,7 @@ npm run sls -- package
 npm run sls -- deploy -s tmp
 
 # export the new env vars to .env file
- npm run sls export-env -- -s tmp && npm run sls manifest -- -s tmp
+npm run sls export-env -- -s tmp && npm run sls manifest -- -s tmp
 
 # run tests (including e2e) against the temporary stack
 npm t
@@ -1274,8 +1274,7 @@ type Query{
 }
 ```
 
-We are going to get the tweets from DDB, therefore we need the usual Appsync
-mapping-template yml and the vtl files query request and response.
+We are going to get the tweets from DDB, therefore we need the usual Appsync mapping-template yml and the vtl files query request and response.
 
 (20.0) Add a mapping template to the yml.
 
@@ -1335,20 +1334,12 @@ mappingTemplates:
       tableName: !Ref TweetsTable
 ```
 
-_(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and
-response.
+_(20.1)_ Add the .vtl files under `./mapping-templates/` for the request and response.
 
-In _(15.0)_ we created a table for the tweets, and we identified a
-`GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize
-the mapping template reference for DDB at
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
-We can get userId (the first argument of the query) by
-` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
-argument, `nextToken`, we can similarly use
-`$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous
-to ascending order (latest tweet last), we want latest tweet first so this is
-set to `false`. We limit the number of tweets returned to be less than 25.
+In _(15.0)_ we created a table for the tweets, and we identified a `GlobalSecondaryIndex` called `byCreator`. We will be using it now. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
+We can get userId (the first argument of the query) by ` $util.dynamodb.toDynamoDBJson($context.arguments.userId)`. For the 2nd
+argument, `nextToken`, we can similarly use `$util.toJson($context.arguments.nextToken)`. `scanIndexForward` is synonymous
+to ascending order (latest tweet last), we want latest tweet first so this is set to `false`. We limit the number of tweets returned to be less than 25.
 
 ```
 // Query.getTweets.request.vtl
@@ -1393,10 +1384,7 @@ type TweetsPage {
 }
 ```
 
-Because `tweets` will be an array, we extract that with `.items` in
-` $util.toJson($context.result.items)`. For `nextToken`, if the token is an
-empty string we want to turn it into null, so we use `defaultIfNullOrBlank`.
-`nexToken` maps to `nextToken`.
+Because `tweets` will be an array, we extract that with `.items` in ` $util.toJson($context.result.items)`. For `nextToken`, if the token is an empty string we want to turn it into null, so we use `defaultIfNullOrBlank`. `nexToken` maps to `nextToken`.
 
 ```
 // Query.getTweets.response.vtl
@@ -1407,9 +1395,7 @@ empty string we want to turn it into null, so we use `defaultIfNullOrBlank`.
 }
 ```
 
-At the moment we do not have the Profile structure in the Tweet object, if we
-look at DDB. Per the schema, that is something we want. What we have is
-`creator`, which is the id of the user that created the tweet.
+At the moment we do not have the Profile structure in the Tweet object, if we look at DDB. Per the schema, that is something we want. What we have is `creator`, which is the id of the user that created the tweet.
 
 ```
 // schema.api.graphql
@@ -1447,22 +1433,20 @@ interface IProfile {
 
 ![tweet-object](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2q83kl4cwejudeame5xr.png)
 
-_(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read
-the user information from `UsersTable`, so that we can populate the user profile
-in the Tweet type of our schema. We do that by using nested resolvers. Create a
-nested resolver in mapping Templates.
+_(20.2)_ Take the `creator` id in the Tweet from DDB, and ask AppSync to read the user information from `UsersTable`, so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers. Create a nested resolver in mapping Templates.
 
 > When do we need nested resolvers?
 >
+> Think of its as a utility to avoid over-fetching.
+>
+> We need nested resolvers when our types are returning other types.
+>
 > Oftentimes when we need to return another type, e.g. a Parent type might have
 > a children property of type [Person]. A Customer type might have an orders
-> array of type [Order] or a Person type might have a spouse property, also of
-> type Person.
+> array of type [Order].
 >
 > In all these examples, it's a relationship, which we can avoid eagerly loading
-> the related item unless the caller asks for them. So if it's a nested resolver
-> then GraphQL would know when to actually execute the nested resolver - ie.
-> when the caller asks for the related entity in its query.
+> the related item unless the caller asks for them. 
 
 ```yml
 # serverless.appsync-api.yml
@@ -1480,11 +1464,9 @@ mappingTemplates:
     dataSource: usersTable
 ```
 
-_(20.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`,
-`Tweet.profile.response.vtl` under `./mapping-templates/`
+_(20.3)_ Create the `.vtl` files `Tweet.profile.request.vtl`, `Tweet.profile.response.vtl` under `./mapping-templates/`
 
-Since we have `creator` field in the `Tweet`, we can reference the nesting
-parent with `$context.source` .
+Since we have `creator` field in the `Tweet`, we can reference the nesting parent with `$context.source` .
 
 > Nested resolvers can only be implemented for graphQL types, not interfaces.
 
@@ -1500,8 +1482,7 @@ parent with `$context.source` .
 }
 ```
 
-From `schema.api.graphql` we see that `Profile` interface is implemented by both
-`MyProfile` and `OtherProfile`. We need to differentiate between the two.
+From `schema.api.graphql` we see that `Profile` interface is implemented by both `MyProfile` and `OtherProfile`. We need to differentiate between the two.
 
 ```
 // Tweet.profile.response.vtl
@@ -1517,8 +1498,7 @@ From `schema.api.graphql` we see that `Profile` interface is implemented by both
 $util.toJson($context.result)
 ```
 
-Deploy with `npm run deploy`. Test an AppSync query. We need a confirmed user
-from Cognito.
+Deploy with `npm run deploy`. Test an AppSync query. We need a confirmed user from Cognito.
 
 ```
 query MyQuery {
@@ -1648,8 +1628,7 @@ type Query{
 }
 ```
 
-We are going to get the timeline from DDB timelinesTable, therefore we need the
-usual Appsync mapping-template yml and the vtl files query request and response.
+We are going to get the timeline from DDB `timelinesTable`, therefore we need theusual Appsync mapping-template yml and the vtl files query request and response.
 
 (23.0) Add a mapping template to the yml.
 
@@ -1681,13 +1660,7 @@ mappingTemplates:
 
 ```
 
-_(23.1)_ Add the .vtl files under `./mapping-templates/` for the request and
-response. We utilize the mapping template reference for DDB at
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html).
-Very similar to (20.1). `userId` instead of `creatorId`, and the current user is
-the value which we get from `$context.identity.username`. We do not need
-`"index" : "byCreator"`. The response is identical to 20.1 as well.
+_(23.1)_ Add the .vtl files under `./mapping-templates/` for the request and response. We utilize the mapping template reference for DDB at [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html). Very similar to (20.1). `userId` instead of `creatorId`, and the current user is the value which we get from `$context.identity.username`. We do not need `"index" : "byCreator"`. The response is identical to 20.1 as well.
 
 ```
 // Query.getMyTimeline.request.vtl
@@ -1721,13 +1694,7 @@ $util.validate($isValidLimit, "max limit is 25")
 }
 ```
 
-After we fetch the tweetId for the tweets on our timeline, we have to hydrate
-them from the Tweets table. We can use pipeline functions for that. Pipeline
-functions tell AppSync to perform multiple steps for a resolver; get a page of
-tweets from the timelines table and hydrate them by doing a batch get against
-Tweets table. But for now we can play with the types at `schema.api.graphql`.
-_(23.2)_ Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a
-`UnhydratedTweetsPage` instead of `TweetsPage`.
+After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table. We can use pipeline functions for that. Pipeline functions tell AppSync to perform multiple steps for a resolver; get a page of tweets from the timelines table and hydrate them by doing a batch get against Tweets table. But for now we can play with the types at `schema.api.graphql`. _(23.2)_ Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a `UnhydratedTweetsPage` instead of `TweetsPage`.
 
 ```
 # schema.api.graphql
@@ -1741,32 +1708,20 @@ type UnhydratedTweetsPage {
 }
 ```
 
-_(23.3)_ Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can
-attach a nested resolver to. We can have that resolver hydrate the data from a
-different table. Create a nested resolver that uses the `tweets` field of the
-type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`.
+_(23.3)_ Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to. We can have that resolver hydrate the data from a different table. Create a nested resolver that uses the `tweets` field of the type `UnhydratedTweetsPage`, to be used to get data from `tweetsTable`.
 
-_(23.4)_ For the nested resolver to work we need another set of `vtl` files
-under `mapping-templates/`.
+_(23.4)_ For the nested resolver to work we need another set of `vtl` files under `mapping-templates/`.
 
-- We will have access to a list of tweets from Timelines table, which has userId
-  and tweetId.
+- We will have access to a list of tweets from Timelines table, which has userId and tweetId.
 - We can use the tweetId to fetch the tweets from the Tweets table.
-- We are going the take the source tweets array from the `UnhydratedTweetsPage`,
-  which are the items that we would fetch from Timelines table
-  `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just
-  the id, Json serialize it, pass it to the BatchGetItem operation.
+- We are going the take the source tweets array from the `UnhydratedTweetsPage`, which are the items that we would fetch from Timelines table `tweets: [ITweet!]`, extract the tweet id into an array of tweets with just the id, Json serialize it, pass it to the BatchGetItem operation.
 
-To add each tweet object into the array, use
-`$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to
-ignore the return value of the `$tweets.add` operation, otherwise the vtl
-interpreter will fail.
+To add each tweet object into the array, use `$tweets.add($util.dynamodb.toMapValues($tweet))`. We have to use `$util,qr` to
+ignore the return value of the `$tweets.add` operation, otherwise the vtl interpreter will fail.
 
-For the `tables` > TweetsTable > keys, after we're done populating the tweets
-array use `$util.toJson($tweets)` to serialize it.
+For the `tables` > TweetsTable > keys, after we're done populating the tweets array use `$util.toJson($tweets)` to serialize it.
 
-_(23.5)_ We need the value of the TweetsTable we are going to BatchGetItem from.
-To get this value we add a block to the `serverless.appsync-api.yml`
+_(23.5)_ We need the value of the TweetsTable we are going to BatchGetItem from. To get this value we add a block to the `serverless.appsync-api.yml`
 
 ```yml
 substitutions:
@@ -1837,11 +1792,9 @@ query MyQuery {
 
 ### 24 Test `getMyTimeline` query
 
-The unit test for `getMyTimeline` would be duplicating the `getTweets`, because
-the vtl templates are near identical.
+The unit test for `getMyTimeline` would be duplicating the `getTweets`, because the vtl templates are near identical.
 
-We can write a test for `UnhydratedTweetsPage.tweets.request.vtl` since there is
-plenty going on there.
+We can write a test for `UnhydratedTweetsPage.tweets.request.vtl` since there is plenty going on there.
 
 Check out `__tests__/unit/UnhydratedTweetsPage.tweets.request.test.js`.
 
@@ -1916,9 +1869,7 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 25 Use `context.info` to remove unnecessary DDB calls
 
-Add some logic to our request template `Tweet.profile.request.vtl` to check what
-fields the query is actually asking for. If it is only asking for the for the
-id, return early without making a request to DDB.
+Add some logic to our request template `Tweet.profile.request.vtl` to check what fields the query is actually asking for. If it is only asking for the for the id, return early without making a request to DDB.
 
 ```
 {
@@ -1965,8 +1916,7 @@ When we like a tweet:
 
 - Increment the like count in the Users table.
 - For the tweet, in Tweetstable increment the number of likes received.
-- Introduce a new table (LikesTable) for which user has liked which tweet, and
-  update that too.
+- Introduce a new table (LikesTable) for which user has liked which tweet, and update that too.
 
 _(26.0)_ create a new DDB table to track which user has liked which tweet.
 
@@ -1995,10 +1945,7 @@ resources:
             Value: likes-table
 ```
 
-We have to update 3 tables when the like mutation happens. We can do this in a
-DDB transaction. (In _(17.1)_ we also updated 3 tables, but used a lambda
-resolver because we had to generate a `ulid`). As usual, we have to create a
-mapping template, dataSource and `vtl` files.
+We have to update 3 tables when the like mutation happens. We can do this in a DDB transaction. (In _(17.1)_ we also updated 3 tables, but used a lambda resolver because we had to generate a `ulid`). As usual, we have to create a mapping template, dataSource and `vtl` files.
 
 In the vtl files we will:
 
@@ -2006,17 +1953,13 @@ In the vtl files we will:
 - Update TweetsTable with `tweetId`.
 - Update UsersTable with `userId`.
 
-_(26.1)_ Create a mapping template for `like`, dataSource for `likesTable` and
-for `likeMutation` . When we need to do multiple transactions in an AppSync
-resolver, we need to create a dataSource for the mutation (`likeMutation`). When
-we want to use refer to the resources in a vtl file with ${resourceName}, we
-need to add it to the substitutions.
+_(26.1)_ Create a mapping template for `like`, dataSource for `likesTable` and for `likeMutation` . When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation (`likeMutation`). When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions.
 
 ```yml
 # serverless.appsync-api.yml
 
 mappingTemplates:
-  # (25.1) setup an AppSync resolver to update 3 tables when like happens:
+  # (26.1) setup an AppSync resolver to update 3 tables when like happens:
   # UsersTable, TweetsTable, LikesTable.
   - type: Mutation
     field: like
@@ -2024,10 +1967,10 @@ mappingTemplates:
 
 dataSources:
  - type: AMAZON_DYNAMODB
-    name: likesTable # (25.1) define a data source for the mutation
+    name: likesTable # (26.1) define a data source for the mutation
     config:
       tableName: !Ref LikesTable
-  # (25.1) we need the like mutation to create an entry in the LikesTable
+  # (26.1) we need the like mutation to create an entry in the LikesTable
   # then update UsersTable and TweetsTable
   # When we need to do multiple transactions in an AppSync resolver,
   # we need to create a dataSource for the mutation
@@ -2048,7 +1991,7 @@ dataSources:
 
 substututions:
   TweetsTable: !Ref TweetsTable
-  # (25.1) when we want to use refer to the resources in a vtl file with ${resourceName},
+  # (26.1) when we want to use refer to the resources in a vtl file with ${resourceName},
   # we need to add it to the substitutions
   LikesTable: !Ref LikesTable
   UsersTable: !Ref UsersTable
@@ -2129,19 +2072,15 @@ true
 
 ![4-DDB-tables](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ap1uq047f04q3i3ieyvp.png)
 
-Grab a `tweetId` from `TweetsTable`, create an AppSync mutation to like the
-tweet.
+Grab a `tweetId` from `TweetsTable`, create an AppSync mutation to like the tweet.
 
 ![like-mutation](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fn1hebhj1qp65nqhlql5.png)
 
-After the like, the `LikesTable` should populate.
-
-![likes-table](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qvcdtgayse3i4a5tc958.png)
+After the like, the `LikesTable` should populate.![likes-table](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/qvcdtgayse3i4a5tc958.png)
 
 ### 27 Implement `Tweet.liked` nested resolver
 
-We can now implement the `liked: Boolean!` since we have the like mutation. It
-is going to be nested resolver as in `Tweet.profile`
+We can now implement the `liked: Boolean!` since we have the like mutation. It is going to be nested resolver as in `Tweet.profile`
 
 ```
 # schema.api.graphql
@@ -2213,15 +2152,11 @@ _(27.1)_ Create vtl files `liked` request and response.
 
 ### 28 Refactor tests to use graphQL fragments
 
-GraphQL fragments is a utility to reduce duplication in queries.
-
-Check out `test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`,
-`__tests__/e2e/tweet-e2e.test.js`.
+GraphQL fragments is a utility to reduce duplication in queries. Check out `test-helpers/graphql.js`, `test-helpers/graphql-fragments.js`, `__tests__/e2e/tweet-e2e.test.js`.
 
 ### 29 E2e Tests for `like` mutation
 
-We want to update a tweet to `liked` and verify that. Try to like a 2nd time,
-get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 30 Implement `unlike` mutation
 
@@ -2233,13 +2168,7 @@ type Mutation {
   unlike(tweetId: ID!): Boolean!
 ```
 
-_(30.0)_ Create a mapping template for `unlike`, dataSource for
-`unlikeMutation`. When we need to do multiple transactions in an AppSync
-resolver, we need to create a dataSource for the mutation AND we already have
-the dataSource for `likesTable` from 26.1. When we want to use refer to the
-resources in a vtl file with ${resourceName}, we need to add it to the
-substitutions, and we already have the `LikesTable` in the substitutions from
-(26.1).
+_(30.0)_ Create a mapping template for `unlike`, dataSource for `unlikeMutation`. When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation AND we already have the dataSource for `likesTable` from 26.1. When we want to use refer to the resources in a vtl file with ${resourceName}, we need to add it to the substitutions, and we already have the `LikesTable` in the substitutions from (26.1).
 
 ```yml
 # serverless.appsync-api.yml
@@ -2349,23 +2278,15 @@ true
 
 ### 31 E2e test for `unlike` mutation
 
-We want to update a tweet to `liked` and verify that. Try to like a 2nd time,
-get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
+We want to update a tweet to `liked` and verify that. Try to like a 2nd time, get an error. Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 32 Implement `getLikes` query
 
-`getLikes` is very similar to `getMyTimeline` (23); the schemas are the same
-with `userId` as the partition key, and `tweetId` as sort key. To get the tweets
-that a user likes, we just need to query the `LikesTable` against the user's
-`userId`. We have the same challenge we had in (23) with `getMyTimeline`; we
-don't have everything about the tweet itself and we need to hydrate it
-afterward.
+`getLikes` is very similar to `getMyTimeline` (23); the schemas are the same with `userId` as the partition key, and `tweetId` as sort key. To get the tweets that a user likes, we just need to query the `LikesTable` against the user's `userId`. We have the same challenge we had in (23) with `getMyTimeline`; we don't have everything about the tweet itself and we need to hydrate it afterward.
 
 ![32-beginning](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/vxd0ofgqvuco7voxc46h.png)
 
-We can use the same trick in (23); instead of returning a `TweetsPage`, we can
-return a `UnhydratedTweetsPage`. After we fetch the tweetId for the tweets on
-our timeline, we can hydrate them from the Tweets table.
+We can use the same trick in (23); instead of returning a `TweetsPage`, we can return a `UnhydratedTweetsPage`. After we fetch the tweetId for the tweets on our timeline, we can hydrate them from the Tweets table.
 
 ```
 # schema.api.graphql
@@ -2458,18 +2379,11 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 > When do we need nested resolvers?
 >
-> Think of its as a utility to avoid over-fetching. Oftentimes when we need to
-> return another type, e.g. a Parent type might have a children property/field
-> of type [Child]. A Customer type might have an orders array of type [Order] or
-> a Person type might have a spouse property, also of type [Person].
->
-> In all these examples, it's a relationship. We can avoid eagerly-loading the
-> related item (ex: children, orders, spouse) unless the caller asks for them.
-> So if it's a nested resolver then GraphQL would know when to actually execute
-> the nested resolver - ie. when the caller specifically asks for it.
+> Think of its as a utility to avoid over-fetching. 
+> 
+> We need nested resolvers when our types are returning other types.
 
-In this case we only want to query the `tweets` field of a `IProfile`
-(`MyProfile`, `OtherProfile`).
+In this case we only want to query the `tweets` field of a `IProfile` (`MyProfile`, `OtherProfile`).
 
 _(34.0)_ Create a nested resolver for MyProfile.tweet.
 
@@ -2520,10 +2434,7 @@ _(34.1)_ Add the `vtl` files. These are similar to `getTweets` (20).
 
 ### E2e testing for `Profile.tweets`
 
-For testing we have to be careful about an infinite loop situation when querying
-or mutation `myProfileFields`. `MyProfile.tweet` returns a `TweetsPage`, which
-in turn returns a `tweets` field, which in turn returns an `ITweet`, which in
-turn returns another `IProfile`.
+For testing we have to be careful about an infinite loop situation when querying or mutation `myProfileFields`. `MyProfile.tweet` returns a `TweetsPage`, which in turn returns a `tweets` field, which in turn returns an `ITweet`, which in turn returns another `IProfile`.
 
 ```
 // schema.api.graphql
@@ -2557,8 +2468,7 @@ interface ITweet {
 }
 ```
 
-Make sure to not include `tweets` in `myProfileFragment ` being used in e2e
-tests
+Make sure to not include `tweets` in `myProfileFragment ` being used in e2e tests
 
 ```js
 // test-helpers/graphql-fragments.js
@@ -2589,10 +2499,7 @@ fragment myProfileFields on MyProfile {
 `
 ```
 
-Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This
-way when we make the calls, we're going to get the first page of tweets back.
-But, when we fetch the profiles for these tweets, it will not go into an
-infinite loop.
+Instead, add `tweets` field to only to `getMyProfile` and `editMyProfile` . This way when we make the calls, we're going to get the first page of tweets back. But, when we fetch the profiles for these tweets, it will not go into an infinite loop.
 
 ```js
 // __tests__/e2e/user-profile.test.js
@@ -2625,13 +2532,9 @@ const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
 
 ## 35 Implement `retweet` mutation
 
-_(35.0)_ create a new DDB table to track which user has retweeted which tweet.
-Similar to (26.0)
+_(35.0)_ create a new DDB table to track which user has retweeted which tweet. Similar to (26.0)
 
-_(35.1)_ We need to add an entry to the `TweetsTable` for the retweet, which
-means we need a tweetId, which is a `ulid` and requires us to use a lambda
-resolver. Similar to (17.2). `retweet` function will need the additional
-`iamRoleStatemements`.
+_(35.1)_ We need to add an entry to the `TweetsTable` for the retweet, which means we need a tweetId, which is a `ulid` and requires us to use a lambda resolver. Similar to (17.2). `retweet` function will need the additional `iamRoleStatemements`.
 
 ```yml
 # serverless.yml
@@ -2687,9 +2590,7 @@ resources:
             Value: retweets-table
 ```
 
-_(35.2)_ add a mapping template for the retweet mutation. Similar to (17.2.0),
-we want AppSync to invoke the lambda function directly without going through a
-custom mapping template.
+_(35.2)_ add a mapping template for the retweet mutation. Similar to (17.2.0), we want AppSync to invoke the lambda function directly without going through a custom mapping template.
 
 _(35.3)_ Define a data source for the mutation
 
@@ -2851,8 +2752,7 @@ module.exports = {
 
 ## 36 Implement Retweet nested resolvers
 
-_(36.0)_ Create a nested resolver to get the profile on Retweet. We need the
-profile field, and we already have the vtl files for that in (20.3) for
+_(36.0)_ Create a nested resolver to get the profile on Retweet. We need the profile field, and we already have the vtl files for that in (20.3) for
 `getTweets`.
 
 _(36.1)_ Create a nested resolver to fetch the retweeted tweet on Retweet
@@ -2900,28 +2800,20 @@ $util.toJson($context.result)
 
 The pattern is as follows:
 
-- Create an event: an object which includes `identity.username` and
-  `arguments.tweetId`.
-- Feed it to the handler (the handler causes writes and updates to 4 DDB tables,
-  hence the "integration")
-- Check that the result matches the expectation (by reading the 4 tables from
-  DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and `arguments.tweetId`.
+- Feed it to the handler (the handler causes writes and updates to 4 DDB tables, hence the "integration")
+- Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
 
-We have to have a real user for this integration test, but it is still an
-integration test given that we are feeding an event object to the handler.
+We have to have a real user for this integration test, but it is still an integration test given that we are feeding an event object to the handler.
 
 Check out `__tests__/integration/retweet-self-integration.test.js`,
 `__tests__/integration/retweet-other-integration.test.js`.
 
 ### 38 E2e test for retweet mutation
 
-_(38.0)_ When a user reweets their own tweet, and get their tweets, we want to
-get the information about the retweet (reweetOf). The `retweeted` boolean is on
-the `type Tweet`, so we need to add a nested resolver for that.
+_(38.0)_ When a user reweets their own tweet, and get their tweets, we want to get the information about the retweet (reweetOf). The `retweeted` boolean is on the `type Tweet`, so we need to add a nested resolver for that.
 
-(38.1) To enable that, although this is the test section, we added to the
-`serverless.appsync-api.yml` to increase retweet capabilities, and we added 2
-vtl files. Reweets are similar to likes.
+(38.1) To enable that, although this is the test section, we added to the `serverless.appsync-api.yml` to increase retweet capabilities, and we added 2 vtl files. Reweets are similar to likes.
 
 ```yml
 # serverless.appsync-api.yml
@@ -2967,9 +2859,7 @@ Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 39 Implement unretweet mutation
 
-_(39.0)_ add a mapping template for the unretweet mutation. Similar to (35.2)
-retweet mutation and (17.2.0) tweet mutation, we want AppSync to invoke the
-lambda function directly without going through a custom mapping template.
+_(39.0)_ add a mapping template for the unretweet mutation. Similar to (35.2) retweet mutation and (17.2.0) tweet mutation, we want AppSync to invoke the lambda function directly without going through a custom mapping template.
 
 _(39.1)_ Define a data source for the mutation (similar to 35.3)
 
@@ -3066,8 +2956,7 @@ resources:
 
 (39.3) Implement the unretweet function.
 
-- Delete the tweet from the TweetsTable, the RetweetsTable, and the
-  TimelinesTable if it's not the same user
+- Delete the tweet from the TweetsTable, the RetweetsTable, and the TimelinesTable if it's not the same user
 - Decrement the count on the UsersTable and the TweetsTable
 
 ```js
@@ -3197,14 +3086,11 @@ module.exports = {
 
 ### 40 Integration test unreweet mutation
 
-- Create an event: an object which includes `identity.username` and
-  `arguments.tweetId`.
-
-- Feed it to the handler (the handler causes writes and updates to DDB, hence
-  the "integration")
-
-- Check that the result matches the expectation (by reading the 4 tables from
-  DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and `arguments.tweetId`.
+  
+- Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
+  
+- Check that the result matches the expectation (by reading the 4 tables from DDB, hence "integration")
 
 Check out `__tests__/integration/unretweet-self-integration.test.js`
 
@@ -3227,11 +3113,9 @@ type Mutation {
 
 ```
 
-_(42.0)_ add a mapping template for the reply mutation. Similar to (35.2)
-(39.0).
+_(42.0)_ add a mapping template for the reply mutation. Similar to (35.2) (39.0).
 
-When replying we have to generate a new tweet, create an id for it (ulid)
-therefore we need a lambda function.
+When replying we have to generate a new tweet, create an id for it (ulid) therefore we need a lambda function.
 
 _(42.1)_ Define a data source for the mutation
 
@@ -3445,14 +3329,11 @@ module.exports = {
 
 ### 43 Integration test for reply mutation
 
-- Create an event: an object which includes `identity.username` and
-  `arguments.tweetId` and `arguments.text`.
-
-- Feed it to the handler (the handler causes writes and updates to DDB, hence
-  the "integration")
-
-- Check that the result matches the expectation (by reading the 3 tables from
-  DDB, hence "integration")
+- Create an event: an object which includes `identity.username` and `arguments.tweetId` and `arguments.text`.
+  
+- Feed it to the handler (the handler causes writes and updates to DDB, hence the "integration")
+  
+- Check that the result matches the expectation (by reading the 3 tables from DDB, hence "integration")
 
 Check out `__tests__/integration/reply.test.js`.
 
@@ -3466,8 +3347,7 @@ In reply we have 3 properties that are a type of interfaces:
   inReplyToUsers: [IProfile!]
 ```
 
-As explained in _(20.2)_, we need nested resolvers when our types are returning
-other types.
+As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
 
 ```
 type Reply implements ITweet {
@@ -3487,8 +3367,7 @@ type Reply implements ITweet {
 
 ### `profile` nested resolver
 
-_(44.0)_ Create a nested resolver to get the profile on Reply. Similar to (36.0)
-Retweet.profile.
+_(44.0)_ Create a nested resolver to get the profile on Reply. Similar to (36.0) Retweet.profile.
 
 We can reuse the `vtl` files for `Tweet.profile`.
 
@@ -3506,8 +3385,7 @@ mappingTemplates:
 
 ### `inReplyToTweet` nested resolver
 
-_(44.1)_ Create a nested resolver to get the inReplyToUsers on Reply, similar to
-(36.1) Retweet.retweetOf.
+_(44.1)_ Create a nested resolver to get the inReplyToUsers on Reply, similar to (36.1) Retweet.retweetOf.
 
 ```yml
 mappingTemplates:
@@ -3517,8 +3395,7 @@ mappingTemplates:
 ```
 
 _(44.3)_ Create the `vtl` files `Reply.inReplyToTweet.request.vtl`,
-`Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet
-nested resolvers.
+`Reply.inReplyToTweet.response.vtl`, these are very similar to (36.2) Retweet nested resolvers.
 
 ```
 # Reply.inReplyToTweet.request.vtl
@@ -3562,8 +3439,7 @@ mappingTemplates:
     reply: Tweet.liked.reply.vtl
 ```
 
-_(44.5)_ Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and
-`Reply.inReplyToUsers.response.vtl`.
+_(44.5)_ Create the `vtl` files `Reply.inReplyToUsers.request.vtl` and `Reply.inReplyToUsers.response.vtl`.
 
 ```
 #if ($context.source.inReplyToUsers.size() == 0)
@@ -3645,8 +3521,7 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 47 Implement follow mutation
 
-_(47.0)_ We need a relationships table to track which user follows/blocks/etc.
-who. Add a `RelationshipsTable` to `serverless.yml`.
+_(47.0)_ We need a relationships table to track which user follows/blocks/etc who. Add a `RelationshipsTable` to `serverless.yml`.
 
 ```yml
 # serverless.yml
@@ -3685,11 +3560,9 @@ resources:
             Value: relationships-table
 ```
 
-_(47.1)_ add a mapping template for follow mutation. Follow will use `vtl`
-templates.
+_(47.1)_ add a mapping template for follow mutation. Follow will use `vtl`templates.
 
-_(47.2)_ add a data source for the follow mutation - write to
-RelationshipsTable, update UsersTable. Also add a data source for relationships
+_(47.2)_ add a data source for the follow mutation - write to RelationshipsTable, update UsersTable. Also add a data source for relationships
 table
 
 ```yml
@@ -3726,21 +3599,17 @@ substitutions:
   RelationshipsTable: !Ref RelationshipsTable
 ```
 
-_(47.3)_ Create the vtl files for `Mutation.follow.request.vtl` &
-`Mutation.follow.response`.
+_(47.3)_ Create the vtl files for `Mutation.follow.request.vtl` & `Mutation.follow.response`.
 
-When a userA follows userB, we write to RelationshipsTable, where userB is the
-otherUserId.
+When a userA follows userB, we write to RelationshipsTable, where userB is the otherUserId.
 
 ![UserA-follows-UserB](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/4j5o07zfyfbz5jn6xaky.png)
 
-At userA and userB, we also increment followersCount & followingCount
-accordingly. All these can be done in a transaction using vtl (it can be in a
-lambda too btw).
+At userA and userB, we also increment followersCount & followingCount accordingly. All these can be done in a transaction using vtl (it can be in a lambda too btw, but vtl is cheaper).
 
 > When do we use substitutions in `serverless.appsync-api.yml` ?
 >
-> Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"`
+> Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}" 
 > we have to define it in substitutions.
 
 ```
@@ -3816,11 +3685,9 @@ true
 
 ## 48 Implement nested resolvers `Profile.following` & `Profile.followedBy`
 
-When userA views userB's profile, userA will see if they follow userB and if
-userB is following them.
+When userA views userB's profile, userA will see if they follow userB and if userB is following them.
 
-_(48.0)_ add nested resolvers for OtherProfile.following and
-OtherProfile.followedBy.
+_(48.0)_ add nested resolvers for OtherProfile.following and OtherProfile.followedBy.
 
 ```yml
 mappingTemplates:
@@ -3903,8 +3770,7 @@ mappingTemplates:
 
 ## 49 Implement `getProfile` query
 
-We are using the screen name and not user id for the sake of a nice url when
-viewing another user's profile
+We are using the screen name and not user id for the sake of a nice url when viewing another user's profile.
 
 ```
 # schema.api.graphql
@@ -3914,8 +3780,7 @@ type Query {
 }
 ```
 
-We need a way to get a user by screen name, and for that we need to add the
-global secondary index to UsersTable.
+We need a way to get a user by screen name, and for that we need to add the global secondary index to UsersTable.
 
 _(49.0)_ add the mapping template for the getProfile query.
 
@@ -4004,18 +3869,15 @@ Act: userA views userBs profile
 
 Assert: following: true, followedBy: false
 
-After that, userB follows back userA, userA views userB again and followedBy
-shows true.
+After that, userB follows back userA, userA views userB again and followedBy shows true.
 
 Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 51 Distribute tweets to followers
 
-Add userA's tweet to their follower's timelines. We will use Dynamo Streams for
-that.
+Add userA's tweet to their follower's timelines. We will use Dynamo Streams for that.
 
-_(51.0)_ enable Dynamo stream specification on tweets table, to use to trigger a
-lambda function
+_(51.0)_ enable Dynamo stream specification on tweets table, to use to trigger a lambda function
 
 ```yml
 # serverless.yml
@@ -4061,10 +3923,11 @@ distributeTweets:
 
 _(51.2)_ add the lambda function to distribute tweets to followers.
 
-In case of a DDB update (write/modify) we get both NewImage and OldImage of that
-record in the DDB table. In case of remove, OldImage tells us the record that
-was deleted. In the case of an insert, the NewImage tests us the record that was
-added.
+In case of a DDB update (write/modify) we get both NewImage and OldImage of that record in the DDB table.
+
+In case of remove, OldImage tells us the record that was deleted. 
+
+In the case of an insert, the NewImage tests us the record that was added.
 
 ![DDB-stream-1](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/wbdng6p18ssyjcl7gqwc.png)
 
@@ -4108,17 +3971,13 @@ module.exports = {handler}
 
 ### 52 Integration test for distribute-tweets function
 
-- Create an event object (this time we are getting it from json files), and
-  modify it to match the test case
-
+- Create an event object (this time we are getting it from json files), and modify it to match the test case
+  
 - Feed it to the handler
 
 - Check that the result matches the expectation
 
-The main idea is that we invoke the lambda handler locally and pass an event
-object to it. Shaping that object can be in any way; our own object or json, as
-long as it looks like it's coming from DDB. We are asserting the result at DDB
-level
+The main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level
 
 Check out `__tests__/integration/distribute-tweets.test.js`
 
@@ -4128,19 +3987,13 @@ Check out `__tests__/integration/distribute-tweets.test.js`
 - Act: userB tweets
 - Assert: userB's tweet appears on userA's timeline
 
-In contrast to the integration test where we performed the assertion by checking
-the DB, now we are checking the response to getMyTimeline. This process happens
-asynchronously, userB's tweet takes time to appear at userA's timeline. We need
-to a utility to retry the check so that the test works more reliably. We
-utilized async-retry library to do this.
+In contrast to the integration test where we performed the assertion by checking the DB, now we are checking the response to getMyTimeline. This process happens asynchronously, userB's tweet takes time to appear at userA's timeline. We need to a utility to retry the check so that the test works more reliably. We utilized async-retry library to do this.
 
 ## 54 Implement add tweets to timeline when following someone
 
-_(54.0)_ add the lambda config and enable streams on the table it's streaming
-from.
+_(54.0)_ add the lambda config and enable streams on the table it's streaming from.
 
-_(54.1)_ add a global secondary index for the tweets distributed from the
-followed user.
+_(54.1)_ add a global secondary index for the tweets distributed from the followed user.
 
 ```yml
 # serverless.yml
@@ -4171,7 +4024,7 @@ functions:
 
 resources:
   Resources:
-  		    TimelinesTable:
+  	TimelinesTable:
       Type: AWS::DynamoDB::Table
       Properties:
         BillingMode: PAY_PER_REQUEST
@@ -4241,8 +4094,7 @@ resources:
 
 (54.2) Add the lambda function
 
-Find the tweets for the user being followed. Insert the recent n tweets to
-user's follower's timeline.
+Find the tweets for the user being followed. Insert the recent n tweets to user's follower's timeline.
 
 ```js
 // functions/distribute-tweets-to-follower.js
@@ -4298,17 +4150,13 @@ module.exports.handler = async event => {
 
 Similar to (52).
 
-- Create an event object (again we are getting it from json files), and modify
-  it to match the test case
-
+- Create an event object (again we are getting it from json files), and modify it to match the test case
+  
 - Feed it to the handler
 
 - Check that the result matches the expectation
 
-Again the main idea is that we invoke the lambda handler locally and pass an
-event object to it. Shaping that object can be in any way; our own object or
-json, as long as it looks like it's coming from DDB. We are asserting the result
-at DDB level.
+Again the main idea is that we invoke the lambda handler locally and pass an event object to it. Shaping that object can be in any way; our own object or json, as long as it looks like it's coming from DDB. We are asserting the result at DDB level.
 
 Check out `__tests__/integration/distribute-tweets-to-follower.test.js`
 
@@ -4355,8 +4203,7 @@ resources:
           Resource: !GetAtt UsersTable.Arn
 ```
 
-_(57.2)_ Implement the `vtl` files `Mutation.unfollow.request.vtl` and
-`Mutation.unfollow.response.vtl`
+_(57.2)_ Implement the `vtl` files `Mutation.unfollow.request.vtl` and `Mutation.unfollow.response.vtl`
 
 ### 58 E2e test for unfollow mutation
 
@@ -4364,8 +4211,7 @@ Opposite of (50). Check out `__tests__/e2e/tweet-e2e.test.js`.
 
 ## 59 Implement getFollowers query
 
-(59.0) add a query for getFollowers. Configure the pipeline resolver and the
-(59.1) pipeline functions (they are not lambdas).
+(59.0) add a query for getFollowers. Configure the pipeline resolver and the (59.1) pipeline functions (they are not lambdas).
 
 https://docs.aws.amazon.com/appsync/latest/devguide/pipeline-resolvers.html
 
@@ -4410,8 +4256,7 @@ Check out `__tests__/e2e/tweet-e2e.test.js`
 
 ## 63 Implement getFollowing query
 
-(63.0) add a query for getFollowers. Configure the pipeline resolver and the
-(63.1) pipeline functions (they are not lambdas).
+(63.0) add a query for getFollowers. Configure the pipeline resolver and the (63.1) pipeline functions (they are not lambdas).
 
 ```yml
 # serverless.appsync-api.yml

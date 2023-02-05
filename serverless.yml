@@ -299,7 +299,7 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-        # (51.0) enable Dynamo stream specification on tweets table, to use to trigger a lambda function
+        # (51.0) enable Dynamo stream specification on tweets table, used to trigger a lambda function
         StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
         Tags: # so that we can track the cost in AWS billing

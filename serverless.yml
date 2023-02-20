@@ -223,6 +223,39 @@ functions:
           - dynamodb:DeleteItem
         Resource: !GetAtt TimelinesTable.Arn
 
+  # [64] Sync users and tweets to Algolia; we need to get all our DDB data into Algolia so that we can search them.
+  # (64.1) Listen in on the stream of events from tweets & users tables, then sync the updates to Algolia. Similar to distributeTweets (51.1)
+  syncUsersToAlgolia:
+    handler: functions/sync-users-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt UsersTable.StreamArn
+    # [65] Securely handle secrets
+    # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+
+  # (64.1)
+  syncTweetsToAlgolia:
+    handler: functions/sync-tweets-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    # [65] Securely handle secrets
+    # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation

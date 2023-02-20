@@ -231,6 +231,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt UsersTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncUsersToAlgolia
     # [65] Securely handle secrets
     # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
     iamRoleStatements:
@@ -247,6 +248,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncTweetsToAlgolia
     # [65] Securely handle secrets
     # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
     iamRoleStatements:

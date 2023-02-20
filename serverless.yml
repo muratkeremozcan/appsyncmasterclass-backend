@@ -280,6 +280,8 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
         Tags:
           - Key: Environment
             # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod

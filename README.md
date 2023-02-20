@@ -4610,3 +4610,323 @@ functionConfigurations:
 
 - `getFollowing.request.vtl` & `getFollowing.response.vtl`
 - `hydrateFollowing.request.vtl` & `hydrateFollowing.response.vtl`
+
+## 64 Sync users and tweets to Algolia
+
+(Signed up at Algolia, created 2 indexes users_dev and tweets_dev, noted down the SearchOnly and Admin api keys)
+
+We need to get all our DDB data into Algolia so that we can search them.
+
+(65.1) Listen in on the stream of events from tweets & users tables, then sync the updates to Algolia. Similar to `distributeTweets` at (51)
+
+```yml
+# serverless.yml
+
+functions:
+  ###
+  # (64.1) Listen in on the stream of events from tweets & users tables, 
+  #then sync the updates to Algolia.
+  syncUsersToAlgolia:
+    handler: functions/sync-users-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt UsersTable.StreamArn
+    environment:
+      ALGOLIA_APP_ID: xxx
+      ALGOLIA_WRITE_KEY: xxx
+  # (64.1)
+  syncTweetsToAlgolia:
+    handler: functions/sync-tweets-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    environment:
+      ALGOLIA_APP_ID: xxx
+      ALGOLIA_WRITE_KEY: xxx
+```
+
+(65.2) Create the lambda handlers for sync (users shown, tweets is the mirror)
+
+```js
+// lib/algolia.js
+// (65.2) Create the lambda handlers for Algolia sync
+const algoliasearch = require('algoliasearch')
+
+// do not initialize the index on every lambda invocation
+let usersIndex, tweetsIndex
+
+const initUsersIndex = async (appId, key, stage) => {
+  if (!usersIndex) {
+    // on cold start initialize the index
+    const client = algoliasearch(appId, key)
+    usersIndex = client.initIndex(`users_${stage}`)
+    // configure the index (just search by name and screenName)
+    await usersIndex.setSettings({
+      searchableAttributes: ['name', 'screenName'],
+    })
+  }
+
+  return usersIndex
+}
+
+const initTweetsIndex = async (appId, key, stage) => {
+  if (!tweetsIndex) {
+    const client = algoliasearch(appId, key)
+    tweetsIndex = client.initIndex(`tweets_${stage}`)
+    await tweetsIndex.setSettings({
+      searchableAttributes: ['text'],
+      // return the most recent tweet on top in search results
+      customRanking: ['desc(createdAt)'],
+    })
+  }
+
+  return tweetsIndex
+}
+
+module.exports = {
+  initUsersIndex,
+  initTweetsIndex,
+}
+```
+
+​	
+
+```javascript
+// functions/sync-users-to-algolia.js
+
+// (65.2) Create the lambda handlers for Algolia sync
+// Similar to distributeTweets (51.1)
+const {initUsersIndex} = require('../lib/algolia')
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+
+const {STAGE, ALGOLIA_APP_ID, ALGOLIA_WRITE_KEY} = process.env
+
+module.exports.handler = async event => {
+  // initialize the Algolia index
+  const index = await initUsersIndex(ALGOLIA_APP_ID, ALGOLIA_WRITE_KEY, STAGE)
+
+  for (const record of event.Records) {
+    // whenever data is inserted or updated
+    if (record.eventName === 'INSERT' || record.eventName === 'MODIFY') {
+      // get the information of the profile (unmarshall converts the DynamoDB record into a JS object)
+      const profile = DynamoDB.Converter.unmarshall(record.dynamodb.NewImage)
+      // a record in Algolia needs a unique ID, we just make up one
+      profile.objectID = profile.id
+      // save the record to Algolia
+      await index.saveObjects([profile])
+    } else if (record.eventName === 'REMOVE') {
+      // whenever data is removed, delete it from Algolia
+      const profile = DynamoDB.Converter.unmarshall(record.dynamodb.OldImage)
+
+      await index.deleteObjects([profile.id])
+    }
+  }
+}
+```
+
+## 65 Securely handle secrets
+
+* The function knows the name of the parameters.
+
+* At run time, during cold start, the functions acquires params from SSM and decrypts using IAM credentials.
+
+* The function caches the parameters, because we don't want to hit SSM on every invocation. Also, we invalidate the cache ever x minutes because in the event of a API key rotation, we do not want to redeploy all the functions that depend on the secrets.
+
+* The function does not put the parameters back into the env vars, because that's a target for attackers. Instead puts them into the execution context object.
+
+* The function checks against the SSM parameter store every x minutes for new param values. If there are no new values, it uses the cached ones.
+
+* Middy has 2 middleware `secretsManager` and `ssm` that help with this.
+
+![secret](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/l3c9esj8arepjprtehlk.png)
+
+(65.0) Add the 2 api keys in the AWS Systems Manager (SSM) > Parameter Store: `/dev/algolia-app-id` and `/dev/algolia-admin-key`.
+
+![algolia](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/izlatbp0re5qogreqc23.png)
+
+![AWS-SSM](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gx4doyylfvvjblaakfpn.png)
+
+![AWS-SSM2](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/8lxo6cjeap2xd8mehsrn.png)
+
+(65.1) Instead of using plain env vars, get the values from AWS SSM Parameter Store
+
+```yml
+# serverless.yml
+
+functions:
+  ###
+
+  # (64.1) Listen in on the stream of events from tweets & users tables, then sync the updates to Algolia. Similar to distributeTweets (51.1)
+  syncUsersToAlgolia:
+    handler: functions/sync-users-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt UsersTable.StreamArn
+    # [65] Securely handle secrets
+    # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+
+  # (64.1)
+  syncTweetsToAlgolia:
+    handler: functions/sync-tweets-to-algolia.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    # [65] Securely handle secrets
+    # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+```
+
+(65.2) Use Middy SSM middleware to fetch the parameters and cache them. We use `setToContext` to add the env vars to the context object instead  of env vars. `yarn add -D @middy/core @middy/ssm`. (Update sync-tweets-to-algolia and sync-users-to-algolia).
+
+```javascript
+// functions/sync-tweets-to-algolia.js
+// (64.2) Create the lambda handlers for Algolia sync
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const middy = require('@middy/core')
+const ssm = require('@middy/ssm')
+const {initTweetsIndex} = require('../lib/algolia')
+const {TweetTypes} = require('../lib/constants')
+
+const {STAGE} = process.env
+
+// (65.2) Use Middy SSM middleware to fetch the parameters and cache them.
+// We use `setToContext` to add the env vars to the context object instead  of env vars
+module.exports.handler = middy(async (event, context) => {
+  // initialize the Algolia index
+  const index = await initTweetsIndex(
+    context.ALGOLIA_APP_ID,
+    context.ALGOLIA_WRITE_KEY,
+    STAGE,
+  )
+
+  for (const record of event.Records) {
+    if (record.eventName === 'INSERT' || record.eventName === 'MODIFY') {
+      // get the information of the profile (unmarshall converts the DynamoDB record into a JS object)
+      const tweet = DynamoDB.Converter.unmarshall(record.dynamodb.NewImage)
+
+      if (tweet.__typename === TweetTypes.RETWEET) {
+        // if it's a retweet, we don't want to index it
+        continue
+      }
+      // a record in Algolia needs a unique ID, we just make up one
+      tweet.objectID = tweet.id
+      // save the record to Algolia
+      await index.saveObjects([tweet])
+    } else if (record.eventName === 'REMOVE') {
+      // whenever data is removed, delete it from Algolia
+      const tweet = DynamoDB.Converter.unmarshall(record.dynamodb.OldImage)
+
+      if (tweet.__typename === TweetTypes.RETWEET) {
+        // if it's a retweet, we don't want to index it
+        continue
+      }
+
+      await index.deleteObjects([tweet.id])
+    }
+  }
+}).use(
+  ssm({
+    cache: true,
+    cacheExpiryInMillis: 5 * 60 * 1000, // 5 mins
+    names: {
+      ALGOLIA_APP_ID: `/${STAGE}/algolia-app-id`,
+      ALGOLIA_WRITE_KEY: `/${STAGE}/algolia-admin-key`,
+    },
+    setToContext: true,
+    throwOnFailedCall: true,
+  }),
+)
+
+```
+
+```javascript
+// functions/sync-users-to-algolia.js
+// (64.2) Create the lambda handlers for Algolia sync
+// Similar to distributeTweets (51.1)
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const {initUsersIndex} = require('../lib/algolia')
+const middy = require('@middy/core')
+const ssm = require('@middy/ssm')
+
+const {STAGE} = process.env
+
+// (65.2) Use Middy SSM middleware to fetch the parameters and cache them.
+// We use `setToContext` to add the env vars to the context object instead  of env vars
+module.exports.handler = middy(async (event, context) => {
+  // initialize the Algolia index
+  const index = await initUsersIndex(
+    context.ALGOLIA_APP_ID,
+    context.ALGOLIA_WRITE_KEY,
+    STAGE,
+  )
+
+  for (const record of event.Records) {
+    // whenever data is inserted or updated
+    if (record.eventName === 'INSERT' || record.eventName === 'MODIFY') {
+      // get the information of the profile (unmarshall converts the DynamoDB record into a JS object)
+      const profile = DynamoDB.Converter.unmarshall(record.dynamodb.NewImage)
+      // a record in Algolia needs a unique ID, we just make up one
+      profile.objectID = profile.id
+      // save the record to Algolia
+      await index.saveObjects([profile])
+    } else if (record.eventName === 'REMOVE') {
+      // whenever data is removed, delete it from Algolia
+      const profile = DynamoDB.Converter.unmarshall(record.dynamodb.OldImage)
+
+      await index.deleteObjects([profile.id])
+    }
+  }
+}).use(
+  ssm({
+    cache: true,
+    cacheExpiryInMillis: 5 * 60 * 1000, // 5 mins
+    names: {
+      ALGOLIA_APP_ID: `/${STAGE}/algolia-app-id`,
+      ALGOLIA_WRITE_KEY: `/${STAGE}/algolia-admin-key`,
+    },
+    setToContext: true,
+    throwOnFailedCall: true,
+  }),
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

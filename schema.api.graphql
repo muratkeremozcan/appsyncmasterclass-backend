@@ -22,6 +22,13 @@ type Query {
   getLikes(userId: ID!, limit: Int!, nextToken: String): UnhydratedTweetsPage!
   getFollowers(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
   getFollowing(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
+  # [66] Add Search query to GraphQL schema
+  search(
+    query: String!
+    mode: SearchMode!
+    limit: Int!
+    nextToken: String
+  ): SearchResultsPage!
 }
 
 type Mutation {
@@ -34,6 +41,15 @@ type Mutation {
   reply(tweetId: ID!, text: String!): Reply!
   follow(userId: ID!): Boolean!
   unfollow(userId: ID!): Boolean!
+}
+
+# (66) Add Search query to GraphQL schema
+enum SearchMode {
+  Top
+  Latest
+  People
+  Photos
+  Videos
 }
 
 input ProfileInput {
@@ -155,5 +171,12 @@ type UnhydratedTweetsPage {
 
 type ProfilesPage {
   profiles: [IProfile!]
+  nextToken: String
+}
+
+# (66) Add Search query to GraphQL schema
+union SearchResult = MyProfile | OtherProfile | Tweet | Reply
+type SearchResultsPage {
+  results: [SearchResult!]
   nextToken: String
 }

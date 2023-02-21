@@ -80,6 +80,13 @@ mappingTemplates:
     request: simplePipeline.request.vtl
     response: simplePipeline.response.vtl
 
+  # (67.1) Implement search query (using a lambda function)
+  - type: Query
+    field: search
+    dataSource: searchFunction
+    request: false
+    response: false
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -379,6 +386,12 @@ dataSources:
     name: replyFunction # (42.1) Define a data source for the mutation
     config:
       functionName: reply
+
+  # (67.1) add a data source for the search function
+  - type: AWS_LAMBDA
+    name: searchFunction
+    config:
+      functionName: search
 
 # When do we use substitutions in `serverless.appsync-api.yml` ?
 # Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.

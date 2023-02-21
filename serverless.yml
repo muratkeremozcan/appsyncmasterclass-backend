@@ -258,6 +258,18 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 
+  # [67] Implement search query
+  # (67.0) add a lambda for search handler
+  search:
+    handler: functions/search.handler
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-search
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation

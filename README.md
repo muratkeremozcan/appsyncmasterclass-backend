@@ -481,9 +481,7 @@ dataSources:
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
 `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize
 how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs
-to configure the `vtl` files
-[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
-[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
 
 - Take the identity of the user (available in `$context.identity`), take the
   username and turn it into a DDB structure.
@@ -4906,9 +4904,94 @@ module.exports.handler = middy(async (event, context) => {
 
 ```
 
+## 66 Add Search query to GraphQL schema
 
+```
+# schema.api.graphql
 
+type Query {
+  getImageUploadUrl(extension: String, contentType: String): AWSURL!
+   getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
+  getMyProfile: MyProfile!
+  getProfile(screenName: String!): OtherProfile
+  getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
+  getLikes(userId: ID!, limit: Int!, nextToken: String): UnhydratedTweetsPage!
+  getFollowers(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
+  getFollowing(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
+  # (66) Add Search query to GraphQL schema
+  search(
+    query: String!
+    mode: SearchMode!
+    limit: Int!
+    nextToken: String
+  ): SearchResultsPage!
+}
 
+# (66) Add Search query to GraphQL schema
+enum SearchMode {
+  Top
+  Latest
+  People
+  Photos
+  Videos
+}
+
+# (66) Add Search query to GraphQL schema
+union SearchResult = MyProfile | OtherProfile | Tweet | Reply
+type SearchResultsPage {
+  results: [SearchResult!]
+  nextToken: String
+}
+```
+
+## 67 Implement search query
+
+We need a lambda function to query Algolia, as opposed to using vtl.
+
+Like the usual:
+
+* Add the lambda function to `serverless.yml` (67.0)
+* Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource (67.1)
+* Add the JS for the lambda function.  (67.2)
+
+(67.0) Add the lambda function to `serverless.yml`:
+
+```yml
+# serverless.yml
+
+functions:
+  ##
+  search:
+    handler: functions/search.handler
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-search
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+```
+
+(67.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource:
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  ##
+  - type: Query
+    field: search
+    dataSource: searchFunction
+    request: false
+    response: false
+  
+dataSources:
+  ## 
+  - type: AWS_LAMBDA
+    name: searchFunction
+    config:
+      functionName: search
+```
 
 
 

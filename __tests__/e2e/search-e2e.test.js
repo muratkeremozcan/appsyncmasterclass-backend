@@ -29,6 +29,7 @@ registerFragment('iTweetFields', iTweetFragment)
 registerFragment('retweetFields', retweetFragment)
 registerFragment('replyFields', replyFragment)
 
+// works locally, but not in
 describe('Given an authenticated user', () => {
   let userA, userAsProfile, tweetAResp, userAsReply, DynamoDB, userAId
   const text = chance.string({length: 16})
@@ -70,7 +71,7 @@ describe('Given an authenticated user', () => {
         maxTimeout: 1000,
       },
     )
-  })
+  }, 30000)
 
   it('The user can find himself when he searches for his name', async () => {
     await retry(
@@ -99,7 +100,7 @@ describe('Given an authenticated user', () => {
         maxTimeout: 1000,
       },
     )
-  }, 10000)
+  }, 30000)
 
   it('The user can find his tweet when he searches for the text', async () => {
     await retry(async () => {
@@ -124,7 +125,7 @@ describe('Given an authenticated user', () => {
         },
       )
     })
-  })
+  }, 30000)
 
   it('The user can find his reply when he searches for the reply text', async () => {
     await retry(async () => {
@@ -149,7 +150,7 @@ describe('Given an authenticated user', () => {
         },
       )
     })
-  })
+  }, 30000)
 
   afterAll(async () => {
     // clean up DynamoDB and Cognito

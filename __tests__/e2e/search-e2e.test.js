@@ -68,7 +68,7 @@ describe('Given an authenticated user', () => {
       },
       {
         retries: 5,
-        maxTimeout: 1000,
+        maxTimeout: 5000,
       },
     )
   }, 30000)
@@ -97,7 +97,7 @@ describe('Given an authenticated user', () => {
       },
       {
         retries: 5,
-        maxTimeout: 1000,
+        maxTimeout: 5000,
       },
     )
   }, 30000)
@@ -121,7 +121,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 1000,
+          maxTimeout: 5000,
         },
       )
     })
@@ -146,7 +146,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 1000,
+          maxTimeout: 5000,
         },
       )
     })

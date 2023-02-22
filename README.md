@@ -4946,6 +4946,8 @@ type SearchResultsPage {
 
 ## 67 Implement search query
 
+![search-query](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fmo9d06o71kbo6gd8kdb.png)
+
 We need a lambda function to query Algolia, as opposed to using vtl.
 
 Like the usual:
@@ -4992,6 +4994,12 @@ dataSources:
     config:
       functionName: search
 ```
+
+(67.2) Add the JS for the lambda function. Check out functions/search.js.
+
+### 68 E2e test search query
+
+
 
 
 

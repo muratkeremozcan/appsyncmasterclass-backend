@@ -6,7 +6,7 @@ const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
 const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
-const {getTweetById} = require('../lib/tweets')
+const {getTweetById, extractHashTags} = require('../lib/tweets')
 const _ = require('lodash')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
@@ -44,6 +44,7 @@ const handler = async event => {
   // generate a new ulid & timestamp for the tweet
   const id = ulid.ulid()
   const timestamp = new Date().toJSON()
+  const hashTags = extractHashTags(text)
 
   // get from Tweets (we can use a helper)
   const tweet = await getTweetById(tweetId)
@@ -80,6 +81,7 @@ const handler = async event => {
     replies: 0,
     likes: 0,
     retweets: 0,
+    hashTags,
   }
 
   // * Get from Tweets

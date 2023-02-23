@@ -87,6 +87,13 @@ mappingTemplates:
     request: false
     response: false
 
+  # (71.1) Implement getHashTag query (using a lambda function)
+  - type: Query
+    field: getHashTag
+    dataSource: getHashTagFunction
+    request: false
+    response: false
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -392,6 +399,12 @@ dataSources:
     name: searchFunction
     config:
       functionName: search
+
+  # (70.1) add a data source for the getHashTag function
+  - type: AWS_LAMBDA
+    name: getHashTagFunction
+    config:
+      functionName: getHashTag
 
 # When do we use substitutions in `serverless.appsync-api.yml` ?
 # Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.

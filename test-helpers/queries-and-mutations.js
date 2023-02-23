@@ -133,6 +133,48 @@ const getFollowing = `query getFollowing($userId: ID!, $limit: Int!, $nextToken:
         }
       }`
 
+const searchPeople = `query search($query: String!, $limit: Int!, $nextToken: String) {
+        search(query: $query, mode: People, limit: $limit, nextToken: $nextToken) {
+          nextToken
+          results {
+            __typename
+            ... on MyProfile {
+              ... myProfileFields
+            }
+            ... on OtherProfile {
+              ... otherProfileFields
+            }
+            ... on Tweet {
+              ... tweetFields
+            }
+            ... on Reply {
+              ... replyFields
+            }
+          }
+        }
+      }`
+
+const searchTweets = `query search($query: String!, $limit: Int!, $nextToken: String) {
+        search(query: $query, mode: Latest, limit: $limit, nextToken: $nextToken) {
+          nextToken
+          results {
+            __typename
+            ... on MyProfile {
+              ... myProfileFields
+            }
+            ... on OtherProfile {
+              ... otherProfileFields
+            }
+            ... on Tweet {
+              ... tweetFields
+            }
+            ... on Reply {
+              ... replyFields
+            }
+          }
+        }
+      }`
+
 module.exports = {
   getTweets,
   getMyTimeline,
@@ -150,4 +192,6 @@ module.exports = {
   reply,
   getFollowers,
   getFollowing,
+  searchPeople,
+  searchTweets,
 }

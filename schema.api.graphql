@@ -29,6 +29,13 @@ type Query {
     limit: Int!
     nextToken: String
   ): SearchResultsPage!
+  # [69] Add getHashTag query to GraphQL schema
+  getHashTag(
+    hashTag: String!
+    mode: HashTagMode!
+    limit: Int!
+    nextToken: String
+  ): HashTagResultsPage!
 }
 
 type Mutation {
@@ -45,6 +52,15 @@ type Mutation {
 
 # (66) Add Search query to GraphQL schema
 enum SearchMode {
+  Top
+  Latest
+  People
+  Photos
+  Videos
+}
+
+# Add getHashTag query to GraphQL schema
+enum HashTagMode {
   Top
   Latest
   People
@@ -178,5 +194,12 @@ type ProfilesPage {
 union SearchResult = MyProfile | OtherProfile | Tweet | Reply
 type SearchResultsPage {
   results: [SearchResult!]
+  nextToken: String
+}
+
+# (69) Add getHashTag query to GraphQL schema
+union HashTagResult = MyProfile | OtherProfile | Tweet | Reply
+type HashTagResultsPage {
+  results: [HashTagResult!]
   nextToken: String
 }

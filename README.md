@@ -4946,6 +4946,8 @@ type SearchResultsPage {
 
 ## 67 Implement search query
 
+![search-query](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fmo9d06o71kbo6gd8kdb.png)
+
 We need a lambda function to query Algolia, as opposed to using vtl.
 
 Like the usual:
@@ -4993,9 +4995,128 @@ dataSources:
       functionName: search
 ```
 
+(67.2) Add the JS for the lambda function. Check out functions/search.js.
 
+### 68 E2e test search query
 
+State: a user tweets and replies to their tweet
 
+Action: User searches people (by id & name) and searches tweets (by text & replyText)
+
+Check out `__tests__/e2e/search-e2e.test.js`.
+
+## 69 Add getHashTag query to GraphQL schema
+
+```
+# schema.api.graphql
+
+type Query {
+  getImageUploadUrl(extension: String, contentType: String): AWSURL!
+   getMyTimeline(limit: Int!, nextToken: String): UnhydratedTweetsPage!
+  getMyProfile: MyProfile!
+  getProfile(screenName: String!): OtherProfile
+  getTweets(userId: ID!, limit: Int!, nextToken: String): TweetsPage!
+  getLikes(userId: ID!, limit: Int!, nextToken: String): UnhydratedTweetsPage!
+  getFollowers(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
+  getFollowing(userId: ID!, limit: Int!, nextToken: String): ProfilesPage!
+  # (66) Add Search query to GraphQL schema
+  search(
+    query: String!
+    mode: SearchMode!
+    limit: Int!
+    nextToken: String
+  ): SearchResultsPage!
+  # [69] Add getHashTag query to GraphQL schema
+  getHashTag(
+    hashTag: String!
+    mode: HashTagMode!
+    limit: Int!
+    nextToken: String
+  ): HashTagResultsPage!
+}
+
+# (66) Add Search query to GraphQL schema
+enum SearchMode {
+  Top
+  Latest
+  People
+  Photos
+  Videos
+}
+
+# Add getHashTag query to GraphQL schema
+enum HashTagMode {
+  Top
+  Latest
+  People
+  Photos
+  Videos
+}
+
+# (66) Add Search query to GraphQL schema
+union SearchResult = MyProfile | OtherProfile | Tweet | Reply
+type SearchResultsPage {
+  results: [SearchResult!]
+  nextToken: String
+}
+
+# (69) Add getHashTag query to GraphQL schema
+union HashTagResult = MyProfile | OtherProfile | Tweet | Reply
+type HashTagResultsPage {
+  results: [HashTagResult!]
+  nextToken: String
+}
+```
+
+## 70 Implement getHashTag Query
+
+Like the usual:
+
+* Add the lambda function to `serverless.yml` (70.0)
+* Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource (70.1)
+* Add the JS for the lambda function.  (70.2)
+
+(70.0) Add the lambda function to `serverless.yml`:
+
+```yml
+# serverless.yml
+
+functions:
+  ##
+  getHashTag:
+    handler: functions/get-hash-tag.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+```
+
+(70.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource:
+
+```yml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  ##
+  - type: Query
+    field: getHashTag
+    dataSource: getHashTagFunction
+    request: false
+    response: false
+  
+dataSources:
+  ## 
+  - type: AWS_LAMBDA
+    name: getHashTagFunction
+    config:
+      functionName: getHashTag
+```
+
+(70.2) Add the JS for the lambda function. Check out functions/get-hash-tag.js.
+
+### 71 E2e test getHashTag query
 
 
 

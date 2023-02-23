@@ -270,6 +270,18 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 
+  # [70] Implement getHashTag query
+  # (70.0) add a lambda for getHashTag handler
+  getHashTag:
+    handler: functions/get-hash-tag.handler
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getHashTag
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameters
+        Resource:
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
+          - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation

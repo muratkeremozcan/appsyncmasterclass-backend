@@ -29,7 +29,8 @@ registerFragment('iTweetFields', iTweetFragment)
 registerFragment('retweetFields', retweetFragment)
 registerFragment('replyFields', replyFragment)
 
-// works locally, but not in
+// works locally, but not in CI
+// https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4242745755/jobs/7374632472#step:9:580
 describe('Given an authenticated user', () => {
   let userA, userAsProfile, tweetAResp, userAsReply, DynamoDB, userAId
   const text = chance.string({length: 16})

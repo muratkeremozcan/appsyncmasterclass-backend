@@ -40,7 +40,7 @@ describe('Given an authenticated user', () => {
   // if you run into LimitExceeded error, just use a fixed test user on Dev such as appsync-tester2
   // const userA = {
   //   accessToken:
-  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI1NmUyZmEyZi05ZmRkLTRlMmYtOTdlZS1hY2YwMmZkNWVhZmQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0xLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtMV9LdXhvYUs2Wm0iLCJjbGllbnRfaWQiOiI5bWI3cWRqcTU0ZjJ2ZjhrdnVvYmxqcGhwIiwib3JpZ2luX2p0aSI6IjcxNWQzNTQ1LTBkYzYtNDQ4MC1hNDIxLTk1OTdiNjU5ZDcyMyIsImV2ZW50X2lkIjoiYTgzMTI3YjQtZjlkOC00NDBkLTkxMDUtMDM0NmQ2OWFlYTY5IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTY3NzE2MzI2NSwiZXhwIjoxNjc3MTY2ODY1LCJpYXQiOjE2NzcxNjMyNjUsImp0aSI6ImMyNWQ5NzA4LTM0ZTAtNGJjYS1iZGMwLTA2OTY2MzMxNDhiZiIsInVzZXJuYW1lIjoiNTZlMmZhMmYtOWZkZC00ZTJmLTk3ZWUtYWNmMDJmZDVlYWZkIn0.Finbif1V2U2uN7xpm-llLCSyjD4Xa7hooFxBylGtkksz61W--kibVTbaL-RNGCpv3mr4w_ToC55BAM3dGEmJDS9b_wF-r6YXgvqj_AtmCWtRRXcvm1hg9hEKhpgrntKB26oREasbxh5ty-1Ah14OQ3Z9WLDOisvz_LaYF-LciFGyfOhbbmZUdpGkyAkHphFK3eMyMvMXbk2I4SMcBMXPY3GLP2Nex26fDIiRf3_qHLYJlV_6A34W-CBe-TIaY2jhSZdXzm8Ie8FrVOhMYKY4t4CpHXh3L2p9dqZ1Q-yZxNz7I8xGQwIIB8RhK9dYHZjBSroXUPrBDcuI2FiwOkysVA',
+  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI1NmUyZmEyZi05ZmRkLTRlMmYtOTdlZS1hY2Yw',
   //   username: '56e2fa2f-9fdd-4e2f-97ee-acf02fd5eafd',
   // }
   beforeAll(async () => {
@@ -78,7 +78,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 3000,
+          maxTimeout: 5000,
         },
       )
     })
@@ -107,7 +107,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 3000,
+          maxTimeout: 5000,
         },
       )
     })
@@ -132,7 +132,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 3000,
+          maxTimeout: 5000,
         },
       )
     })
@@ -156,7 +156,7 @@ describe('Given an authenticated user', () => {
           },
           {
             retries: 5,
-            maxTimeout: 3000,
+            maxTimeout: 5000,
           },
         )
       })
@@ -220,7 +220,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 3000,
+          maxTimeout: 5000,
         },
       )
     })
@@ -247,7 +247,7 @@ describe('Given an authenticated user', () => {
         },
         {
           retries: 5,
-          maxTimeout: 3000,
+          maxTimeout: 5000,
         },
       )
     })

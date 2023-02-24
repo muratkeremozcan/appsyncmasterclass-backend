@@ -5118,7 +5118,7 @@ dataSources:
 
 ### 71 E2e test getHashTag query
 
-
+Check out `__tests__/e2e/search-hashtag.e2e.test.js`.
 
 
 

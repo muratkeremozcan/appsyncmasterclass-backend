@@ -175,6 +175,48 @@ const searchTweets = `query search($query: String!, $limit: Int!, $nextToken: St
         }
       }`
 
+const getHashTagPeople = `query getHashTag($hashTag: String!, $limit: Int!, $nextToken: String) {
+  getHashTag(hashTag: $hashTag, mode: People, limit: $limit, nextToken: $nextToken) {
+    nextToken
+    results {
+      __typename
+      ... on MyProfile {
+        ... myProfileFields
+      }
+      ... on OtherProfile {
+        ... otherProfileFields
+      }
+      ... on Tweet {
+        ... tweetFields
+      }
+      ... on Reply {
+        ... replyFields
+      }
+    }
+  }
+}`
+
+const getHashTagTweets = `query getHashTag($hashTag: String!, $limit: Int!, $nextToken: String) {
+  getHashTag(hashTag: $hashTag, mode: Latest, limit: $limit, nextToken: $nextToken) {
+    nextToken
+    results {
+      __typename
+      ... on MyProfile {
+        ... myProfileFields
+      }
+      ... on OtherProfile {
+        ... otherProfileFields
+      }
+      ... on Tweet {
+        ... tweetFields
+      }
+      ... on Reply {
+        ... replyFields
+      }
+    }
+  }
+}`
+
 module.exports = {
   getTweets,
   getMyTimeline,
@@ -194,4 +236,6 @@ module.exports = {
   getFollowing,
   searchPeople,
   searchTweets,
+  getHashTagPeople,
+  getHashTagTweets,
 }

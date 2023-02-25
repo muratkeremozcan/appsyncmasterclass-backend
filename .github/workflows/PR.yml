@@ -24,7 +24,8 @@ jobs:
           node-version: '16'
 
       - name: install
-        run: npm ci --force
+        # run: npm install --force
+        run: npm install --force
 
       - name: install AWS CLI
         run: |

@@ -5120,15 +5120,143 @@ dataSources:
 
 Check out `__tests__/e2e/search-hashtag.e2e.test.js`.
 
+## 73 Add subscriptions to GraphQL schema
 
+We do not want clients to poll AppSync for notifications. Instead we want the backend to push data to the clients when there is data to be sent. We implement this with GraphQL subscriptions which allow clients to subscribe to data change events.
 
+![subscriptions](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ymxjt3osgk51t3fq2944.png)
 
+* (73.0) Define a top level subscription type
+* (73.1) add the mutations for the subscription type
+* (73.2) define the subscription types
+*  (73.3) add subscription to appsync.yml file
 
+ ```yml
+ # schema.api.graphql
+ 
+ schema {
+   query: Query
+   mutation: Mutation
+   subscription: Subscription
+ }
+ 
+ type Mutation {
+   ##
+   
+   # (73.1) add the mutations for the subscription type
+   notifyRetweeted(
+     id: ID!
+     userId: ID!
+     tweetId: ID!
+     retweetedBy: ID!
+     retweetId: ID!
+   ): Notification! @aws_iam
+ 
+   notifyLiked(id: ID!, userId: ID!, tweetId: ID!, likedBy: ID!): Notification!
+     @aws_iam
+ 
+   notifyMentioned(
+     id: ID!
+     userId: ID!
+     mentionedBy: ID!
+     mentionedByTweetId: ID!
+   ): Notification! @aws_iam
+ 
+   notifyReplied(
+     id: ID!
+     userId: ID!
+     tweetId: ID!
+     replyTweetId: ID!
+     repliedBy: ID!
+   ): Notification! @aws_iam
+ }
+ # (73.0) Define a top level subscription type
+ type Subscription {
+   onNotified(userId: ID!, type: NotificationType): Notification
+     @aws_subscribe(
+       mutations: [
+         "notifyRetweeted"
+         "notifyLiked"
+         "notifyMentioned"
+         "notifyReplied"
+       ]
+     )
+ }
+ 
+ # (73.2) define the subscription types
+ type Retweeted implements iNotification @aws_iam @aws_cognito_user_pools {
+   id: ID!
+   type: NotificationType!
+   userId: ID!
+   tweetId: ID!
+   retweetedBy: ID!
+   retweetId: ID!
+   createdAt: AWSDateTime!
+ }
+ 
+ type Liked implements iNotification @aws_iam @aws_cognito_user_pools {
+   id: ID!
+   type: NotificationType!
+   userId: ID!
+   tweetId: ID!
+   likedBy: ID!
+   createdAt: AWSDateTime!
+ }
+ 
+ type Mentioned implements iNotification @aws_iam @aws_cognito_user_pools {
+   id: ID!
+   type: NotificationType!
+   userId: ID!
+   mentionedBy: ID!
+   mentionedByTweetId: ID!
+   createdAt: AWSDateTime!
+ }
+ 
+ type Replied implements iNotification @aws_iam @aws_cognito_user_pools {
+   id: ID!
+   type: NotificationType!
+   userId: ID!
+   tweetId: ID!
+   replyTweetId: ID!
+   repliedBy: ID!
+   createdAt: AWSDateTime!
+ }
+ 
+ union Notification @aws_iam @aws_cognito_user_pools =
+     Retweeted
+   | Liked
+   | Mentioned
+   | Replied
+ 
+ interface iNotification @aws_iam @aws_cognito_user_pools {
+   id: ID!
+   type: NotificationType!
+   userId: ID!
+   createdAt: AWSDateTime!
+ }
+ 
+ enum NotificationType {
+   Retweeted
+   Liked
+   Mentioned
+   Replied
+ }
+ 
+ ```
 
+```yml
+# serverless.appsync-api.yml
 
+mappingTemplates:
+  
+  ## SUBSCRIPTIONS 
+  # (73.3) add subscription to appsync.yml file
+  - type: Subscription
+    field: onNotified
+    dataSource: none
+```
 
-
-
+Also add the vtl files `Subscription.onNotified.request.vtl` and `Subscription.onNotified.response.vtl` to mappingTemplates folder.
 
 
 

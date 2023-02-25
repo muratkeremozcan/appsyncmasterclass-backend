@@ -10,7 +10,7 @@ CLI command. Once authorized, you deploy and can run e2e tests.
 ```bash
 # needs node 16
 nvm use
-npm i
+npm i # may need force
 
 # configure credentials (needed for deploy and e2e tests)
 npm run sls -- config credentials --provider aws --key <yourAWSAccessKeyId> --secret <AWSSecretKey> --overwrite
@@ -4695,7 +4695,7 @@ module.exports = {
 }
 ```
 
-​
+
 
 ```javascript
 // functions/sync-users-to-algolia.js

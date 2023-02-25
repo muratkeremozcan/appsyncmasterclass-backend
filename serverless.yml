@@ -30,6 +30,9 @@ custom:
   region: ${opt:region, self:provider.region}
   # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
+  # Define the custom.stage variable with a default value of 'dev'
+  custom:
+    stage: ${self:custom.stage, 'dev'}
   # [1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
   # (10) get API_URL from CognitoUserPoolArn
@@ -282,6 +285,27 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-app-id
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 
+  # [74]  Add subscription for retweets
+  # Use a DDB stream to trigger a lambda function whenever a tweet is retweeted, then send the notifyRetweeted mutation to AppSync API.
+  # (74.0) add a lambda function for notify handler, similar to distributeTweets (51.1)
+  notify:
+    handler: functions/notify.handler
+    environment:
+      GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
+      TWEETS_TABLE: !Ref TweetsTable
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notify
+    iamRoleStatements:
+      - Effect: Allow
+        Action: appsync:GraphQL
+        Resource: !Sub ${GraphQlApi.Arn}/*
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation
@@ -404,6 +428,36 @@ resources:
             Value: ${self:custom.stage}
           - Key: Name
             Value: timelines-table
+
+    # (74.1) Create a DynamoDB table to store notifications
+    NotificationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byUserId
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: notifications-table
 
     # [3] Configure Cognito User Pool
     CognitoUserPool:

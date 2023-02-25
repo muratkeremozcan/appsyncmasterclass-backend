@@ -23,8 +23,9 @@ jobs:
         with:
           node-version: '16'
 
-      - name: npm ci
-        run: npm ci
+      - name: install
+        # run: npm ci --force
+        run: npm ci --force
 
       - name: install AWS CLI
         run: |
@@ -49,17 +50,20 @@ jobs:
         run: |
           npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
           npm run sls -- deploy -s ${{ steps.branch-name.outputs.current_branch }}
+
+      - name: export env vars
+        run: |
+          npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
+          npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
+
       - name:
+          jest tests
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
           # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
           # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
-          jest tests
-        run: |
-          npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
-          npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
-          npm t
+        run: npm t
 
       - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
         run: |

@@ -8,6 +8,8 @@ After so, you may need to renew the authorization config periodically with the
 CLI command. Once authorized, you deploy and can run e2e tests.
 
 ```bash
+# needs node 14
+nvm use
 npm i
 
 # configure credentials (needed for deploy and e2e tests)
@@ -481,7 +483,9 @@ dataSources:
 _(8.2)_ Per convention, add two files at the folder `./mapping-templates`;
 `Query.getMyProfile.request.vtl`, `Query.getMyProfile.response.vtl` . Realize
 how it matches `mappingTemplates:type&field`. Use the info in these two AWS docs
-to configure the `vtl` files [1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html), [2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
+to configure the `vtl` files
+[1](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-dynamodb.html),
+[2](https://docs.aws.amazon.com/appsync/latest/devguide/dynamodb-helpers-in-util-dynamodb.html):
 
 - Take the identity of the user (available in `$context.identity`), take the
   username and turn it into a DDB structure.
@@ -4611,18 +4615,20 @@ functionConfigurations:
 
 ## 64 Sync users and tweets to Algolia
 
-(Signed up at Algolia, created 2 indexes users_dev and tweets_dev, noted down the SearchOnly and Admin api keys)
+(Signed up at Algolia, created 2 indexes users_dev and tweets_dev, noted down
+the SearchOnly and Admin api keys)
 
 We need to get all our DDB data into Algolia so that we can search them.
 
-(65.1) Listen in on the stream of events from tweets & users tables, then sync the updates to Algolia. Similar to `distributeTweets` at (51)
+(65.1) Listen in on the stream of events from tweets & users tables, then sync
+the updates to Algolia. Similar to `distributeTweets` at (51)
 
 ```yml
 # serverless.yml
 
 functions:
   ###
-  # (64.1) Listen in on the stream of events from tweets & users tables, 
+  # (64.1) Listen in on the stream of events from tweets & users tables,
   #then sync the updates to Algolia.
   syncUsersToAlgolia:
     handler: functions/sync-users-to-algolia.handler
@@ -4689,7 +4695,7 @@ module.exports = {
 }
 ```
 
-​	
+​
 
 ```javascript
 // functions/sync-users-to-algolia.js
@@ -4726,21 +4732,29 @@ module.exports.handler = async event => {
 
 ## 65 Securely handle secrets
 
-* The function knows the name of the parameters.
+- The function knows the name of the parameters.
 
-* At run time, during cold start, the functions acquires params from SSM and decrypts using IAM credentials.
+- At run time, during cold start, the functions acquires params from SSM and
+  decrypts using IAM credentials.
 
-* The function caches the parameters, because we don't want to hit SSM on every invocation. Also, we invalidate the cache ever x minutes because in the event of a API key rotation, we do not want to redeploy all the functions that depend on the secrets.
+- The function caches the parameters, because we don't want to hit SSM on every
+  invocation. Also, we invalidate the cache ever x minutes because in the event
+  of a API key rotation, we do not want to redeploy all the functions that
+  depend on the secrets.
 
-* The function does not put the parameters back into the env vars, because that's a target for attackers. Instead puts them into the execution context object.
+- The function does not put the parameters back into the env vars, because
+  that's a target for attackers. Instead puts them into the execution context
+  object.
 
-* The function checks against the SSM parameter store every x minutes for new param values. If there are no new values, it uses the cached ones.
+- The function checks against the SSM parameter store every x minutes for new
+  param values. If there are no new values, it uses the cached ones.
 
-* Middy has 2 middleware `secretsManager` and `ssm` that help with this.
+- Middy has 2 middleware `secretsManager` and `ssm` that help with this.
 
 ![secret](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/l3c9esj8arepjprtehlk.png)
 
-(65.0) Add the 2 api keys in the AWS Systems Manager (SSM) > Parameter Store: `/dev/algolia-app-id` and `/dev/algolia-admin-key`.
+(65.0) Add the 2 api keys in the AWS Systems Manager (SSM) > Parameter Store:
+`/dev/algolia-app-id` and `/dev/algolia-admin-key`.
 
 ![algolia](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/izlatbp0re5qogreqc23.png)
 
@@ -4748,7 +4762,8 @@ module.exports.handler = async event => {
 
 ![AWS-SSM2](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/8lxo6cjeap2xd8mehsrn.png)
 
-(65.1) Instead of using plain env vars, get the values from AWS SSM Parameter Store
+(65.1) Instead of using plain env vars, get the values from AWS SSM Parameter
+Store
 
 ```yml
 # serverless.yml
@@ -4789,7 +4804,10 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 ```
 
-(65.2) Use Middy SSM middleware to fetch the parameters and cache them. We use `setToContext` to add the env vars to the context object instead  of env vars. `yarn add -D @middy/core @middy/ssm`. (Update sync-tweets-to-algolia and sync-users-to-algolia).
+(65.2) Use Middy SSM middleware to fetch the parameters and cache them. We use
+`setToContext` to add the env vars to the context object instead of env vars.
+`yarn add -D @middy/core @middy/ssm`. (Update sync-tweets-to-algolia and
+sync-users-to-algolia).
 
 ```javascript
 // functions/sync-tweets-to-algolia.js
@@ -4849,7 +4867,6 @@ module.exports.handler = middy(async (event, context) => {
     throwOnFailedCall: true,
   }),
 )
-
 ```
 
 ```javascript
@@ -4901,7 +4918,6 @@ module.exports.handler = middy(async (event, context) => {
     throwOnFailedCall: true,
   }),
 )
-
 ```
 
 ## 66 Add Search query to GraphQL schema
@@ -4952,9 +4968,10 @@ We need a lambda function to query Algolia, as opposed to using vtl.
 
 Like the usual:
 
-* Add the lambda function to `serverless.yml` (67.0)
-* Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource (67.1)
-* Add the JS for the lambda function.  (67.2)
+- Add the lambda function to `serverless.yml` (67.0)
+- Add the mapping template (GQL query) to `serverless.appsync.yml` and the
+  dataSource (67.1)
+- Add the JS for the lambda function. (67.2)
 
 (67.0) Add the lambda function to `serverless.yml`:
 
@@ -4974,7 +4991,8 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 ```
 
-(67.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource:
+(67.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the
+dataSource:
 
 ```yml
 # serverless.appsync-api.yml
@@ -4986,9 +5004,9 @@ mappingTemplates:
     dataSource: searchFunction
     request: false
     response: false
-  
+
 dataSources:
-  ## 
+  ##
   - type: AWS_LAMBDA
     name: searchFunction
     config:
@@ -5001,7 +5019,8 @@ dataSources:
 
 State: a user tweets and replies to their tweet
 
-Action: User searches people (by id & name) and searches tweets (by text & replyText)
+Action: User searches people (by id & name) and searches tweets (by text &
+replyText)
 
 Check out `__tests__/e2e/search-e2e.test.js`.
 
@@ -5072,9 +5091,10 @@ type HashTagResultsPage {
 
 Like the usual:
 
-* Add the lambda function to `serverless.yml` (70.0)
-* Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource (70.1)
-* Add the JS for the lambda function.  (70.2)
+- Add the lambda function to `serverless.yml` (70.0)
+- Add the mapping template (GQL query) to `serverless.appsync.yml` and the
+  dataSource (70.1)
+- Add the JS for the lambda function. (70.2)
 
 (70.0) Add the lambda function to `serverless.yml`:
 
@@ -5093,7 +5113,8 @@ functions:
           - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${self:custom.stage}/algolia-admin-key
 ```
 
-(70.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource:
+(70.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the
+dataSource:
 
 ```yml
 # serverless.appsync-api.yml
@@ -5105,9 +5126,9 @@ mappingTemplates:
     dataSource: getHashTagFunction
     request: false
     response: false
-  
+
 dataSources:
-  ## 
+  ##
   - type: AWS_LAMBDA
     name: getHashTagFunction
     config:
@@ -5122,143 +5143,228 @@ Check out `__tests__/e2e/search-hashtag.e2e.test.js`.
 
 ## 73 Add subscriptions to GraphQL schema
 
-We do not want clients to poll AppSync for notifications. Instead we want the backend to push data to the clients when there is data to be sent. We implement this with GraphQL subscriptions which allow clients to subscribe to data change events.
+We do not want clients to poll AppSync for notifications. Instead we want the
+backend to push data to the clients when there is data to be sent. We implement
+this with GraphQL subscriptions which allow clients to subscribe to data change
+events.
 
 ![subscriptions](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ymxjt3osgk51t3fq2944.png)
 
-* (73.0) Define a top level subscription type
-* (73.1) add the mutations for the subscription type
-* (73.2) define the subscription types
-*  (73.3) add subscription to appsync.yml file
+- (73.0) Define a top level subscription type
+- (73.1) add the mutations for the subscription type
+- (73.2) define the subscription types
 
- ```yml
- # schema.api.graphql
- 
- schema {
-   query: Query
-   mutation: Mutation
-   subscription: Subscription
- }
- 
- type Mutation {
-   ##
-   
-   # (73.1) add the mutations for the subscription type
-   notifyRetweeted(
-     id: ID!
-     userId: ID!
-     tweetId: ID!
-     retweetedBy: ID!
-     retweetId: ID!
-   ): Notification! @aws_iam
- 
-   notifyLiked(id: ID!, userId: ID!, tweetId: ID!, likedBy: ID!): Notification!
-     @aws_iam
- 
-   notifyMentioned(
-     id: ID!
-     userId: ID!
-     mentionedBy: ID!
-     mentionedByTweetId: ID!
-   ): Notification! @aws_iam
- 
-   notifyReplied(
-     id: ID!
-     userId: ID!
-     tweetId: ID!
-     replyTweetId: ID!
-     repliedBy: ID!
-   ): Notification! @aws_iam
- }
- # (73.0) Define a top level subscription type
- type Subscription {
-   onNotified(userId: ID!, type: NotificationType): Notification
-     @aws_subscribe(
-       mutations: [
-         "notifyRetweeted"
-         "notifyLiked"
-         "notifyMentioned"
-         "notifyReplied"
-       ]
-     )
- }
- 
- # (73.2) define the subscription types
- type Retweeted implements iNotification @aws_iam @aws_cognito_user_pools {
-   id: ID!
-   type: NotificationType!
-   userId: ID!
-   tweetId: ID!
-   retweetedBy: ID!
-   retweetId: ID!
-   createdAt: AWSDateTime!
- }
- 
- type Liked implements iNotification @aws_iam @aws_cognito_user_pools {
-   id: ID!
-   type: NotificationType!
-   userId: ID!
-   tweetId: ID!
-   likedBy: ID!
-   createdAt: AWSDateTime!
- }
- 
- type Mentioned implements iNotification @aws_iam @aws_cognito_user_pools {
-   id: ID!
-   type: NotificationType!
-   userId: ID!
-   mentionedBy: ID!
-   mentionedByTweetId: ID!
-   createdAt: AWSDateTime!
- }
- 
- type Replied implements iNotification @aws_iam @aws_cognito_user_pools {
-   id: ID!
-   type: NotificationType!
-   userId: ID!
-   tweetId: ID!
-   replyTweetId: ID!
-   repliedBy: ID!
-   createdAt: AWSDateTime!
- }
- 
- union Notification @aws_iam @aws_cognito_user_pools =
-     Retweeted
-   | Liked
-   | Mentioned
-   | Replied
- 
- interface iNotification @aws_iam @aws_cognito_user_pools {
-   id: ID!
-   type: NotificationType!
-   userId: ID!
-   createdAt: AWSDateTime!
- }
- 
- enum NotificationType {
-   Retweeted
-   Liked
-   Mentioned
-   Replied
- }
- 
- ```
+```yml
+# schema.api.graphql
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type Mutation {
+  ##
+
+  # (73.1) add the mutations for the subscription type
+  notifyRetweeted(
+    id: ID!
+    userId: ID!
+    tweetId: ID!
+    retweetedBy: ID!
+    retweetId: ID!
+  ): Notification! @aws_iam
+
+  notifyLiked(id: ID!, userId: ID!, tweetId: ID!, likedBy: ID!): Notification!
+    @aws_iam
+
+  notifyMentioned(
+    id: ID!
+    userId: ID!
+    mentionedBy: ID!
+    mentionedByTweetId: ID!
+  ): Notification! @aws_iam
+
+  notifyReplied(
+    id: ID!
+    userId: ID!
+    tweetId: ID!
+    replyTweetId: ID!
+    repliedBy: ID!
+  ): Notification! @aws_iam
+}
+# (73.0) Define a top level subscription type
+type Subscription {
+  onNotified(userId: ID!, type: NotificationType): Notification
+    @aws_subscribe(
+      mutations: [
+        "notifyRetweeted"
+        "notifyLiked"
+        "notifyMentioned"
+        "notifyReplied"
+      ]
+    )
+}
+
+# (73.2) define the subscription types
+type Retweeted implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  tweetId: ID!
+  retweetedBy: ID!
+  retweetId: ID!
+  createdAt: AWSDateTime!
+}
+
+type Liked implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  tweetId: ID!
+  likedBy: ID!
+  createdAt: AWSDateTime!
+}
+
+type Mentioned implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  mentionedBy: ID!
+  mentionedByTweetId: ID!
+  createdAt: AWSDateTime!
+}
+
+type Replied implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  tweetId: ID!
+  replyTweetId: ID!
+  repliedBy: ID!
+  createdAt: AWSDateTime!
+}
+
+union Notification @aws_iam @aws_cognito_user_pools =
+    Retweeted
+  | Liked
+  | Mentioned
+  | Replied
+
+interface iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  createdAt: AWSDateTime!
+}
+
+enum NotificationType {
+  Retweeted
+  Liked
+  Mentioned
+  Replied
+}
+
+```
 
 ```yml
 # serverless.appsync-api.yml
 
 mappingTemplates:
-  
-  ## SUBSCRIPTIONS 
+  ## SUBSCRIPTIONS
   # (73.3) add subscription to appsync.yml file
   - type: Subscription
     field: onNotified
     dataSource: none
 ```
 
-Also add the vtl files `Subscription.onNotified.request.vtl` and `Subscription.onNotified.response.vtl` to mappingTemplates folder.
+Also add the vtl files `Subscription.onNotified.request.vtl` and
+`Subscription.onNotified.response.vtl` to mappingTemplates folder.
 
+## 74 Add subscription for retweets
 
+Use a DDB stream to trigger a lambda function whenever a tweet is retweeted,
+then send the notifyRetweeted mutation to AppSync API.
 
+Like the usual:
 
+- (74.0) Add the lambda function to serverless.yml, this one is similar to
+  distributeTweets.
+  - Additionally for this one reate a DynamoDB table to store notifications
+- (74.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and
+  the dataSource
+- (74.2) Add the JS for the lambda function.
 
+```yaml
+# serverless.yml
+
+functions:
+  notify:
+    handler: functions/notify.handler
+    environment:
+      GRAPHQL_API_URL: !GetAtt AppsyncmasterclassGraphQlApi.GraphQLUrl
+      TWEETS_TABLE: !Ref TweetsTable
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt TweetsTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notify
+    iamRoleStatements:
+      - Effect: Allow
+        Action: appsync:GraphQL
+        Resource: !Sub ${AppsyncmasterclassGraphQlApi.Arn}/*
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+
+resources:
+  NotificationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: byUserId
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: ${self:custom.stage}
+        - Key: Name
+          Value: notifications-table
+```
+
+(74.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the
+dataSource
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  - type: Mutation
+    field: notifyRetweeted
+    dataSource: notificationsTable
+
+dataSources:
+  - type: AMAZON_DYNAMODB
+    name: notificationsTable
+    config:
+      tableName: !Ref NotificationsTable
+```
+
+(74.2) Add the JS for the lambda function (similar to distribute-tweets)
+`functions/notify.js`.

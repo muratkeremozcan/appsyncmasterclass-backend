@@ -23,8 +23,8 @@ jobs:
         with:
           node-version: '16'
 
-      - name: npm ci
-        run: npm ci
+      - name: install
+        run: yarn i --frozen-lockfile
 
       - name: install AWS CLI
         run: |
@@ -47,8 +47,8 @@ jobs:
           # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
-          npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
-          npm run sls -- deploy -s ${{ steps.branch-name.outputs.current_branch }}
+          yarn sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
+          yarn sls -- deploy -s ${{ steps.branch-name.outputs.current_branch }}
       - name:
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
@@ -57,10 +57,10 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
           jest tests
         run: |
-          npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
-          npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
-          npm t
+          yarn sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
+          yarn sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
+          yarn test
 
       - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
         run: |
-          npm run sls -- remove -s ${{ steps.branch-name.outputs.current_branch }}
+          yarn sls -- remove -s ${{ steps.branch-name.outputs.current_branch }}

@@ -159,6 +159,11 @@ mappingTemplates:
     field: unfollow
     dataSource: unfollowMutation
 
+  # (74.2) add a mapping template for the notifyRetweeted mutation
+  - type: Mutation
+    field: notifyRetweeted
+    dataSource: notificationsTable
+
   ## NESTED RESOLVERS
 
   # When do we need nested resolvers?
@@ -365,6 +370,12 @@ dataSources:
         - Effect: Allow
           Action: dynamodb:UpdateItem
           Resource: !GetAtt UsersTable.Arn
+
+  #
+  - type: AMAZON_DYNAMODB
+    name: notificationsTable
+    config:
+      tableName: !Ref NotificationsTable
 
   ## LAMBDA data sources
 

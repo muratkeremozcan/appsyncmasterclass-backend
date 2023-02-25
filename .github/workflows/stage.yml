@@ -24,8 +24,8 @@ jobs:
         with:
           node-version: '16'
 
-      - name: npm ci
-        run: npm ci
+      - name: install
+        run: yarn i --frozen-lockfile
 
       - name: install AWS CLI
         run: |
@@ -44,8 +44,8 @@ jobs:
           # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: |
-          npm run sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
-          npm run sls -- deploy -s stage
+          yarn sls -- config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }} --overwrite     
+          yarn sls -- deploy -s stage
       - name:
           # if you want to use the ci role, move this to below
           # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
@@ -54,6 +54,6 @@ jobs:
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
           jest tests
         run: |
-          npm run export:env-stage
+          yarn export:env-stage
 
-          npm t
+          yarn test

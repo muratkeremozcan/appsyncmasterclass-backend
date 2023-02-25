@@ -25,7 +25,7 @@ jobs:
           node-version: '16'
 
       - name: install
-        run: yarn i --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: install AWS CLI
         run: |

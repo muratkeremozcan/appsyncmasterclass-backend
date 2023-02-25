@@ -49,11 +49,13 @@
     "aws-appsync": "4.0.3",
     "bufferutil": "^4.0.7",
     "chance": "1.1.9",
+    "encoding": "^0.1.13",
     "graphql": "15.5.0",
     "graphql-tag": "2.11.0",
     "isomorphic-fetch": "3.0.0",
     "lodash": "4.17.20",
     "ulid": "2.3.0",
+    "utf-8-validate": "^5.0.10",
     "uuid": "8.3.2"
   }
 }

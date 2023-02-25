@@ -30,6 +30,9 @@ custom:
   region: ${opt:region, self:provider.region}
   # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
+  # Define the custom.stage variable with a default value of 'dev'
+  custom:
+    stage: ${self:custom.stage, 'dev'}
   # [1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
   # (10) get API_URL from CognitoUserPoolArn
@@ -51,7 +54,7 @@ functions:
     # note: we don't want a global iamRoleStatements: under provider: , we just want permission for this function
     # (4.2) we use npm i -D serverless-iam-roles-per-function to do this
     # auto generated role name for function too long, so we use iamRoleStatementsName to override it
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-confirmUserSignup
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-confirmUserSignup
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:PutItem # in DDB, Put means rest POST, and Update means rest PUT
@@ -64,7 +67,7 @@ functions:
     environment:
       BUCKET_NAME: !Ref AssetsBucket
     # auto generated role name for function too long, so we use iamRoleStatementsName to override it
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-getImageUploadUrl
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getImageUploadUrl
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -183,7 +186,7 @@ functions:
           type: dynamodb
           arn: !GetAtt TweetsTable.StreamArn
     # auto generated role name for function too long, so we use iamRoleStatementsName to override it
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-distributeTweets
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-distributeTweets
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -209,7 +212,7 @@ functions:
           arn: !GetAtt RelationshipsTable.StreamArn
     # (56) workaround to 64 character limit
     # auto generated role name for function too long, so we use iamRoleStatementsName to override it
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-distributeTweetsToFollower
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-distributeTweetsToFollower
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:Query
@@ -231,7 +234,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt UsersTable.StreamArn
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncUsersToAlgolia
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncUsersToAlgolia
     # [65] Securely handle secrets
     # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
     iamRoleStatements:
@@ -248,7 +251,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt TweetsTable.StreamArn
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncTweetsToAlgolia
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-syncTweetsToAlgolia
     # [65] Securely handle secrets
     # (65.1) instead of using plain env vars, get the values from AWS SSM Parameter Store
     iamRoleStatements:
@@ -262,7 +265,7 @@ functions:
   # (67.0) add a lambda for search handler
   search:
     handler: functions/search.handler
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-search
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-search
     iamRoleStatements:
       - Effect: Allow
         Action: ssm:GetParameters
@@ -274,7 +277,7 @@ functions:
   # (70.0) add a lambda for getHashTag handler
   getHashTag:
     handler: functions/get-hash-tag.handler
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-getHashTag
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getHashTag
     iamRoleStatements:
       - Effect: Allow
         Action: ssm:GetParameters
@@ -294,7 +297,7 @@ functions:
       - stream:
           type: dynamodb
           arn: !GetAtt TweetsTable.StreamArn
-    # iamRoleStatementsName: ${self:service}-${self:custom.stage}-notify
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notify
     iamRoleStatements:
       - Effect: Allow
         Action: appsync:GraphQL
@@ -630,5 +633,3 @@ resources:
     # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
     AwsRegion:
       Value: ${self:custom.region}
-
-variablesResolutionMode: 20210326

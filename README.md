@@ -1007,12 +1007,12 @@ Other notes:
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
-const ulid = require('ulid')
+const {ulid} = require('ulid')
 
 const handler = async event => {
   // (15.2.1) construct the key for S3 putObject request
   // use ulid to create a randomized, but sorted id (chance is not sorted when we create multiple ids)
-  const id = ulid.ulid()
+  const id = ulid()
   // construct a S3 key using the event.identity.username (got it from Lumigo)
   let key = `${event.identity.username}/${id}`
   // get the extension from graphQL schema : getImageUploadUrl(extension: String, contentType: String): AWSURL!
@@ -1300,7 +1300,7 @@ table.
 // write to Tweets and Timelines tables, and update Users table
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const ulid = require('ulid')
+const {ulid} = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
@@ -1312,7 +1312,7 @@ const handler = async event => {
   // we can get the username from event.identity.username (Lumigo and before in (13.2.1) )
   const {username} = event.identity
   // generate a new ulid & timestamp for the tweet
-  const id = ulid.ulid()
+  const id = ulid()
   const timestamp = new Date().toJSON()
 
   const newTweet = {
@@ -2903,7 +2903,7 @@ _(35.4)_ Create the lambda function for retweet. Similar to (17.2.2).
 // Get from Tweets, write to Tweets, Timelines, Retweets, Update Tweets and Users
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const ulid = require('ulid')
+const {ulid} = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE, RETWEETS_TABLE} = process.env
@@ -2915,7 +2915,7 @@ const handler = async event => {
   // we can get the username from event.identity.username
   const {username} = event.identity
   // generate a new ulid & timestamp for the tweet
-  const id = ulid.ulid()
+  const id = ulid()
   const timestamp = new Date().toJSON()
 
   // get from Tweets
@@ -3478,7 +3478,7 @@ functions:
 // * Write to Tweets, Timelines
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const ulid = require('ulid')
+const {ulid} = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 const {getTweetById} = require('../lib/tweets')
 const _ = require('lodash')
@@ -3516,7 +3516,7 @@ const handler = async event => {
   // we need it because reply is like a new tweet, so we need to know who created it
   const {username} = event.identity
   // generate a new ulid & timestamp for the tweet
-  const id = ulid.ulid()
+  const id = ulid()
   const timestamp = new Date().toJSON()
 
   // get from Tweets (we can use a helper)
@@ -4694,8 +4694,6 @@ module.exports = {
   initTweetsIndex,
 }
 ```
-
-
 
 ```javascript
 // functions/sync-users-to-algolia.js

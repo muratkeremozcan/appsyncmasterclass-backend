@@ -288,7 +288,7 @@ functions:
   notify:
     handler: functions/notify.handler
     environment:
-      GRAPHQL_API_URL: !GetAtt AppsyncmasterclassGraphQlApi.GraphQLUrl
+      GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
       TWEETS_TABLE: !Ref TweetsTable
     events:
       - stream:
@@ -298,7 +298,7 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action: appsync:GraphQL
-        Resource: !Sub ${AppsyncmasterclassGraphQlApi.Arn}/*
+        Resource: !Sub ${GraphQlApi.Arn}/*
       - Effect: Allow
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn

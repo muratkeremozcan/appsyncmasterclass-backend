@@ -4690,7 +4690,7 @@ module.exports = {
 }
 ```
 
-​
+
 
 ```javascript
 // functions/sync-users-to-algolia.js
@@ -5350,5 +5350,4 @@ dataSources:
       tableName: !Ref NotificationsTable
 ```
 
-(74.2) Add the JS for the lambda function (similar to distribute-tweets)
-`functions/notify.js`.
+(74.2) Add the JS for the lambda function (similar to distribute-tweets) `functions/notify.js`.

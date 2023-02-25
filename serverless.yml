@@ -28,7 +28,7 @@ package:
 custom:
   # (6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
   region: ${opt:region, self:provider.region}
-  # (4.0) Environment is dev, unless we pass in a stage override; yarn sls -- -s prod
+  # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
   # [1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
@@ -331,7 +331,7 @@ resources:
           StreamViewType: NEW_AND_OLD_IMAGES
         Tags:
           - Key: Environment
-            # (4.0) Environment is dev, unless we pass in a stage override; yarn sls -- -s prod
+            # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
             # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
@@ -386,7 +386,7 @@ resources:
           StreamViewType: NEW_AND_OLD_IMAGES
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
-            # same as (4.0) Environment is dev, unless we pass in a stage override; yarn sls -- -s prod
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
           # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name
@@ -481,7 +481,7 @@ resources:
             Mutable: true
         # (4.3) Configure Cognito to call the lambda trigger function when a new user is registered.
         # We can't use the lambda function's name, because that's something local to serverless framework
-        # instead we figure out the logical id sls generates for the lambda function, by using yarn sls -- package
+        # instead we figure out the logical id sls generates for the lambda function, by using npm run sls -- package
         # which generates cloudformation template under .serverless folder. There look for ConfirmUserSignupLambdaFunction
         LambdaConfig:
           PostConfirmation: !GetAtt ConfirmUserSignupLambdaFunction.Arn
@@ -547,7 +547,7 @@ resources:
             AttributeType: S
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
-            # same as (4.0) Environment is dev, unless we pass in a stage override; yarn sls -- -s prod
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
             Value: ${self:custom.stage}
           # a helper tag to aid in monitoring the individual cost of dynamodb tables
           - Key: Name

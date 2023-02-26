@@ -14,6 +14,10 @@ mappingTemplatesLocation: mapping-templates
 
 mappingTemplates:
   # Yan recommends to organize the mapping templates by Query, Mutation and Nested resolvers.
+
+  ## SUBSCRIPTIONS
+  # [76] Add subscription for mentions
+  # (76.0) add a mapping template for the onNotified subscription
   - type: Subscription
     field: onNotified
     dataSource: none
@@ -170,6 +174,16 @@ mappingTemplates:
   # (75.2) add a mapping template for the notifyLiked mutation
   - type: Mutation
     field: notifyLiked
+    dataSource: notificationsTable
+
+  # (76.1) add a mapping template for the notifyMentioned mutation
+  - type: Mutation
+    field: notifyMentioned
+    dataSource: notificationsTable
+
+  # (77.0) add a mapping template for the notifyReplied mutation
+  - type: Mutation
+    field: notifyReplied
     dataSource: notificationsTable
 
   ## NESTED RESOLVERS

@@ -312,7 +312,7 @@ functions:
   notifyLiked:
     handler: functions/notify-liked.handler
     environment:
-      GRAPHQL_API_URL: !GetAtt AppsyncmasterclassGraphQlApi.GraphQLUrl
+      GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
       TWEETS_TABLE: !Ref TweetsTable
     events:
       - stream:

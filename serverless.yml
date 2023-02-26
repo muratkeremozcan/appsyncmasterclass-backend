@@ -322,7 +322,7 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action: appsync:GraphQL
-        Resource: !Sub ${AppsyncmasterclassGraphQlApi.Arn}/*
+        Resource: !Sub ${GraphQlApi.Arn}/*
       - Effect: Allow
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn

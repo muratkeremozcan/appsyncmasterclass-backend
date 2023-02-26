@@ -306,6 +306,27 @@ functions:
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn
 
+  # [75] Add subscription for likes
+  # Use a DDB stream to trigger a lambda function whenever a tweet is liked, then send the notifyLiked mutation to AppSync API.
+  # (75.0) add a lambda function for liked handler, similar to distributeTweets (74.0)
+  notifyLiked:
+    handler: functions/notify-liked.handler
+    environment:
+      GRAPHQL_API_URL: !GetAtt AppsyncmasterclassGraphQlApi.GraphQLUrl
+      TWEETS_TABLE: !Ref TweetsTable
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt LikesTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notifyLiked
+    iamRoleStatements:
+      - Effect: Allow
+        Action: appsync:GraphQL
+        Resource: !Sub ${AppsyncmasterclassGraphQlApi.Arn}/*
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+
 resources:
   Resources:
     # [4] Save user profile on PostConfirmation
@@ -548,6 +569,8 @@ resources:
             AttributeType: S
           - AttributeName: tweetId
             AttributeType: S
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
         Tags: # so that we can track the cost in AWS billing
           - Key: Environment
             # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod

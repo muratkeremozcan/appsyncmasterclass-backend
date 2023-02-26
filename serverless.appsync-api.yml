@@ -159,9 +159,14 @@ mappingTemplates:
     field: unfollow
     dataSource: unfollowMutation
 
-  # (74.2) add a mapping template for the notifyRetweeted mutation
+  # (74.1) add a mapping template for the notifyRetweeted mutation
   - type: Mutation
     field: notifyRetweeted
+    dataSource: notificationsTable
+
+  # (75.2) add a mapping template for the notifyLiked mutation
+  - type: Mutation
+    field: notifyLiked
     dataSource: notificationsTable
 
   ## NESTED RESOLVERS

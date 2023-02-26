@@ -1007,7 +1007,7 @@ Other notes:
 const S3 = require('aws-sdk/clients/s3')
 // when creating urls for the user to upload content, use S3 Transfer Acceleration
 const s3 = new S3({useAccelerateEndpoint: true})
-const {ulid} = require('ulid')
+const ulid = require('ulid')
 
 const handler = async event => {
   // (15.2.1) construct the key for S3 putObject request
@@ -1300,7 +1300,7 @@ table.
 // write to Tweets and Timelines tables, and update Users table
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const {ulid} = require('ulid')
+const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
@@ -2903,7 +2903,7 @@ _(35.4)_ Create the lambda function for retweet. Similar to (17.2.2).
 // Get from Tweets, write to Tweets, Timelines, Retweets, Update Tweets and Users
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const {ulid} = require('ulid')
+const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE, RETWEETS_TABLE} = process.env
@@ -3478,7 +3478,7 @@ functions:
 // * Write to Tweets, Timelines
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
-const {ulid} = require('ulid')
+const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 const {getTweetById} = require('../lib/tweets')
 const _ = require('lodash')
@@ -5286,11 +5286,9 @@ then send the notifyRetweeted mutation to AppSync API.
 
 Like the usual:
 
-- (74.0) Add the lambda function to serverless.yml, this one is similar to
-  distributeTweets.
+- (74.0) Add the lambda function to serverless.yml, this one is similar to distributeTweets.
   - Additionally for this one reate a DynamoDB table to store notifications
-- (74.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and
-  the dataSource
+- (74.1) Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSource
 - (74.2) Add the JS for the lambda function.
 
 ```yaml
@@ -5366,3 +5364,88 @@ dataSources:
 
 (74.2) Add the JS for the lambda function (similar to distribute-tweets)
 `functions/notify.js`.
+
+## 75 Add subscription for likes
+
+Use a DDB stream to trigger a lambda function whenever a tweet is liked, then send the notifyLiked mutation to AppSync API.
+
+Like the usual:
+
+- (75.0) Add the lambda function to serverless.yml.
+- (75.1) Add the mapping template (GQL query) to `serverless.appsync.yml`,  the dataSource `NotificationsTable` already exists from (74.1)
+- (75.2) Add the JS for the lambda function.
+
+```yaml
+# serverless.yml
+
+functions:
+  notifyLiked:
+    handler: functions/notify-liked.handler
+    environment:
+      GRAPHQL_API_URL: !GetAtt AppsyncmasterclassGraphQlApi.GraphQLUrl
+      TWEETS_TABLE: !Ref TweetsTable
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt LikesTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notifyLiked
+    iamRoleStatements:
+      - Effect: Allow
+        Action: appsync:GraphQL
+        Resource: !Sub ${AppsyncmasterclassGraphQlApi.Arn}/*
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+```
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  - type: Mutation
+    field: notifyLiked
+    dataSource: notificationsTable
+
+# the dataSource already exists from (74.1)
+```
+
+Check out `functions/notify-liked.js`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

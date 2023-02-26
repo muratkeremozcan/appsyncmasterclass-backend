@@ -14,8 +14,11 @@ mappingTemplatesLocation: mapping-templates
 
 mappingTemplates:
   # Yan recommends to organize the mapping templates by Query, Mutation and Nested resolvers.
-  ## QUERIES
+  - type: Subscription
+    field: onNotified
+    dataSource: none
 
+  ## QUERIES
   # [8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
   - type: Query
     field: getMyProfile

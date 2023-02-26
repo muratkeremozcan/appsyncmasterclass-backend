@@ -293,6 +293,7 @@ functions:
     environment:
       GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
       TWEETS_TABLE: !Ref TweetsTable
+      USERS_TABLE: !Ref UsersTable
     events:
       - stream:
           type: dynamodb
@@ -305,6 +306,9 @@ functions:
       - Effect: Allow
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:Query
+        Resource: !Sub ${UsersTable.Arn}/index/byScreenName
 
   # [75] Add subscription for likes
   # Use a DDB stream to trigger a lambda function whenever a tweet is liked, then send the notifyLiked mutation to AppSync API.

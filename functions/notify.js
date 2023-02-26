@@ -1,10 +1,13 @@
 // (74.2) create the lambda function (similar to distribute-tweets)
+
+const _ = require('lodash')
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const {TweetTypes} = require('../lib/constants')
 const graphql = require('graphql-tag')
 const {mutate} = require('../lib/graphql')
 const ulid = require('ulid')
-const {getTweetById} = require('../lib/tweets')
+const {getTweetById, extractMentions} = require('../lib/tweets')
+const {getUserByScreenName} = require('../lib/users')
 
 // iterate over all tweets in the database
 // if it's a retweet, broadcast a notification to subscribers
@@ -17,6 +20,13 @@ module.exports.handler = async event => {
         case TweetTypes.RETWEET:
           await notifyRetweet(tweet)
           break
+      }
+
+      if (tweet.text) {
+        const mentions = extractMentions(tweet.text)
+        if (!_.isEmpty(mentions)) {
+          await notifyMentioned(mentions, tweet)
+        }
       }
     }
   }
@@ -61,4 +71,49 @@ async function notifyRetweet(tweet) {
       retweetedBy: tweet.creator,
     },
   )
+}
+
+async function notifyMentioned(screenNames, tweet) {
+  const promises = screenNames.map(async screenName => {
+    const user = await getUserByScreenName(screenName.replace('@', ''))
+    if (!user) {
+      return
+    }
+
+    await mutate(
+      graphql`
+        mutation notifyMentioned(
+          $id: ID!
+          $userId: ID!
+          $mentionedBy: ID!
+          $mentionedByTweetId: ID!
+        ) {
+          notifyMentioned(
+            id: $id
+            userId: $userId
+            mentionedBy: $mentionedBy
+            mentionedByTweetId: $mentionedByTweetId
+          ) {
+            __typename
+            ... on Mentioned {
+              id
+              type
+              userId
+              mentionedBy
+              mentionedByTweetId
+              createdAt
+            }
+          }
+        }
+      `,
+      {
+        id: ulid.ulid(),
+        userId: user.id,
+        mentionedBy: tweet.creator,
+        mentionedByTweetId: tweet.id,
+      },
+    )
+  })
+
+  await Promise.all(promises)
 }

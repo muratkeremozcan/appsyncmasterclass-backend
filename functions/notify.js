@@ -1,5 +1,6 @@
 // (74.2) create the lambda function (similar to distribute-tweets)
-
+// iterate over all tweets in the database
+// if it's a retweet, broadcast a notification to subscribers
 const _ = require('lodash')
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const {TweetTypes} = require('../lib/constants')
@@ -9,8 +10,6 @@ const ulid = require('ulid')
 const {getTweetById, extractMentions} = require('../lib/tweets')
 const {getUserByScreenName} = require('../lib/users')
 
-// iterate over all tweets in the database
-// if it's a retweet, broadcast a notification to subscribers
 module.exports.handler = async event => {
   for (const record of event.Records) {
     if (record.eventName === 'INSERT') {
@@ -19,6 +18,9 @@ module.exports.handler = async event => {
       switch (tweet.__typename) {
         case TweetTypes.RETWEET:
           await notifyRetweet(tweet)
+          break
+        case TweetTypes.REPLY:
+          await notifyReply(tweet.inReplyToUserIds, tweet)
           break
       }
 
@@ -71,6 +73,50 @@ async function notifyRetweet(tweet) {
       retweetedBy: tweet.creator,
     },
   )
+}
+
+async function notifyReply(userIds, tweet) {
+  const promises = userIds.map(userId =>
+    mutate(
+      graphql`
+        mutation notifyReplied(
+          $id: ID!
+          $userId: ID!
+          $tweetId: ID!
+          $replyTweetId: ID!
+          $repliedBy: ID!
+        ) {
+          notifyReplied(
+            id: $id
+            userId: $userId
+            tweetId: $tweetId
+            replyTweetId: $replyTweetId
+            repliedBy: $repliedBy
+          ) {
+            __typename
+            ... on Replied {
+              id
+              type
+              userId
+              tweetId
+              repliedBy
+              replyTweetId
+              createdAt
+            }
+          }
+        }
+      `,
+      {
+        id: ulid.ulid(),
+        userId,
+        tweetId: tweet.inReplyToTweetId,
+        replyTweetId: tweet.id,
+        repliedBy: tweet.creator,
+      },
+    ),
+  )
+
+  await Promise.all(promises)
 }
 
 async function notifyMentioned(screenNames, tweet) {

@@ -5410,7 +5410,7 @@ mappingTemplates:
 
 Check out `functions/notify-liked.js`.
 
-## 76 Add subscription for mentions
+## 76-77 Add subscription for mentions & replies
 
 ```yaml
 # serverless.appsync-api.yml
@@ -5423,6 +5423,10 @@ mappingTemplates:
   # (76.1) add a mapping template for the notifyMentioned mutation
   - type: Mutation
     field: notifyMentioned
+    dataSource: notificationsTable
+  # (77.0) add a mapping template for the notifyReplied mutation
+  - type: Mutation
+    field: notifyReplied
     dataSource: notificationsTable
 ```
 

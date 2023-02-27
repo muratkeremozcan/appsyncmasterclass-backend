@@ -6,7 +6,7 @@ const chance = require('chance').Chance()
 const AWS = require('aws-sdk')
 
 // jest + async-retry is a sub-par solution for eventual consistency in e2e tests... Very unreliable.
-describe.skip('Given an authenticated user', () => {
+describe('Given an authenticated user', () => {
   let userAsProfile, tweet, DynamoDB
   let userA
 

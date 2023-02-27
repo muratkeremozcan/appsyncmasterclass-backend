@@ -8,6 +8,8 @@ userPoolConfig:
   awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
+additionalAuthenticationProviders:
+  - authenticationType: AWS_IAM
 
 # (8.1) tell the serverless AppSync plugin where the Appsync templates are going to be, and how to map them to the graphQL query
 mappingTemplatesLocation: mapping-templates

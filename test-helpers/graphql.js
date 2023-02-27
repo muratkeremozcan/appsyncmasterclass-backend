@@ -74,7 +74,40 @@ const graphQLQuery = async (auth, query, variables = {}) => {
   }
 }
 
+// Yan's version
+const GraphQL = async (url, query, variables = {}, auth) => {
+  const headers = {}
+  if (auth) {
+    headers.Authorization = auth
+  }
+
+  const usedFragments = Array.from(findUsedFragments(query)).map(
+    name => fragments[name],
+  )
+
+  try {
+    const resp = await http({
+      method: 'post',
+      url,
+      headers,
+      data: {
+        query: [query, ...usedFragments].join('\n'),
+        variables: JSON.stringify(variables),
+      },
+    })
+
+    const {data, errors} = resp.data
+    throwOnErrors({query, variables, errors})
+    return data
+  } catch (error) {
+    const errors = _.get(error, 'response.data.errors')
+    throwOnErrors({query, variables, errors})
+    throw error
+  }
+}
+
 module.exports = {
+  GraphQL,
   graphQLQuery,
   registerFragment,
 }

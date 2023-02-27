@@ -24,6 +24,8 @@ package:
   exclude:
     - package-lock.json
     - package.json
+    - '**/test-helpers/**'
+    - '**/__tests__/**'
 
 custom:
   # (6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
@@ -660,3 +662,6 @@ resources:
     # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
     AwsRegion:
       Value: ${self:custom.region}
+
+    ApiUrl:
+      Value: !GetAtt GraphQlApi.GraphQLUrl

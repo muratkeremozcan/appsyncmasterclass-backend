@@ -32,6 +32,8 @@ registerFragment('iTweetFields', iTweetFragment)
 registerFragment('retweetFields', retweetFragment)
 registerFragment('replyFields', replyFragment)
 
+// this is my version of search + getHashTag, trying to save from Cognito quota for emails
+// regardless of the style
 // jest + async-retry is a sub-par solution for eventual consistency in e2e tests... Very unreliable.
 describe.skip('Given an authenticated user', () => {
   let userA, userAsProfile, tweetAResp, userAsReply, DynamoDB, userAId

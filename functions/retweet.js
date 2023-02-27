@@ -98,8 +98,9 @@ const handler = async event => {
       Put: {
         TableName: TIMELINES_TABLE,
         Item: {
-          userId: tweet.creator,
+          userId: username,
           tweetId: id,
+          retweetOf: tweetId,
           timestamp,
         },
       },

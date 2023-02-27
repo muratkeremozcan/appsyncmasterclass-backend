@@ -61,6 +61,7 @@ async function distribute(tweet, followers) {
         userId,
         tweetId: tweet.id,
         timestamp: tweet.createdAt,
+        distributedFrom: tweet.creator,
         retweetOf: tweet.retweetOf,
         inReplyToTweetId: tweet.inReplyToTweetId,
         inReplyToUserIds: tweet.inReplyToUserIds,
@@ -69,7 +70,7 @@ async function distribute(tweet, followers) {
   }))
 
   // https://www.geeksforgeeks.org/lodash-_-chunk-method/
-  const chunks = _.chunk(timelineEntries, Constants.DynamoDB.MAX_BATCH_WRITE)
+  const chunks = _.chunk(timelineEntries, Constants.DynamoDB.MAX_BATCH_SIZE)
 
   const promises = chunks.map(async chunk => {
     await DocumentClient.batchWrite({

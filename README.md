@@ -43,7 +43,7 @@ npm run sls -- package
 npm run sls -- deploy -s tmp
 
 # export the new env vars to .env file
-npm run sls export-env -- -s tmp && npm run sls manifest -- -s tmp
+npm run sls export-env -- -s tmp
 
 # run tests (including e2e) against the temporary stack
 npm t
@@ -568,7 +568,7 @@ Check out `__tests__/e2e/user-profile.test.js`.
 > at the end of the e2e test, do not delete your user which is used in AppSync
 > console tests.
 
-### Getting the GraphQL API_URL with `serverless-manifest-plugin`
+### Getting the GraphQL API_URL with `serverless-manifest-plugin` not needed as of 78
 
 A crude way to get the GraphQLApiUrl is through the web console:
 `CloudFormation/Stacks/appsyncmasterclass-backend-dev` > Outputs.
@@ -672,9 +672,10 @@ function format(key, value) {
 }
 ```
 
-Modify the `package.json` script to also include `sls manifest`
+Modify the `package.json` script to also include `sls manifest`. NOT NEEDED as
+of 78
 
-` export:env": "sls export-env && sls manifest",`
+` export:env": "sls export-env",`
 
 Run the command `npm run export:env`. `API_URL=******` should get generated
 
@@ -5369,12 +5370,14 @@ dataSources:
 
 ## 75 Add subscription for likes
 
-Use a DDB stream to trigger a lambda function whenever a tweet is liked, then send the notifyLiked mutation to AppSync API.
+Use a DDB stream to trigger a lambda function whenever a tweet is liked, then
+send the notifyLiked mutation to AppSync API.
 
 Like the usual:
 
 - (75.0) Add the lambda function to serverless.yml.
-- (75.1) Add the mapping template (GQL query) to `serverless.appsync.yml`,  the dataSource `NotificationsTable` already exists from (74.1)
+- (75.1) Add the mapping template (GQL query) to `serverless.appsync.yml`, the
+  dataSource `NotificationsTable` already exists from (74.1)
 - (75.2) Add the JS for the lambda function.
 
 ```yaml
@@ -5403,8 +5406,7 @@ functions:
 mappingTemplates:
   - type: Mutation
     field: notifyLiked
-    dataSource: notificationsTable
-
+    dataSource: notificationsTable.
 # the dataSource already exists from (74.1)
 ```
 
@@ -5431,3 +5433,99 @@ mappingTemplates:
 ```
 
 We are reusing the notify lambda.
+
+### 78 E2e test retweeted notifications
+
+The key here is that we removed serverless-manifest-plugin because of it demanding peer dependencies and bloating package size. Export-env plugin has gotten better by now. 
+
+We removed everything about manifest. We had to add a value to Outputs in serverless.yml:
+
+```yml
+# serverless.yml 
+
+Outputs:
+  # export env gives GRAPHQL_API_URL=[object Object], so we trick serverless yml
+  ApiUrl:
+    Value: !GetAtt GraphQlApi.GraphQLUrl
+```
+
+On export, `.env` file looks as such:
+
+```
+STAGE=dev
+AWS_NODEJS_CONNECTION_REUSE_ENABLED=1
+COGNITO_USER_POOL_ID=eu-west-1_***
+WEB_COGNITO_USER_POOL_CLIENT_ID=***
+AWS_REGION=eu-west-1
+API_URL=https://***.appsync-api.eu-west-1.amazonaws.com/graphql
+USERS_TABLE=backend-dev-UsersTable-***
+BUCKET_NAME=backend-dev-assetsbucket-***
+TWEETS_TABLE=backend-dev-TweetsTable-***
+TIMELINES_TABLE=backend-dev-TimelinesTable-***
+RETWEETS_TABLE=backend-dev-RetweetsTable-***
+RELATIONSHIPS_TABLE=backend-dev-RelationshipsTable-***
+MAX_TWEETS=100
+GRAPHQL_API_URL=[object Object] # This is ok
+```
+
+There is one more important highlight. In the test `__tests__/e2e/notifications.test.js` we began to use the real GraphQL client because we need web socket support for subscriptions. These imports may be necessary if the tests are rewritten in Cypress.
+
+```javascript
+global.WebSocket = require('ws')
+const gql = require('graphql-tag')
+const {AWSAppSyncClient, AUTH_TYPE} = require('aws-appsync')
+require('isomorphic-fetch')
+
+// ...
+
+let client, subscription
+const notifications = []
+
+// key point
+beforeAll(async () => {
+  client = new AWSAppSyncClient({
+    url: process.env.API_URL,
+    region: process.env.AWS_REGION,
+    auth: {
+      type: AUTH_TYPE.AMAZON_COGNITO_USER_POOLS,
+      jwtToken: () => userA.idToken,
+    },
+    disableOffline: true,
+  })
+
+  subscription = client
+    .subscribe({
+      query: gql`
+        subscription onNotified($userId: ID!) {
+          onNotified(userId: $userId) {
+            ... on iNotification {
+              id
+              type
+              userId
+              createdAt
+            }
+
+            ... on Retweeted {
+              tweetId
+              retweetedBy
+              retweetId
+            }
+          }
+        }
+      `,
+      variables: {
+        userId: userA.username,
+      },
+    })
+    .subscribe({
+      next: resp => {
+        notifications.push(resp.data.onNotified)
+      },
+    })
+})
+
+afterAll(() => {
+  subscription.unsubscribe()
+})
+```
+

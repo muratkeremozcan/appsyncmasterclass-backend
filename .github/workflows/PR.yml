@@ -54,7 +54,6 @@ jobs:
       - name: export env vars
         run: |
           npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
-          npm run sls manifest -- -s ${{ steps.branch-name.outputs.current_branch }}
 
       - name:
           jest tests

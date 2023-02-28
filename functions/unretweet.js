@@ -42,7 +42,9 @@ const handler = async event => {
 
   const retweet = _.get(queryResp, 'Items.0')
 
-  if (!retweet) throw new Error('Retweet is not found')
+  if (!retweet) {
+    throw new Error('Retweet is not found')
+  }
 
   // Delete the tweet from the TweetsTable, the RetweetsTable, and the TimelinesTable if it's not the same user
   // Decrement the count on the UsersTable and the TweetsTable

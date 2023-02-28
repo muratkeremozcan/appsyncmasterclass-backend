@@ -5534,3 +5534,72 @@ afterAll(() => {
   subscription.unsubscribe()
 })
 ```
+
+## 79 Serverless-layers to reduce package size
+
+Cons: trouble with devDeps & testing. Trouble with versioning when dealing with changes in the layers (no semantic ver). Limited to 5 layers per lambda.
+
+Pro: may be useful for things that don't change like FFMpeg, and / or not available via npm, and very large.
+
+`serverless-layers` is a handy npm plugin for optimization. Only uploads dependencies if they have changed. You take your dependencies from `package.json`, put them into a layer, and publish that layer to your account. The benefit is not having to upload the same artifacts over and over.
+
+Add it under plugins, create a custom variable `serverless-layers` > `layersDeploymentBucket`. Create a custom bucket and specify it as a `layersDeploymentBucket` which is a property of the plugin.
+
+![s3-parameter](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/05o8vwdw0rwon37mk85h.png)
+
+```yaml
+# serverless.yml
+
+plugins:
+  - serverless-appsync-plugin
+  - serverless-iam-roles-per-function
+  - serverless-export-env 
+  - serverless-layers # [79] serverless-layers
+
+custom:
+  serverless-layers:
+    # in the same format as parameter we created in S3
+    layersDeploymentBucket: ${ssm:/appsyncmasterclass/${self:custom.stage}/layer-deployment-bucket}
+
+```
+
+> I did not do this because I have to install with `--registry` modifier . This one requires me to login to company network and install from the company's registry. Which would be ok, but the CI will not work in that case.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

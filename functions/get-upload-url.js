@@ -8,6 +8,8 @@ const S3 = require('aws-sdk/clients/s3')
 const s3 = new S3({useAccelerateEndpoint: true})
 const ulid = require('ulid')
 
+const {BUCKET_NAME} = process.env
+
 const handler = async event => {
   // (15.2.1) construct the key for S3 putObject request
   // use ulid to create a randomized, but sorted id (chance is not sorted when we create multiple ids)
@@ -29,18 +31,19 @@ const handler = async event => {
   // get the contentType from graphQL schema as well, it is optional so we give it a default value
   const contentType = event.arguments.contentType || 'image/jpeg'
   if (!contentType.startsWith('image/')) {
-    throw new Error('contentType must start be an image')
+    throw new Error('content type should be an image')
   }
 
   // (15.3) use S3 to upload an image to S3. The operation is `putObject`
   const params = {
-    Bucket: process.env.BUCKET_NAME, // (15.2.3) get the bucket env var (settings in serverless.yml file)
+    Bucket: BUCKET_NAME, // (15.2.3) get the bucket env var (settings in serverless.yml file)
     Key: key,
     ACL: 'public-read',
     ContentType: contentType,
   }
   // note that s3.getSignedUrl is completely local, does not make a request to S3 (no need for a promise)
-  return s3.getSignedUrl('putObject', params)
+  const signedUrl = s3.getSignedUrl('putObject', params)
+  return signedUrl
 }
 
 module.exports = {

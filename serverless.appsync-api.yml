@@ -39,6 +39,16 @@ mappingTemplates:
     field: getProfile
     dataSource: usersTable
 
+  # [15] Implement getImageUploadUrl query (use a lambda to implement it)
+  # (15.0) add an entry to the mappingTemplates
+  - type: Query
+    field: getImageUploadUrl
+    dataSource: getImageUploadUrlFunction # we define dataSources below for this
+    # For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template.
+    # this is how we configure it, and serverless-appsync-plugin takes care of it
+    request: false
+    response: false
+
   # [20] Implement getTweets query
   # (20.0) Add the mapping template
   - type: Query
@@ -50,16 +60,6 @@ mappingTemplates:
   - type: Query
     field: getMyTimeline
     dataSource: timelinesTable
-
-  # [15] Implement getImageUploadUrl query (use a lambda to implement it)
-  # (15.0) add an entry to the mappingTemplates
-  - type: Query
-    field: getImageUploadUrl
-    dataSource: getImageUploadUrlFunction # we define dataSources below for this
-    # For lambda functions, Appsync has a direct resolver integration, so we do not need a custom request & response vtl template.
-    # this is how we configure it, and serverless-appsync-plugin takes care of it
-    request: false
-    response: false
 
   # [32] implement getLike query
   # (32.1) add an entry to the mappingTemplates
@@ -203,17 +203,63 @@ mappingTemplates:
     field: profile
     dataSource: usersTable
 
+  # [36] Implement Retweet nested resolver
+  # (36.0) Create a nested resolver to get the profile on Retweet
+  - type: Retweet
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+
+  # [44] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
+  # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
+  # (44.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
+  - type: Reply
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
+    response: Tweet.profile.response.vtl
+
   # [27] Implement the Tweet.liked nested resolver
   # (27.0) create a nested resolver for liked
   - type: Tweet
     field: liked
     dataSource: likesTable
 
+  # (46.0) added during e2e when we realized we need to get the profile of the user who liked the tweet
+  - type: Reply
+    field: liked
+    dataSource: likesTable
+    request: Tweet.liked.request.vtl
+    response: Tweet.liked.response.vtl
+
   # (38.0) add a nested resolver for reweeted
   # similar to liked at (27.0)
   - type: Tweet
     field: retweeted
     dataSource: retweetsTable
+
+  # (46.0) added during e2e when we realized we need to get the profile of the user who retweeted the tweet
+  - type: Reply
+    field: retweeted
+    dataSource: retweetsTable
+    request: Tweet.retweeted.request.vtl
+    response: Tweet.retweeted.response.vtl
+
+  # (36.1) Create a nested resolver to fetch the retweeted tweet on Retweet
+  - type: Retweet
+    field: retweetOf
+    dataSource: tweetsTable
+
+  # (44.1) Create a nested resolver to get the inReplyToUsers on Reply (similar to 36.1)
+  - type: Reply
+    field: inReplyToTweet
+    dataSource: tweetsTable
+
+  # (44.4) Create a nested resolver to get the inReplyToUsers on Reply
+  - type: Reply
+    field: inReplyToUsers
+    dataSource: usersTable
 
   # (23.3) Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to.
   # We can have that resolver hydrate the data from a different table.
@@ -243,50 +289,6 @@ mappingTemplates:
   - type: OtherProfile
     field: followedBy
     dataSource: relationshipsTable
-
-  # [44] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
-  # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
-  # (44.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
-  - type: Reply
-    field: profile
-    dataSource: usersTable
-    request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
-    response: Tweet.profile.response.vtl
-
-  # (44.1) Create a nested resolver to get the inReplyToUsers on Reply (similar to 36.1)
-  - type: Reply
-    field: inReplyToTweet
-    dataSource: tweetsTable
-
-  # (44.4) Create a nested resolver to get the inReplyToUsers on Reply
-  - type: Reply
-    field: inReplyToUsers
-    dataSource: usersTable
-
-  # (46.0) added during e2e when we realized we need to get the profile of the user who retweeted the tweet
-  - type: Reply
-    field: retweeted
-    dataSource: retweetsTable
-    request: Tweet.retweeted.request.vtl
-    response: Tweet.retweeted.response.vtl
-  # (46.0) added during e2e when we realized we need to get the profile of the user who liked the tweet
-  - type: Reply
-    field: liked
-    dataSource: likesTable
-    request: Tweet.liked.request.vtl
-    response: Tweet.liked.response.vtl
-
-  # [36] Implement Retweet nested resolver
-  # (36.0) Create a nested resolver to get the profile on Retweet
-  - type: Retweet
-    field: profile
-    dataSource: usersTable
-    request: Tweet.profile.request.vtl
-    response: Tweet.profile.response.vtl
-  # (36.1) Create a nested resolver to fetch the retweeted tweet on Retweet
-  - type: Retweet
-    field: retweetOf
-    dataSource: tweetsTable
 
 # (59.1) configure the pipeline functions
 functionConfigurations:
@@ -320,17 +322,29 @@ dataSources:
     config:
       tableName: !Ref TimelinesTable
 
-  - type: AMAZON_DYNAMODB
-    name: retweetsTable # (38.1) add a data source for the rested resolver
-    config:
-      tableName: !Ref RetweetsTable
-
   # (26.1) define a data source for the mutation, this one needs to be a chained data source
   # because we need likeMutation to have permissions to modify the 3 tables
   - type: AMAZON_DYNAMODB
     name: likesTable
     config:
       tableName: !Ref LikesTable
+
+  - type: AMAZON_DYNAMODB
+    name: retweetsTable # (38.1) add a data source for the rested resolver
+    config:
+      tableName: !Ref RetweetsTable
+
+  # (47.2) add a datasource for relationshipsTable
+  - type: AMAZON_DYNAMODB
+    name: relationshipsTable
+    config:
+      tableName: !Ref RelationshipsTable
+
+  - type: AMAZON_DYNAMODB
+    name: notificationsTable
+    config:
+      tableName: !Ref NotificationsTable
+
   # (26.1) we need the like mutation to create an entry in the LikesTable, then update UsersTable and TweetsTable
   # When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation
   - type: AMAZON_DYNAMODB
@@ -363,11 +377,6 @@ dataSources:
             - !GetAtt UsersTable.Arn
             - !GetAtt TweetsTable.Arn
 
-  # (47.2) add a datasource for relationshipsTable
-  - type: AMAZON_DYNAMODB
-    name: relationshipsTable
-    config:
-      tableName: !Ref RelationshipsTable
   # (47.2) add a data source for the follow mutation
   # write to RelationshipsTable, update UsersTable
   - type: AMAZON_DYNAMODB
@@ -396,10 +405,6 @@ dataSources:
           Resource: !GetAtt UsersTable.Arn
 
   #
-  - type: AMAZON_DYNAMODB
-    name: notificationsTable
-    config:
-      tableName: !Ref NotificationsTable
 
   ## LAMBDA data sources
 

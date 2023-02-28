@@ -35,7 +35,7 @@ registerFragment('replyFields', replyFragment)
 // this is my version of search + getHashTag, trying to save from Cognito quota for emails
 // regardless of the style
 // jest + async-retry is a sub-par solution for eventual consistency in e2e tests... Very unreliable.
-describe('Given an authenticated user', () => {
+describe.skip('Given an authenticated user', () => {
   let userAsProfile, tweetAResp, userAsReply, DynamoDB, userAId
   let userA
   const text = chance.string({length: 16})

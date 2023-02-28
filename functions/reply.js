@@ -2,37 +2,14 @@
 // * Get from Tweets
 // * Update Tweets and Users
 // * Write to Tweets, Timelines
+const _ = require('lodash')
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
 const ulid = require('ulid')
 const {TweetTypes} = require('../lib/constants')
 const {getTweetById, extractHashTags} = require('../lib/tweets')
-const _ = require('lodash')
 
 const {USERS_TABLE, TIMELINES_TABLE, TWEETS_TABLE} = process.env
-
-async function getUserIdsToReplyTo(tweet) {
-  let userIds = [tweet.creator]
-  if (tweet.__typename === TweetTypes.REPLY) {
-    userIds = userIds.concat(tweet.inReplyToUserIds)
-  } else if (tweet.__typename === TweetTypes.RETWEET) {
-    const retweetOf = await getTweetById(tweet.retweetOf)
-    userIds = userIds.concat(await getUserIdsToReplyTo(retweetOf))
-  }
-
-  return _.uniq(userIds)
-}
-// ramda version
-// const getUserIdsToReplyToR = async tweet => {
-//   const retweetOf = await getTweetById(tweet.retweetOf)
-//   return R.pipe(
-//     x => (x.__typename === TweetTypes.REPLY ? x.inReplyToUserIds : []),
-//     x =>
-//       x.__typename === TweetTypes.RETWEET ? getUserIdsToReplyTo(retweetOf) : x,
-//     x => [tweet.creator].concat(x),
-//     R.uniq,
-//   )(tweet)
-// }
 
 const handler = async event => {
   // we know from graphQL schema the arguments for reply - reply(tweetId: ID!, text: String!): Reply!
@@ -49,7 +26,9 @@ const handler = async event => {
   // get from Tweets (we can use a helper)
   const tweet = await getTweetById(tweetId)
 
-  if (!tweet) throw new Error('Tweet is not found')
+  if (!tweet) {
+    throw new Error('Tweet is not found')
+  }
 
   // get the user ids to reply to
   const inReplyToUserIds = await getUserIdsToReplyTo(tweet)
@@ -145,3 +124,25 @@ const handler = async event => {
 module.exports = {
   handler,
 }
+async function getUserIdsToReplyTo(tweet) {
+  let userIds = [tweet.creator]
+  if (tweet.__typename === TweetTypes.REPLY) {
+    userIds = userIds.concat(tweet.inReplyToUserIds)
+  } else if (tweet.__typename === TweetTypes.RETWEET) {
+    const retweetOf = await getTweetById(tweet.retweetOf)
+    userIds = userIds.concat(await getUserIdsToReplyTo(retweetOf))
+  }
+
+  return _.uniq(userIds)
+}
+// ramda version
+// const getUserIdsToReplyToR = async tweet => {
+//   const retweetOf = await getTweetById(tweet.retweetOf)
+//   return R.pipe(
+//     x => (x.__typename === TweetTypes.REPLY ? x.inReplyToUserIds : []),
+//     x =>
+//       x.__typename === TweetTypes.RETWEET ? getUserIdsToReplyTo(retweetOf) : x,
+//     x => [tweet.creator].concat(x),
+//     R.uniq,
+//   )(tweet)
+// }

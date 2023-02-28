@@ -32,9 +32,6 @@ custom:
   region: ${opt:region, self:provider.region}
   # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
   stage: ${opt:stage, self:provider.stage}
-  # Define the custom.stage variable with a default value of 'dev'
-  custom:
-    stage: ${self:custom.stage, 'dev'}
   # [1] Create a separate `serverless.appsync-api.yml` file for AppSync configuration.
   appSync: ${file(serverless.appsync-api.yml)}
   # (10) get API_URL from CognitoUserPoolArn # not needed as of 78
@@ -43,6 +40,10 @@ custom:
   #   disablePostDeployGeneration: true
   #   disableOutput: true
   #   silent: true
+
+  # Define the custom.stage variable with a default value of 'dev'
+  custom:
+    stage: ${self:custom.stage, 'dev'}
 
 functions:
   # (4.1) Add a functions block for the lambda trigger function
@@ -123,6 +124,30 @@ functions:
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
 
+  # (44.2) Add the lambda for reply
+  # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines
+  # Similar to (35.1) retweets without the retweet table
+  reply:
+    handler: functions/reply.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+      TWEETS_TABLE: !Ref TweetsTable
+      TIMELINES_TABLE: !Ref TimelinesTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:GetItem
+        Resource: !GetAtt TweetsTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt UsersTable.Arn
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource:
+          - !GetAtt TweetsTable.Arn
+          - !GetAtt TimelinesTable.Arn
+
   # (39.2) add a new function for unretweet, almost the same as retweet at (35.1)
   unretweet:
     handler: functions/unretweet.handler
@@ -151,30 +176,6 @@ functions:
           - !GetAtt TweetsTable.Arn
           - !GetAtt TimelinesTable.Arn
           - !GetAtt RetweetsTable.Arn
-
-  # (44.2) Add the lambda for reply
-  # Get from Tweets, Update Tweets and Users, write to Tweets, Timelines
-  # Similar to (35.1) retweets without the retweet table
-  reply:
-    handler: functions/reply.handler
-    environment:
-      USERS_TABLE: !Ref UsersTable
-      TWEETS_TABLE: !Ref TweetsTable
-      TIMELINES_TABLE: !Ref TimelinesTable
-    iamRoleStatements:
-      - Effect: Allow
-        Action: dynamodb:GetItem
-        Resource: !GetAtt TweetsTable.Arn
-      - Effect: Allow
-        Action: dynamodb:UpdateItem
-        Resource:
-          - !GetAtt TweetsTable.Arn
-          - !GetAtt UsersTable.Arn
-      - Effect: Allow
-        Action: dynamodb:PutItem
-        Resource:
-          - !GetAtt TweetsTable.Arn
-          - !GetAtt TimelinesTable.Arn
 
   # [51] Distribute tweets to followers
   # (51.1) add a new function for distributeTweets
@@ -378,9 +379,9 @@ resources:
             KeyType: HASH
         AttributeDefinitions:
           # to fetch the tweets for a particular user, we also need the DDB partition key
-          - AttributeName: creator # partition key
-            AttributeType: S
           - AttributeName: id # sort key
+            AttributeType: S
+          - AttributeName: creator # partition key
             AttributeType: S
           - AttributeName: retweetOf # (39.2) add a new index for retweets
             AttributeType: S
@@ -455,6 +456,91 @@ resources:
             Value: ${self:custom.stage}
           - Key: Name
             Value: timelines-table
+
+    # [26] like mutation
+    # (26.0) create a new DDB table to track which user has liked which tweet
+    LikesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId # partition key
+            KeyType: HASH
+          - AttributeName: tweetId # sort key
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags: # so that we can track the cost in AWS billing
+          - Key: Environment
+            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
+            Value: ${self:custom.stage}
+          # a helper tag to aid in monitoring the individual cost of dynamodb tables
+          - Key: Name
+            Value: likes-table
+
+    # [35] Implement retweet mutation
+    # (35.0) create a new DDB table to track which user has retweeted which tweet
+    RetweetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: tweetId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: tweetId
+            AttributeType: S
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: retweets-table
+
+    # [47] Implement follow mutation
+    # (47.0) create a relationships table to track which user follows/blocks/etc. who
+    # sk for sort key
+    RelationshipsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: otherUserId
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byOtherUser
+            KeySchema:
+              - AttributeName: otherUserId
+                KeyType: HASH
+              - AttributeName: sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # (54.0) add the lambda and enable streams on the table it's streaming from.
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: relationships-table
 
     # (74.1) Create a DynamoDB table to store notifications
     NotificationsTable:
@@ -559,92 +645,12 @@ resources:
               AllowedHeaders:
                 - '*'
 
-    # [26] like mutation
-    # (26.0) create a new DDB table to track which user has liked which tweet
-    LikesTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        BillingMode: PAY_PER_REQUEST
-        KeySchema:
-          - AttributeName: userId # partition key
-            KeyType: HASH
-          - AttributeName: tweetId # sort key
-            KeyType: RANGE
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: tweetId
-            AttributeType: S
-        StreamSpecification:
-          StreamViewType: NEW_AND_OLD_IMAGES
-        Tags: # so that we can track the cost in AWS billing
-          - Key: Environment
-            # same as (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
-            Value: ${self:custom.stage}
-          # a helper tag to aid in monitoring the individual cost of dynamodb tables
-          - Key: Name
-            Value: likes-table
-
-    # [35] Implement retweet mutation
-    # (35.0) create a new DDB table to track which user has retweeted which tweet
-    RetweetsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        BillingMode: PAY_PER_REQUEST
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-          - AttributeName: tweetId
-            KeyType: RANGE
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: tweetId
-            AttributeType: S
-        Tags:
-          - Key: Environment
-            Value: ${self:custom.stage}
-          - Key: Name
-            Value: retweets-table
-
-    # [47] Implement follow mutation
-    # (47.0) create a relationships table to track which user follows/blocks/etc. who
-    # sk for sort key
-    RelationshipsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        BillingMode: PAY_PER_REQUEST
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-          - AttributeName: sk
-            KeyType: RANGE
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: sk
-            AttributeType: S
-          - AttributeName: otherUserId
-            AttributeType: S
-        GlobalSecondaryIndexes:
-          - IndexName: byOtherUser
-            KeySchema:
-              - AttributeName: otherUserId
-                KeyType: HASH
-              - AttributeName: sk
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-        # (54.0) add the lambda and enable streams on the table it's streaming from.
-        StreamSpecification:
-          StreamViewType: NEW_AND_OLD_IMAGES
-        Tags:
-          - Key: Environment
-            Value: ${self:custom.stage}
-          - Key: Name
-            Value: relationships-table
-
   Outputs:
+    # (6) add AWS_REGION as an env var
+    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
+    AwsRegion:
+      Value: ${self:custom.region}
+
     # (3.1) We need the CognitoUserPoolId of the CognitoUserPool as a cloud formation output,
     # We get that value with !Ref
     # lets us use process.env.COGNITO_USER_POOL_ID in the e2e test
@@ -657,11 +663,6 @@ resources:
     # lets us use process.env.WEB_COGNITO_USER_POOL_CLIENT_ID in the e2e test
     WebCognitoUserPoolClientId:
       Value: !Ref WebUserPoolClient
-
-    # (6) add AWS_REGION as an env var
-    # Use the `${self:custom.*}` trick for AWS_REGION, because we cannot use it as lambda function level since that is specific to sls.
-    AwsRegion:
-      Value: ${self:custom.region}
 
     # export env gives GRAPHQL_API_URL=[object Object], so we trick serverless yml
     ApiUrl:

@@ -1,7 +1,8 @@
 const DynamoDB = require('aws-sdk/clients/dynamodb')
-const Chance = require('chance')
 const DocumentClient = new DynamoDB.DocumentClient()
+const Chance = require('chance')
 const chance = new Chance()
+
 const {USERS_TABLE} = process.env
 
 // (4.5) implement the lambda function for confirming a user signup

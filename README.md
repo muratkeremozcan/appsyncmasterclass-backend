@@ -5436,12 +5436,15 @@ We are reusing the notify lambda.
 
 ### 78 E2e test retweeted notifications
 
-The key here is that we removed serverless-manifest-plugin because of it demanding peer dependencies and bloating package size. Export-env plugin has gotten better by now. 
+The key here is that we removed serverless-manifest-plugin because of it
+demanding peer dependencies and bloating package size. Export-env plugin has
+gotten better by now.
 
-We removed everything about manifest. We had to add a value to Outputs in serverless.yml:
+We removed everything about manifest. We had to add a value to Outputs in
+serverless.yml:
 
 ```yml
-# serverless.yml 
+# serverless.yml
 
 Outputs:
   # export env gives GRAPHQL_API_URL=[object Object], so we trick serverless yml
@@ -5468,7 +5471,10 @@ MAX_TWEETS=100
 GRAPHQL_API_URL=[object Object] # This is ok
 ```
 
-There is one more important highlight. In the test `__tests__/e2e/notifications.test.js` we began to use the real GraphQL client because we need web socket support for subscriptions. These imports may be necessary if the tests are rewritten in Cypress.
+There is one more important highlight. In the test
+`__tests__/e2e/notifications.test.js` we began to use the real GraphQL client
+because we need web socket support for subscriptions. These imports may be
+necessary if the tests are rewritten in Cypress.
 
 ```javascript
 global.WebSocket = require('ws')
@@ -5528,4 +5534,3 @@ afterAll(() => {
   subscription.unsubscribe()
 })
 ```
-

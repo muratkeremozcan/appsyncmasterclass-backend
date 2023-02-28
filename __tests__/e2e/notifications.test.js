@@ -10,6 +10,7 @@ console.error = jest.fn()
 const AWS = require('aws-sdk')
 
 // jest + async-retry is a sub-par solution for eventual consistency in e2e tests... Very unreliable.
+// the notification array is empty no matter what
 describe.skip('Given two authenticated users', () => {
   let userAsTweet, userBsRetweet, DynamoDB
   let userA, userB

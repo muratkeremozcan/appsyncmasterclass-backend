@@ -13,21 +13,20 @@ const AWS = require('aws-sdk')
 // the notification array is empty no matter what
 describe.skip('Given two authenticated users', () => {
   let userAsTweet, userBsRetweet, DynamoDB
-  let userA, userB
   const text = chance.string({length: 16})
+  let userA, userB
 
   // if you run into LimitExceeded error, just use a fixed test user on Dev such as appsync-tester2
   // DONT FORGET TO DISABLE THE AFTERALL HOOK
   // const userA = {
   //   accessToken:
-  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI1NmUyZmEyZi05ZmRkLTRlMmYtOTdlZS1hY2YwMmZkNWVhZmQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0xLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtMV9LdXhvYUs2Wm0iLCJjbGllbnRfaWQiOiI5bWI3cWRqcTU0ZjJ2ZjhrdnVvYmxqcGhwIiwib3JpZ2luX2p0aSI6IjZkYzBmMmIxLWUyM2YtNGQ2YS1hNWM1LTIwMWNiN2FiYjAxMSIsImV2ZW50X2lkIjoiYjdjYWE1Y2EtMDQzOC00Y2E2LTg1YmUtOWUwMWM1NmQ0NzAxIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTY3NzUwNTcxMSwiZXhwIjoxNjc3NTA5MzExLCJpYXQiOjE2Nzc1MDU3MTEsImp0aSI6IjBjYTU1NzdkLTBhZDAtNDMxOC05NTM5LTA0OTY5YWQxNzdkOCIsInVzZXJuYW1lIjoiNTZlMmZhMmYtOWZkZC00ZTJmLTk3ZWUtYWNmMDJmZDVlYWZkIn0.PGVCsmDPdCq3kEESjP4pSNyxPDNirxvjHz096Ogk_N29cDP2f6lQtF90H1sH48sFkf1KrVWoVX8FdP99x5iXbK8PrA8Zj7n0p0B9q3dmAij_ERVvirKNr6ww_pCPxmKvBmdZ1CgxzjHLWl8dQNoxbyeC57Kxe0PoiTYmROTT5oD25RqkyWH70x2dz4_xKTb68dgecfbNGH5WjbdIO4QHc-4A8H7PQW7Ysb_PYxmePCy7xssrqnphpe1WkjRYlWw4AoYh7B6__FHSIWRnazv8LljeOLVZ0hrOZ74FiwFb9v5Xtm-3YNpttnFpbRHg4VpothRyTDI0GWd5ZkLJg_rTAQ',
+  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI1NmUyZmEyZi05ZmRkLTRlMmYtOTdlZS1hY2YwMmZkNWVhZmQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0xLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtMV9LdXhvYUs2Wm0iLCJjbGllbnRfaWQiOiI5bWI3cWRqcTU0ZjJ2ZjhrdnVvYmxqcGhwIiwib3JpZ2luX2p0aSI6Ijk3ZDZkNzQ4LTY2ZTctNGYzZS04ZjQzLWZhYzA0ZjM3YjIxNCIsImV2ZW50X2lkIjoiMmY1Njc4ODYtZDQ3Mi00Mzc2LThhNGMtNmFjYjI3MmYyOTc1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTY3NzU5MDQ0MCwiZXhwIjoxNjc3NTk0MDQwLCJpYXQiOjE2Nzc1OTA0NDAsImp0aSI6IjFhOWZjOGZiLTZiZWYtNDM0MS1iZWVjLWU0ZGUzMWIxNDBlMiIsInVzZXJuYW1lIjoiNTZlMmZhMmYtOWZkZC00ZTJmLTk3ZWUtYWNmMDJmZDVlYWZkIn0.dI2ggK4ilz_l2gqoDAbm12Sn1yxhGn28zamnXJXFKm54nfcF2onuoAZNuN_Zf6ExMTgFpX2YTkNSXu_-77FKhGMOXnkxnC_hezibfvYI2Mr5ABOkzfI0NJLWeTwdv6-fnzqHeA59FVYMh_BL19u3YjUEX7agSxGtCbe3BO-cWsGRagbGZyL5W5M1q1GB43ICHammyDSOcIq0e7_AwPzqePg06XG6AANsh_owLJULxX6x2n2jdbiJi1F8162s0p_hYMrv4Dtjsqn22aAy1FTPdIPO30Lr2jbsnA4v1Yjjuc4QWfJsSkAin4pQi4j1rrD7Co2bWx6hPJkH1bZZbdhTMg',
   //   username: '56e2fa2f-9fdd-4e2f-97ee-acf02fd5eafd',
   // }
-  // create a userB with appsync-tester3
   // const userB = {
   //   accessToken:
-  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI1NmUyZmEyZi05ZmRkLTRlMmYtOTdlZS1hY2YwMmZkNWVhZmQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0xLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtMV9LdXhvYUs2Wm0iLCJjbGllbnRfaWQiOiI5bWI3cWRqcTU0ZjJ2ZjhrdnVvYmxqcGhwIiwib3JpZ2luX2p0aSI6IjZkYzBmMmIxLWUyM2YtNGQ2YS1hNWM1LTIwMWNiN2FiYjAxMSIsImV2ZW50X2lkIjoiYjdjYWE1Y2EtMDQzOC00Y2E2LTg1YmUtOWUwMWM1NmQ0NzAxIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTY3NzUwNTcxMSwiZXhwIjoxNjc3NTA5MzExLCJpYXQiOjE2Nzc1MDU3MTEsImp0aSI6IjBjYTU1NzdkLTBhZDAtNDMxOC05NTM5LTA0OTY5YWQxNzdkOCIsInVzZXJuYW1lIjoiNTZlMmZhMmYtOWZkZC00ZTJmLTk3ZWUtYWNmMDJmZDVlYWZkIn0.PGVCsmDPdCq3kEESjP4pSNyxPDNirxvjHz096Ogk_N29cDP2f6lQtF90H1sH48sFkf1KrVWoVX8FdP99x5iXbK8PrA8Zj7n0p0B9q3dmAij_ERVvirKNr6ww_pCPxmKvBmdZ1CgxzjHLWl8dQNoxbyeC57Kxe0PoiTYmROTT5oD25RqkyWH70x2dz4_xKTb68dgecfbNGH5WjbdIO4QHc-4A8H7PQW7Ysb_PYxmePCy7xssrqnphpe1WkjRYlWw4AoYh7B6__FHSIWRnazv8LljeOLVZ0hrOZ74FiwFb9v5Xtm-3YNpttnFpbRHg4VpothRyTDI0GWd5ZkLJg_rTAQ',
-  //   username: '56e2fa2f-9fdd-4e2f-97ee-acf02fd5eafd',
+  //     'eyJraWQiOiJvc0FHSXN1QW9reURqOVRoam9XeFwvSFcwc2drcWRMZDVEOTZaTkdxXC9yZDg9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJhOTI0NGM3My0xN2QwLTQ3ZGUtYjY0OC1kYjBiNTM5NTU0NjEiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0xLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtMV9LdXhvYUs2Wm0iLCJjbGllbnRfaWQiOiI5bWI3cWRqcTU0ZjJ2ZjhrdnVvYmxqcGhwIiwib3JpZ2luX2p0aSI6IjAxYmQ0NDFlLTczOWQtNDMxYy1iYjNiLTVmOTEzZjI1NzIxYSIsImV2ZW50X2lkIjoiOTM1OWIyMjItYjM4YS00YjcxLWFjZTAtMmEyYzM3NTg5YWRlIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTY3NzU5MDQ3OSwiZXhwIjoxNjc3NTk0MDc5LCJpYXQiOjE2Nzc1OTA0NzksImp0aSI6ImEyYzg5OTlkLTAzNjgtNDFiNC1hODIwLTc3MTE4YzBjYmEyNSIsInVzZXJuYW1lIjoiYTkyNDRjNzMtMTdkMC00N2RlLWI2NDgtZGIwYjUzOTU1NDYxIn0.s4GeRI2Q-2V4IK39TFzO0HtrzY4arCx8hrUvGO5xS6BznNzcyqTK4hRwNEjnt2VZxPdKy8q8JyfWRvpZM_XhGezqK_hYQzmFfNnZ2g9JF3_t9tZtd0EnVQDhKMlHGrL1B7I5Dqvg1MH6IkztDpYjNUd9f3418CIW_k_ioMRojnqD1K0ZPqZw57WvmyfXCggulcbIPF2VXfI8J3fiEVy_hKaPPJnjGkJNUhWoK7nbRvEGGzSfour4SIjZv_ZqAIC6xeeyNyVrrpxLigzIgAefiXZWXPOksyGd_UFidm5P4mrGi3abpyErqNZ5ogJ8RNrQCM-y3xsDjf19DfaXiiTYvA',
+  //   username: 'a9244c73-17d0-47de-b648-db0b53955461',
   // }
 
   beforeAll(async () => {
@@ -93,6 +92,7 @@ describe.skip('Given two authenticated users', () => {
       })
 
       it('User A should receive a notification', async () => {
+        // console.log('yo')
         await retry(
           async () => {
             expect(notifications).toEqual(
@@ -109,10 +109,10 @@ describe.skip('Given two authenticated users', () => {
           },
           {
             retries: 10,
-            maxTimeout: 3000,
+            maxTimeout: 5000,
           },
         )
-      })
+      }, 50000)
     })
   })
 

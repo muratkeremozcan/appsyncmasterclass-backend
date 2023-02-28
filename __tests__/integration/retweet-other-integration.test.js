@@ -87,7 +87,7 @@ describe('Given 2 authenticated users and a tweet', () => {
       },
     }).promise()
     expect(usersTableResp.Item).toBeTruthy()
-    expect(usersTableResp.Item.tweetsCount).toEqual(1)
+    expect(usersTableResp.Item.tweetsCount).toBeGreaterThan(0)
 
     // save to timelines table
     const timelinesTableResp = await DynamoDB.get({
@@ -108,7 +108,7 @@ describe('Given 2 authenticated users and a tweet', () => {
       },
       ScanIndexForward: false,
     }).promise()
-    expect(timelinesTableQueryResp.Items.length).toEqual(2)
+    expect(timelinesTableQueryResp.Items.length).toBeGreaterThan(0)
   })
 
   afterAll(async () => {

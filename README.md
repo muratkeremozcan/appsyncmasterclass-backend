@@ -5742,6 +5742,22 @@ dataSources:
 
 Add the vtl files...
 
+## 83 Implement listConversations query
+
+Add a nested field for listConversations. Add the vtl files...
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+
+  - type: Query
+    field: listConversations
+    dataSource: conversationsTable
+```
+
+
+
 
 
 

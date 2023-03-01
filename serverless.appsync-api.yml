@@ -103,6 +103,11 @@ mappingTemplates:
     request: false
     response: false
 
+  # (83.0) Implement listConversations query
+  - type: Query
+    field: listConversations
+    dataSource: conversationsTable
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.

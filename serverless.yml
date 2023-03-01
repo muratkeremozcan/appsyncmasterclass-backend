@@ -7,6 +7,7 @@ plugins:
   - serverless-appsync-plugin
   - serverless-iam-roles-per-function
   - serverless-export-env # (6) integration test
+  - serverless-prune-plugin # fixes Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn # not needed as of 78
 
 provider:
@@ -14,6 +15,8 @@ provider:
   runtime: nodejs12.x
   region: eu-west-1
   versionFunctions: false # avoids Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
+  # can also do automatic pruning https://github.com/claygregory/serverless-prune-plugin#automatic-pruning, but we really don't need versions here...
+
   # stage: dev # this is default, we don't have to specify it
   # any env var defined here applies to all the functions
   environment:
@@ -41,6 +44,12 @@ custom:
   #   disablePostDeployGeneration: true
   #   disableOutput: true
   #   silent: true
+
+  # if you want to use pruning lambda versions with serverless-prune-plugin, instead of setting versionFunctions: false
+  # prune:
+  #   automatic: true
+  #   includeLayers: true
+  #   number: 3
 
   # Define the custom.stage variable with a default value of 'dev'
   custom:

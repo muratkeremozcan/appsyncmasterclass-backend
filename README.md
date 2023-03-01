@@ -32,6 +32,10 @@ npm run format
 
 # generate cloud formation template
 npm run sls -- package
+
+# you ran into CodeStorage limit exceeded error (too many lambda versions)
+# prune the last n versions
+npm run sls -- prune -n 2 
 ```
 
 ### Working on a branch

@@ -13,6 +13,7 @@ provider:
   name: aws
   runtime: nodejs12.x
   region: eu-west-1
+  versionFunctions: false # avoids Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # stage: dev # this is default, we don't have to specify it
   # any env var defined here applies to all the functions
   environment:
@@ -341,6 +342,7 @@ functions:
     environment:
       CONVERSATIONS_TABLE: !Ref ConversationsTable
       DIRECT_MESSAGES_TABLE: !Ref DirectMessagesTable
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-sendDirectMessage
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:PutItem

@@ -41,6 +41,14 @@ type Query {
     limit: Int!
     nextToken: String
   ): HashTagResultsPage!
+  # [81] Support direct messages in the GraphQL schema
+  listConversations(limit: Int!, nextToken: String): ConversationsPage!
+  # (81) Support direct messages in the GraphQL schema
+  getDirectMessages(
+    otherUserId: ID!
+    limit: Int!
+    nextToken: String
+  ): MessagesPage!
 }
 
 type Mutation {
@@ -79,6 +87,8 @@ type Mutation {
     replyTweetId: ID!
     repliedBy: ID!
   ): Notification! @aws_iam
+  # (81) Support direct messages in the GraphQL schema
+  sendDirectMessage(otherUserId: ID!, message: String!): Conversation!
 }
 # (73.0) Define a top level subscription type
 type Subscription {
@@ -304,4 +314,29 @@ enum NotificationType {
   Liked
   Mentioned
   Replied
+}
+
+# (81) Support direct messages in the GraphQL schema
+type Conversation {
+  id: ID!
+  otherUser: OtherProfile!
+  lastMessage: String!
+  lastModified: AWSDateTime!
+}
+
+type ConversationsPage {
+  conversations: [Conversation!]
+  nextToken: String
+}
+
+type Message {
+  messageId: ID!
+  from: IProfile!
+  message: String!
+  timestamp: AWSDateTime!
+}
+
+type MessagesPage {
+  messages: [Message!]
+  nextToken: String
 }

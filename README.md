@@ -32,6 +32,10 @@ npm run format
 
 # generate cloud formation template
 npm run sls -- package
+
+# you ran into CodeStorage limit exceeded error (too many lambda versions)
+# prune the last n versions
+npm run sls -- prune -n 2 
 ```
 
 ### Working on a branch
@@ -5567,15 +5571,176 @@ custom:
 
 
 
+### 80 e2e for subs (doesn't work in CI...)
+
+## 81 Support direct messages in the GraphQL schema
+
+```yaml
+# schema.api.graphql
+
+type: Query{ 
+  # [81] Support direct messages in the GraphQL schema
+  listConversations(limit: Int!, nextToken: String): ConversationsPage!
+
+  getDirectMessages(
+    otherUserId: ID!
+    limit: Int!
+    nextToken: String
+  ): MessagesPage!
+}
+
+type: Mutation {
+  sendDirectMessage(otherUserId: ID!, message: String!): Conversation!
+}
+
+type Conversation {
+  id: ID!
+  otherUser: OtherProfile!
+  lastMessage: String!
+  lastModified: AWSDateTime!
+}
+
+type ConversationsPage {
+  conversations: [Conversation!]
+  nextToken: String
+}
+
+type Message {
+  messageId: ID!
+  from: IProfile!
+  message: String!
+  timestamp: AWSDateTime!
+}
+
+type MessagesPage {
+  messages: [Message!]
+  nextToken: String
+}
+
+```
+
+## 82 Implement sendDriectMessage mutation
+
+- Add the lambda function to `serverless.yml` (82.0) (we are also adding new tables here under resources)
+- Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSources (82.1) (a data source for the lambda, and datasources for the new tables )
+- Add the JS for the lambda function. (82.2)
+
+```yaml
+# serverless.yml
+
+functions:
+  # [82] Implement sendDirectMessage mutation
+  # (82.0) add a lambda function that handles the sendDirectMessage handler
+  sendDirectMessage:
+    handler: functions/send-direct-message.handler
+    environment:
+      CONVERSATIONS_TABLE: !Ref ConversationsTable
+      DIRECT_MESSAGES_TABLE: !Ref DirectMessagesTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource: !GetAtt DirectMessagesTable.Arn
+      - Effect: Allow
+        Action: dynamodb:UpdateItem
+        Resource: !GetAtt ConversationsTable.Arn
+        
+resources:
+	Resources:
+	
+	# (82.0.1) add the new tables needed for conversations
+    ConversationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: otherUserId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: otherUserId
+            AttributeType: S
+          - AttributeName: lastModified
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: byUserId
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: lastModified
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: conversations-table
+
+    DirectMessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: conversationId
+            KeyType: HASH
+          - AttributeName: messageId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: conversationId
+            AttributeType: S
+          - AttributeName: messageId
+            AttributeType: S
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+          - Key: Name
+            Value: direct-messages-table
+```
 
 
 
+```yaml
+# serverless.appsync-api.yml
 
+mappingTemplates:
+	
+	# (82.1) add a mapping template for the sendDirectMessage mutation
+	- type: Mutation
+    field: sendDirectMessage
+    dataSource: sendDirectMessageFunction
+    request: false
+    response: false
+    
+    
+  # (82.1.2) add a nested field for Conversation.otherUser
+  - type: Conversation
+    field: otherUser
+    dataSource: usersTable
+    
+dataSources:
 
+  # (82.1) add dataSources for the newly created tables : ConversationsTable and DirectMessagesTable
+  - type: AMAZON_DYNAMODB
+    name: conversationsTable
+    config:
+      tableName: !Ref ConversationsTable
+  - type: AMAZON_DYNAMODB
+    name: directMessagesTable
+    config:
+      tableName: !Ref DirectMessagesTable
+  # (82.1) add the dataSource for the lambda
+  - type: AWS_LAMBDA
+    name: sendDirectMessageFunction
+    config:
+      functionName: sendDirectMessage
+```
 
-
-
-
+Add the vtl files...
 
 
 

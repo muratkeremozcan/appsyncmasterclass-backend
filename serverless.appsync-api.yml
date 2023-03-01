@@ -188,7 +188,14 @@ mappingTemplates:
     field: notifyReplied
     dataSource: notificationsTable
 
-  ## NESTED RESOLVERS
+  # (82.1) add a mapping template for the sendDirectMessage mutation
+  - type: Mutation
+    field: sendDirectMessage
+    dataSource: sendDirectMessageFunction
+    request: false
+    response: false
+
+  ## NESTED FIELDS / RESOLVERS
 
   # When do we need nested resolvers?
   # Think of its as a utility to avoid over-fetching.
@@ -290,6 +297,11 @@ mappingTemplates:
     field: followedBy
     dataSource: relationshipsTable
 
+  # (82.1) add a nested field for Conversation.otherUser
+  - type: Conversation
+    field: otherUser
+    dataSource: usersTable
+
 # (59.1) configure the pipeline functions
 functionConfigurations:
   - name: getFollowers
@@ -344,6 +356,16 @@ dataSources:
     name: notificationsTable
     config:
       tableName: !Ref NotificationsTable
+
+  # (82.1) add dataSources for the newly created tables : ConversationsTable and DirectMessagesTable
+  - type: AMAZON_DYNAMODB
+    name: conversationsTable
+    config:
+      tableName: !Ref ConversationsTable
+  - type: AMAZON_DYNAMODB
+    name: directMessagesTable
+    config:
+      tableName: !Ref DirectMessagesTable
 
   # (26.1) we need the like mutation to create an entry in the LikesTable, then update UsersTable and TweetsTable
   # When we need to do multiple transactions in an AppSync resolver, we need to create a dataSource for the mutation
@@ -445,6 +467,12 @@ dataSources:
     name: getHashTagFunction
     config:
       functionName: getHashTag
+
+  # (82.1) add a data source for the lambda function
+  - type: AWS_LAMBDA
+    name: sendDirectMessageFunction
+    config:
+      functionName: sendDirectMessage
 
 # When do we use substitutions in `serverless.appsync-api.yml` ?
 # Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.

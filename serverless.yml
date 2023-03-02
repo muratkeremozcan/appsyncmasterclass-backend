@@ -344,6 +344,22 @@ functions:
         Action: dynamodb:GetItem
         Resource: !GetAtt TweetsTable.Arn
 
+# [86] Implement notifyDmed notification
+# (86.0) Add the lambda function to serverless.yml
+notifyDmed:
+  handler: functions/notify-dmed.handler
+  environment:
+    GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
+  events:
+    - stream:
+        type: dynamodb
+        arn: !GetAtt DirectMessagesTable.StreamArn
+  iamRoleStatementsName: ${self:service}-${self:custom.stage}-notifyDmed
+  iamRoleStatements:
+    - Effect: Allow
+      Action: appsync:GraphQL
+      Resource: !Sub ${GraphQlApi.Arn}/*
+
   # [82] Implement sendDirectMessage mutation
   # (82.0) add a lambda function that handles the sendDirectMessage handler
   sendDirectMessage:

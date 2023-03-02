@@ -31,8 +31,8 @@ describe.skip('Given two authenticated users', () => {
   //   username: 'a9244c73-17d0-47de-b648-db0b53955461',
   // }
   beforeAll(async () => {
-    // userA = await given.an_authenticated_user()
-    // userB = await given.an_authenticated_user()
+    userA = await given.an_authenticated_user()
+    userB = await given.an_authenticated_user()
     userAsProfile = await when.a_user_calls_getMyProfile(userA)
     userAsTweet = await when.a_user_calls_tweet(userA, text)
     DynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -85,6 +85,11 @@ describe.skip('Given two authenticated users', () => {
                 ... on Mentioned {
                   mentionedByTweetId
                   mentionedBy
+                }
+
+                ... on DMed {
+                  otherUserId
+                  message
                 }
               }
             }
@@ -212,6 +217,39 @@ describe.skip('Given two authenticated users', () => {
                   userId: userA.username,
                   mentionedByTweetId: userBsTweet.id,
                   mentionedBy: userB.username,
+                }),
+              ]),
+            )
+          },
+          {
+            retries: 10,
+            maxTimeout: 1000,
+          },
+        )
+      }, 15000)
+    })
+
+    describe('When user B DMs user A', () => {
+      const message = chance.string({length: 16})
+
+      beforeAll(async () => {
+        await when.a_user_calls_sendDirectMessage(
+          userB,
+          userA.username,
+          message,
+        )
+      })
+
+      it('User A should receive a notification', async () => {
+        await retry(
+          async () => {
+            expect(notifications).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({
+                  userId: userA.username,
+                  type: 'DMed',
+                  otherUserId: userB.username,
+                  message,
                 }),
               ]),
             )

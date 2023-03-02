@@ -87,6 +87,15 @@ type Mutation {
     replyTweetId: ID!
     repliedBy: ID!
   ): Notification! @aws_iam
+
+  # [85] Support notifyDMed in the GraphQL schema
+  notifyDMed(
+    id: ID!
+    userId: ID!
+    otherUserId: ID!
+    message: String!
+  ): Notification! @aws_iam
+
   # (81) Support direct messages in the GraphQL schema
   sendDirectMessage(otherUserId: ID!, message: String!): Conversation!
 }
@@ -99,6 +108,7 @@ type Subscription {
         "notifyLiked"
         "notifyMentioned"
         "notifyReplied"
+        "notifyDMed"
       ]
     )
 }
@@ -294,6 +304,14 @@ type Replied implements iNotification @aws_iam @aws_cognito_user_pools {
   replyTweetId: ID!
   repliedBy: ID!
   createdAt: AWSDateTime!
+
+type DMed implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  createdAt: AWSDateTime!
+  otherUserId: ID!
+  message: String!
 }
 
 union Notification @aws_iam @aws_cognito_user_pools =
@@ -301,6 +319,7 @@ union Notification @aws_iam @aws_cognito_user_pools =
   | Liked
   | Mentioned
   | Replied
+  | DMed
 
 interface iNotification @aws_iam @aws_cognito_user_pools {
   id: ID!
@@ -314,6 +333,7 @@ enum NotificationType {
   Liked
   Mentioned
   Replied
+  DMed
 }
 
 # (81) Support direct messages in the GraphQL schema

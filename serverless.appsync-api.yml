@@ -188,6 +188,11 @@ mappingTemplates:
     field: notifyLiked
     dataSource: notificationsTable
 
+  # (86.1) Add the mapping template (GQL mutation) to `serverless.appsync.yml`
+  - type: Mutation
+    field: notifyDMed
+    dataSource: notificationsTable
+
   # (76.1) add a mapping template for the notifyMentioned mutation
   - type: Mutation
     field: notifyMentioned

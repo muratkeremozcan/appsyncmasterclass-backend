@@ -5756,6 +5756,26 @@ mappingTemplates:
     dataSource: conversationsTable
 ```
 
+## 84 Implement getDirectMessages query
+
+
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+ 
+  # (84.0) add the query
+  - type: Query
+    field: getDirectMessages
+    dataSource: 
+    
+  # (84.1) add a nested field for Message.from
+  - type: Message
+    field: from
+    dataSource: usersTable
+```
+
 
 
 

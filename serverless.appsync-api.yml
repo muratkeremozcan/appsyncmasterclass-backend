@@ -108,6 +108,11 @@ mappingTemplates:
     field: listConversations
     dataSource: conversationsTable
 
+  # [84] Implement getDirectMessages query
+  - type: Query
+    field: getDirectMessages
+    dataSource: directMessagesTable
+
   ## MUTATIONS
 
   # [12] Implement editMyProfile mutation. We need to setup an AppSync resolver and have it edit an item at DDB.
@@ -305,6 +310,11 @@ mappingTemplates:
   # (82.1) add a nested field for Conversation.otherUser
   - type: Conversation
     field: otherUser
+    dataSource: usersTable
+
+  # (84.1) add a nested field for Message.from
+  - type: Message
+    field: from
     dataSource: usersTable
 
 # (59.1) configure the pipeline functions

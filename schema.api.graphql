@@ -304,6 +304,7 @@ type Replied implements iNotification @aws_iam @aws_cognito_user_pools {
   replyTweetId: ID!
   repliedBy: ID!
   createdAt: AWSDateTime!
+}
 
 type DMed implements iNotification @aws_iam @aws_cognito_user_pools {
   id: ID!

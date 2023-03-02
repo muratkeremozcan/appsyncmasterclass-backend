@@ -5574,6 +5574,8 @@ custom:
 
 ## 81 Support direct messages in the GraphQL schema
 
+![direct-messaging](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xyxpb8ixx73ilo8o14ba.png)
+
 ```yaml
 # schema.api.graphql
 

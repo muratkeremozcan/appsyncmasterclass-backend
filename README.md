@@ -41,7 +41,6 @@ npm run sls -- prune -n 2
 ### Working on a branch
 
 ```bash
-
 # deploy the temporary stack, the stack name can be anything
 # conventionally we match it to the branch name
 npm run sls -- deploy -s tmp
@@ -215,9 +214,9 @@ resources:
 >
 > ```yml
 > custom:
->   # Environment is dev, unless we pass in a stage override
->   stage: ${opt:stage, self:provider.stage}
->   appSync:
+> # Environment is dev, unless we pass in a stage override
+> stage: ${opt:stage, self:provider.stage}
+> appSync:
 >     - ${file(serverless.appsync-api.yml)}
 > ```
 
@@ -5575,6 +5574,8 @@ custom:
 
 ## 81 Support direct messages in the GraphQL schema
 
+![direct-messaging](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xyxpb8ixx73ilo8o14ba.png)
+
 ```yaml
 # schema.api.graphql
 
@@ -5778,11 +5779,100 @@ mappingTemplates:
 
 
 
+## 85 Support notifyDMed in the GraphQL schema
+
+ 
+
+```yaml
+# serverless.appsync-api.yml
 
 
+notifyDMed(
+  id: ID!
+  userId: ID!
+  otherUserId: ID!
+  message: String!
+): Notification! @aws_iam
+
+type Subscription {
+  onNotified(userId: ID!, type: NotificationType): Notification
+  @aws_subscribe(mutations: ["notifyRetweeted", "notifyLiked", "notifyMentioned", "notifyReplied", "notifyDMed"])
+}
 
 
+type DMed implements iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  createdAt: AWSDateTime!
+  otherUserId: ID!
+  message: String!
+}
 
+union Notification @aws_iam @aws_cognito_user_pools =
+    Retweeted
+  | Liked
+  | Mentioned
+  | Replied
+  | DMed
+
+interface iNotification @aws_iam @aws_cognito_user_pools {
+  id: ID!
+  type: NotificationType!
+  userId: ID!
+  createdAt: AWSDateTime!
+}
+
+enum NotificationType {
+  Retweeted
+  Liked
+  Mentioned
+  Replied
+  DMed
+}
+
+```
+
+## 86 Implement notifyDMed notification
+
+Like the usual:
+
+- Add the lambda function to `serverless.yml` (86.0)
+- Add the mapping template (GQL query) to `serverless.appsync.yml` (86.1)
+- Add the JS for the lambda function. (86.2) .
+
+```yaml
+# serverless.yml
+
+functions:
+	# (86.0) Add the lambda function to serverless.yml
+  notifyDmed:
+    handler: functions/notify-dmed.handler
+    environment:
+      GRAPHQL_API_URL: !GetAtt GraphQlApi.GraphQLUrl
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt DirectMessagesTable.StreamArn
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-notifyDmed
+    iamRoleStatements:
+      - Effect: Allow
+        Action: appsync:GraphQL
+        Resource: !Sub ${GraphQlApi.Arn}/*
+```
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+
+  # (86.1) Add the mapping template (GQL mutation) to `serverless.appsync.yml`
+  - type: Mutation
+    field: notifyDMed
+    dataSource: notificationsTable
+```
+
+(86.2) Add the JS for the lambda function; `functions/notify-dmed.js`.
 
 
 

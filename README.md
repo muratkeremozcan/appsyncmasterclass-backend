@@ -5884,7 +5884,7 @@ AWS X-ray shows lots of redundant requests for user profile. Although they are i
 
 ![Aws-xray](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/usuyv508ygw76fah9e9y.png)
 
-(89.0) define caching in serverless.yml
+(89.0) define caching in serverless.yml. We pay for caching, so we do not want to enable it for every environment.
 
 ```yaml
 # serverless.yml
@@ -5896,7 +5896,7 @@ AWS X-ray shows lots of redundant requests for user profile. Although they are i
   # (89.0) define caching in serverless.yml
   appSyncCaching:
     default:
-    prod:
+    prod: # only enable caching for production
       behavior: PER_RESOLVER_CACHING
       ttl: 3600
       type: T2_SMALL
@@ -5908,6 +5908,11 @@ We pay for caching, so we do not need it in every resolver.
 
 ```yaml
 # serverless.appsync-api.yml
+
+# (89.1) check if we there is an override for the stage we are deploying to (prod in our case) use that, otherwise use default (which is nothing in our case)
+caching:
+  ${self:custom.appSyncCaching.${self:custom.stage},
+  self:custom.appSyncCaching.default}
 
 mappingTemplates:
   # QUERIES
@@ -5962,7 +5967,7 @@ mappingTemplates:
       ttl: 300
 ```
 
-
+This is all commented out because I don't want to pay for it!
 
 
 

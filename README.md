@@ -5876,11 +5876,91 @@ mappingTemplates:
 
 
 
+## 89 Per Resolver Caching
 
+![appsync-caching](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/dpi19fwzqn9z84zohqkv.png)
 
+AWS X-ray shows lots of redundant requests for user profile. Although they are in parallel, the DDB queries cost. We can cache some of these requests, especially nested queries, to reduce costs. We decide on what to cache based on this stream of data.
 
+![Aws-xray](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/usuyv508ygw76fah9e9y.png)
 
+(89.0) define caching in serverless.yml
 
+```yaml
+# serverless.yml
+
+  provider: #
+  package: #
+  custom: # 
+
+  # (89.0) define caching in serverless.yml
+  appSyncCaching:
+    default:
+    prod:
+      behavior: PER_RESOLVER_CACHING
+      ttl: 3600
+      type: T2_SMALL
+```
+
+We pay for caching, so we do not need it in every resolver.
+
+(89.1) add caching to the queries. The keys depend on the schema.
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates:
+  # QUERIES
+  - type: Query
+    field: getProfile
+    dataSource: usersTable
+    caching:
+      keys:
+        - $context.arguments.screenName
+      ttl: 300
+     
+      
+  # NESTED FIELDS
+  - type: Tweet
+    field: profile
+    dataSource: usersTable
+    caching:
+      keys:
+        - $context.identity.username
+        - $context.source.creator
+      ttl: 300
+      
+  - type: Retweet
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+    caching:
+      keys:
+        - $context.identity.username
+        - $context.source.creator
+      ttl: 300
+      
+  - type: Reply
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
+    caching:
+      keys:
+        - $context.identity.username
+        - $context.source.creator
+      ttl: 300
+      
+  - type: Reply
+    field: inReplyToUsers
+    dataSource: usersTable
+    caching:
+      keys:
+        - $context.identity.username
+        - $context.source.inReplyToUserIds
+      ttl: 300
+```
 
 
 

@@ -55,6 +55,20 @@ custom:
   custom:
     stage: ${self:custom.stage, 'dev'}
 
+# [89] Per resolver caching
+# AWS X-ray shows lots of redundant requests for user profile. Although they are
+# in parallel, the DDB queries cost. We can cache some of these requests,
+# especially nested queries, to reduce costs. We decide on what to cache based on
+# this stream of data.
+
+# (89.0) define caching in serverless.yml
+appSyncCaching:
+  default:
+  prod:
+    behavior: PER_RESOLVER_CACHING
+    ttl: 3600
+    type: T2_SMALL # you pay for it so keep it small
+
 functions:
   # (4.1) Add a functions block for the lambda trigger function
   confirmUserSignup:

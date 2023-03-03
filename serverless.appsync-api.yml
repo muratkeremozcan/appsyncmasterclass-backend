@@ -3,6 +3,11 @@ name: appsyncmasterclass
 schema: schema.api.graphql # name of the graphql schema file [2]
 # (3.2) after configuring the Cognito User Pool, we need to configure the AppSync API to use it.
 authenticationType: AMAZON_COGNITO_USER_POOLS
+# (89.1) check if we there is an override for the stage we are deploying to (prod in our case) use that, otherwise use default (which is nothing in our case)
+# This is all commented out because I don't want to pay for it!
+# caching:
+#   ${self:custom.appSyncCaching.${self:custom.stage},
+#   self:custom.appSyncCaching.default}
 
 userPoolConfig:
   awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
@@ -38,6 +43,10 @@ mappingTemplates:
   - type: Query
     field: getProfile
     dataSource: usersTable
+    # caching: # (89.1) add caching to the queries. The keys depend on the schema.
+    #   keys:
+    #     - $context.arguments.screenName
+    #   ttl: 300
 
   # [15] Implement getImageUploadUrl query (use a lambda to implement it)
   # (15.0) add an entry to the mappingTemplates
@@ -211,7 +220,6 @@ mappingTemplates:
     response: false
 
   ## NESTED FIELDS / RESOLVERS
-
   # When do we need nested resolvers?
   # Think of its as a utility to avoid over-fetching.
   # We need nested resolvers when our types are returning other types.
@@ -224,6 +232,11 @@ mappingTemplates:
   - type: Tweet
     field: profile
     dataSource: usersTable
+    # caching: # (89.1) caching
+    #   keys:
+    #     - $context.identity.username
+    #     - $context.source.creator
+    #   ttl: 300
 
   # [36] Implement Retweet nested resolver
   # (36.0) Create a nested resolver to get the profile on Retweet
@@ -232,6 +245,11 @@ mappingTemplates:
     dataSource: usersTable
     request: Tweet.profile.request.vtl
     response: Tweet.profile.response.vtl
+    # caching: # (89.1) caching
+    #   keys:
+    #     - $context.identity.username
+    #     - $context.source.creator
+    #   ttl: 300
 
   # [44] Implement reply nested resolvers `profile`, `inReplyToTweet`, `inReplyToUsers`
   # As explained in _(20.2)_, we need nested resolvers when our types are returning other types.
@@ -241,6 +259,11 @@ mappingTemplates:
     dataSource: usersTable
     request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
     response: Tweet.profile.response.vtl
+    # caching: # (89.1) caching
+    #   keys:
+    #     - $context.identity.username
+    #     - $context.source.creator
+    #   ttl: 300
 
   # [27] Implement the Tweet.liked nested resolver
   # (27.0) create a nested resolver for liked
@@ -282,6 +305,11 @@ mappingTemplates:
   - type: Reply
     field: inReplyToUsers
     dataSource: usersTable
+    # caching: # (89.1) caching
+    #   keys:
+    #     - $context.identity.username
+    #     - $context.source.inReplyToUserIds
+    #   ttl: 300
 
   # (23.3) Now we have a type `UnhydratedTweetsPage`, and a `tweets` field we can attach a nested resolver to.
   # We can have that resolver hydrate the data from a different table.

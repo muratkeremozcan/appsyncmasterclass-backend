@@ -235,7 +235,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username
@@ -252,7 +252,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username
@@ -270,7 +270,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username

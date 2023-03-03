@@ -5969,7 +5969,7 @@ mappingTemplates:
 
 This is all commented out because I don't want to pay for it!
 
-## 90 BatchInvoke to reduce the umber of lambda invocations
+## 90, 91 BatchInvoke to reduce the umber of lambda invocations
 
 Certain concurrent lambda calls can be expensive and reach a regional limit. AppSync has support for BatchInvoke; instead of calling a lambda for each item in an array, we can batch multiple items for an invocation.
 
@@ -5997,8 +5997,6 @@ functions:
         Resource: !GetAtt UsersTable.Arn
 ```
 
-
-
 ```yaml
 # serverless.appsync-api.yml
 
@@ -6010,7 +6008,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl 
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
     
   - type: Retweet
     field: profile
@@ -6020,7 +6018,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
 
   - type: Reply
     field: profile
@@ -6030,7 +6028,7 @@ mappingTemplates:
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
     request: Tweet.profile.batchInvoke.request.vtl
-    response: false
+    response: Tweet.profile.batchInvoke.response.vtl
 
 dataSources:
 

@@ -5969,13 +5969,79 @@ mappingTemplates:
 
 This is all commented out because I don't want to pay for it!
 
+## 90 BatchInvoke to reduce the umber of lambda invocations
+
+Certain concurrent lambda calls can be expensive and reach a regional limit. AppSync has support for BatchInvoke; instead of calling a lambda for each item in an array, we can batch multiple items for an invocation.
+
+![batch invoke](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/dgtzurt1gy7bgaf2uxge.png)
+
+Like the usual:
+
+- Add the lambda function to `serverless.yml` (90.0)
+- Modify the mapping templates `serverless.appsync.yml` and add the
+  dataSource (90.1)
+- Add the JS for the lambda function. (90.2)
+
+```yaml
+# serverless.yml
+functions:
+  # Add the lambda function to `serverless.yml` (90.0)
+  getTweetCreator:
+    handler: functions/get-tweet-creator.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getTweetCreator
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:BatchGetItem
+        Resource: !GetAtt UsersTable.Arn
+```
 
 
 
+```yaml
+# serverless.appsync-api.yml
 
+mappingTemplates:
 
+  - type: Tweet
+    field: profile
+    # dataSource: usersTable
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl 
+    response: false
+    
+  - type: Retweet
+    field: profile
+    # dataSource: usersTable
+    # request: Tweet.profile.request.vtl
+    # response: Tweet.profile.response.vtl
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl
+    response: false
 
+  - type: Reply
+    field: profile
+    # dataSource: usersTable
+    # request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
+    # response: Tweet.profile.response.vtl
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl
+    response: false
 
+dataSources:
+
+  # (92.1) add a data source for the lambda function
+  - type: AWS_LAMBDA
+    name: getTweetCreatorFunction
+    config:
+      functionName: getTweetCreator
+```
+
+Add the JS for the lambda (90.2), check out `functions/get-tweet-creator.js`.
 
 
 

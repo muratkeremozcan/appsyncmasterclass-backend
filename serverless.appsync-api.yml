@@ -231,7 +231,11 @@ mappingTemplates:
   # so that we can populate the user profile in the Tweet type of our schema. We do that by using nested resolvers.
   - type: Tweet
     field: profile
-    dataSource: usersTable
+    # dataSource: usersTable
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl
+    response: false
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username
@@ -242,9 +246,13 @@ mappingTemplates:
   # (36.0) Create a nested resolver to get the profile on Retweet
   - type: Retweet
     field: profile
-    dataSource: usersTable
-    request: Tweet.profile.request.vtl
-    response: Tweet.profile.response.vtl
+    # dataSource: usersTable
+    # request: Tweet.profile.request.vtl
+    # response: Tweet.profile.response.vtl
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl
+    response: false
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username
@@ -256,9 +264,13 @@ mappingTemplates:
   # (44.0) Create a nested resolver to get the profile on Reply (similar to 36.0)
   - type: Reply
     field: profile
-    dataSource: usersTable
-    request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
-    response: Tweet.profile.response.vtl
+    # dataSource: usersTable
+    # request: Tweet.profile.request.vtl # use the same request templates as for Tweet.profile
+    # response: Tweet.profile.response.vtl
+    # (90.1) modify the mapping template for nested field to use batchInvoke
+    dataSource: getTweetCreatorFunction
+    request: Tweet.profile.batchInvoke.request.vtl
+    response: false
     # caching: # (89.1) caching
     #   keys:
     #     - $context.identity.username
@@ -521,6 +533,12 @@ dataSources:
     name: sendDirectMessageFunction
     config:
       functionName: sendDirectMessage
+
+  # (92.1) add a data source for the lambda function
+  - type: AWS_LAMBDA
+    name: getTweetCreatorFunction
+    config:
+      functionName: getTweetCreator
 
 # When do we use substitutions in `serverless.appsync-api.yml` ?
 # Whenever we are using table names in vtl file, ex: `"${RelationshipsTable}"` we have to define it in substitutions.

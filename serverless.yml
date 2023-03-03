@@ -62,12 +62,12 @@ custom:
 # this stream of data.
 
 # (89.0) define caching in serverless.yml
-appSyncCaching:
-  default:
-  prod:
-    behavior: PER_RESOLVER_CACHING
-    ttl: 3600
-    type: T2_SMALL # you pay for it so keep it small
+# appSyncCaching:
+#   default:
+#   prod:
+#     behavior: PER_RESOLVER_CACHING
+#     ttl: 3600
+#     type: T2_SMALL # you pay for it so keep it small
 
 functions:
   # (4.1) Add a functions block for the lambda trigger function
@@ -387,6 +387,18 @@ functions:
       - Effect: Allow
         Action: dynamodb:UpdateItem
         Resource: !GetAtt ConversationsTable.Arn
+
+  # [90] BatchInvoke to reduce the umber of lambda invocations
+  # (90.0) Add the lambda function to `serverless.yml`
+  getTweetCreator:
+    handler: functions/get-tweet-creator.handler
+    environment:
+      USERS_TABLE: !Ref UsersTable
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-getTweetCreator
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:BatchGetItem
+        Resource: !GetAtt UsersTable.Arn
 
 resources:
   Resources:

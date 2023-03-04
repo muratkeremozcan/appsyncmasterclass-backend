@@ -2,6 +2,7 @@ name: deploy to temp stack
 
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:

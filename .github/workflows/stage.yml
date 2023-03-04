@@ -3,6 +3,7 @@ name: deploy to stage
 on:
   push:
     tags: ['*']
+  workflow_dispatch:
 
 jobs:
   build:

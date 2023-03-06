@@ -6041,5 +6041,272 @@ dataSources:
 
 Add the JS for the lambda (90.2), check out `functions/get-tweet-creator.js`.
 
+## 92 AWS Kinesis - analyze data streams
+
+People used to use an API gateway + lambda, but the recent approach is using Cognito Identity Pool.
+
+![Kinesis-1](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xpue8id1y9o7az5589a7.png)
+
+![Kinesis-2](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/tmtthgwzm0cvmuury984.png)
+
+![Kinesis-3](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z4f77xlvk6xqg6mh6vtq.png)
+
+
+
+## 93 Configure Kinesis Firehose
+
+(93.0) use a lambda to transform the data into a Kinesis Firehose stream; it comes as a JSON object but not formatted line by line. Check out `functions/firehose-transformer.js`.
+
+(93.1) Define the lambda function at `serverless.yml`.
+
+(93.2) Define all the resources Kinesis Firehose.
+
+```yml
+# serverless.yml
+
+functions:
+  ## 
+  firehoseTransformer:
+    handler: functions/firehose-transformer.handler
+    timeout: 61 # must set this timeout to avoid a console warning
+    
+resources:
+	Resources:
+	
+    # (93.2) Define all the resources Kinesis Firehose
+    # S3 bucket, without any public access
+    AnalyticsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+    # Kinesis firehose delivery stream
+    FirehoseStream:
+      Type: AWS::KinesisFirehose::DeliveryStream
+      Properties:
+        DeliveryStreamType: DirectPut
+        ExtendedS3DestinationConfiguration:
+          BucketARN: !GetAtt AnalyticsBucket.Arn
+          BufferingHints:
+            IntervalInSeconds: 60
+            SizeInMBs: 1
+          CloudWatchLoggingOptions:
+            Enabled: true
+            LogGroupName: !Ref FirehoseLogGroup
+            LogStreamName: !Ref FirehoseLogStream
+          CompressionFormat: GZIP
+          RoleARN: !GetAtt FirehoseDeliveryIamRole.Arn
+          Prefix: analytics/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+          ErrorOutputPrefix: analytics_errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}
+          ProcessingConfiguration:
+            Enabled: true
+            Processors:
+              - Type: Lambda
+                Parameters:
+                  - ParameterName: LambdaArn
+                    ParameterValue: !GetAtt FirehoseTransformerLambdaFunction.Arn
+    # Cloudwatch log group
+    FirehoseLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        RetentionInDays: 14
+    # Cloudwatch log stream within that group
+    FirehoseLogStream:
+      Type: AWS::Logs::LogStream
+      Properties:
+        LogGroupName:
+          Ref: FirehoseLogGroup
+    # IAM role for cloudwatch stream
+    FirehoseDeliveryIamRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: firehose.amazonaws.com
+              Action: sts:AssumeRole
+        Path: '/'
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:AbortMultipartUpload
+                    - s3:GetBucketLocation
+                    - s3:GetObject
+                    - s3:ListBucket
+                    - s3:ListBucketMultipartUploads
+                    - s3:PutObject
+                  Resource:
+                    - !GetAtt AnalyticsBucket.Arn
+                    - !Sub ${AnalyticsBucket.Arn}/*
+                - Effect: Allow
+                  Action: logs:PutLogEvents
+                  Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${FirehoseLogGroup}:log-stream:*
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                    - lambda:GetFunctionConfiguration
+                  Resource: !GetAtt FirehoseTransformerLambdaFunction.Arn
+
+    # [94] Configure Cognito Identity Pool and IAM role              
+		IdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      Properties:
+        AllowUnauthenticatedIdentities: true
+        AllowClassicFlow: false
+        CognitoIdentityProviders:
+          - ClientId: !Ref WebUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+            ServerSideTokenCheck: true
+
+    UnauthedClientRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Action: sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                ForAnyValue:StringLike:
+                  cognito-identity.amazonaws.com:amr: unauthenticated
+        Policies:
+          - PolicyName: CognitoPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - firehose:PutRecord
+                    - firehose:PutRecordBatch
+                  Resource: !GetAtt FirehoseStream.Arn
+
+    AuthedClientRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Action: sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                ForAnyValue:StringLike:
+                  cognito-identity.amazonaws.com:amr: authenticated
+        Policies:
+          - PolicyName: CognitoPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - firehose:PutRecord
+                    - firehose:PutRecordBatch
+                  Resource: !GetAtt FirehoseStream.Arn
+
+    IdentityPoolRoleMapping:
+      Type: AWS::Cognito::IdentityPoolRoleAttachment
+      Properties:
+        IdentityPoolId: !Ref IdentityPool
+        Roles:
+          authenticated: !GetAtt AuthedClientRole.Arn
+          unauthenticated: !GetAtt UnauthedClientRole.Arn
+```
+
+## 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

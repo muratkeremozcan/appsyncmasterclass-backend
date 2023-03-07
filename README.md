@@ -6236,12 +6236,13 @@ Add the query and the type to `schema.api.graphql`.
 # schema.api.graphql
 
 type Query {
-  # (95.0) add the query
+  # (95.0) add the query, (96.0) add tags for unauthenticated GQL ops
   getAnalyticsConfig: AnalyticsConfig
+  @aws_iam @aws_cognito_user_pools 
 }
 
 # (95.1) add the type
-type AnalyticsConfig {
+type AnalyticsConfig @aws_iam @aws_cognito_user_pools {
   identityPoolId: ID!
   streamName: String!
 }
@@ -6268,7 +6269,7 @@ substitutions:
 
 ```
 
-
+## 96 Add unauthenticated GraphQL operations
 
 
 

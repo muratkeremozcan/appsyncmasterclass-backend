@@ -14,6 +14,9 @@ schema {
 # ID, AWSUrl, AWSDate, AWSDateTime are GraphQL built-in types
 
 type Query {
+  # [95] Update schema to return Kinesis Firehose stream name
+  getAnalyticsConfig: AnalyticsConfig @aws_iam @aws_cognito_user_pools
+
   getImageUploadUrl(extension: String, contentType: String): AWSURL!
   # After we fetch the tweetId for the tweets on our timeline, we have to hydrate them from the Tweets table
   # (23.2) Add a type `UnhydratedTweetsPage` and make `getMyTimeline` return a `UnhydratedTweetsPage` instead of `TweetsPage`
@@ -360,4 +363,9 @@ type Message {
 type MessagesPage {
   messages: [Message!]
   nextToken: String
+}
+# (95.1) add the type
+type AnalyticsConfig @aws_iam @aws_cognito_user_pools {
+  identityPoolId: ID!
+  streamName: String!
 }

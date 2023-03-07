@@ -6053,7 +6053,7 @@ People used to use an API gateway + lambda, but the recent approach is using Cog
 
 
 
-## 93 Configure Kinesis Firehose
+## 93 Configure Kinesis Firehose & 94 Configure Cognito Identity Pool and IAM
 
 (93.0) use a lambda to transform the data into a Kinesis Firehose stream; it comes as a JSON object but not formatted line by line. Check out `functions/firehose-transformer.js`.
 
@@ -6228,15 +6228,48 @@ resources:
           unauthenticated: !GetAtt UnauthedClientRole.Arn
 ```
 
+## 95 Update schema to return Kinesis Firehose stream name & 96 Add unauthenticated GraphQL operations
+
+Add the query and the type to `schema.api.graphql`.
+
+```yaml
+# schema.api.graphql
+
+type Query {
+  # (95.0) add the query, (96.0) add tags for unauthenticated GQL ops
+  getAnalyticsConfig: AnalyticsConfig
+  @aws_iam @aws_cognito_user_pools 
+}
+
+# (95.1) add the type
+type AnalyticsConfig @aws_iam @aws_cognito_user_pools {
+  identityPoolId: ID!
+  streamName: String!
+}
+
+```
+
+Add the mapping template and the substitutions.
+
+```yaml
+# serverless.appsync-api.yml
+
+mappingTemplates: 
+
+# (95.2) add the mapping template
+- type: Query
+    field: getAnalyticsConfig
+    dataSource: none
+    
+    
+substitutions:
+  # (95.3) add the substitutions for the firehose stream and identity pool
+  FirehoseStreamName: !Ref FirehoseStream 
+  IdentityPoolId: !Ref IdentityPool
+
+```
+
 ## 
-
-
-
-
-
-
-
-
 
 
 

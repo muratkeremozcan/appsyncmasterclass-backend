@@ -30,6 +30,12 @@ mappingTemplates:
     dataSource: none
 
   ## QUERIES
+
+  # (95.2) add the mapping template
+  - type: Query
+    field: getAnalyticsConfig
+    dataSource: none
+
   # [8] Implement getMyProfile query. We need to setup an AppSync resolver and have it get an item from DDB.
   - type: Query
     field: getMyProfile
@@ -556,3 +562,6 @@ substitutions:
   LikesTable: !Ref LikesTable
   UsersTable: !Ref UsersTable
   RelationshipsTable: !Ref RelationshipsTable
+  # (95.3) add the substitutions for the firehose stream and identity pool
+  FirehoseStreamName: !Ref FirehoseStream
+  IdentityPoolId: !Ref IdentityPool

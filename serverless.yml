@@ -893,8 +893,8 @@ resources:
                 - Effect: Allow
                   Action: appsync:GraphQL
                   Resource:
-                    - !Sub ${AppsyncmasterclassGraphQlApi.Arn}/types/Query/fields/getAnalyticsConfig
-                    - !Sub ${AppsyncmasterclassGraphQlApi.Arn}/types/AnalyticsConfig
+                    - !Sub ${GraphQlApi.Arn}/types/Query/fields/getAnalyticsConfig
+                    - !Sub ${GraphQlApi.Arn}/types/AnalyticsConfig
 
     AuthedClientRole:
       Type: AWS::IAM::Role
@@ -925,8 +925,8 @@ resources:
                 - Effect: Allow
                   Action: appsync:GraphQL
                   Resource:
-                    - !Sub ${AppsyncmasterclassGraphQlApi.Arn}/types/Query/fields/getAnalyticsConfig
-                    - !Sub ${AppsyncmasterclassGraphQlApi.Arn}/types/AnalyticsConfig
+                    - !Sub ${GraphQlApi.Arn}/types/Query/fields/getAnalyticsConfig
+                    - !Sub ${GraphQlApi.Arn}/types/AnalyticsConfig
 
     IdentityPoolRoleMapping:
       Type: AWS::Cognito::IdentityPoolRoleAttachment

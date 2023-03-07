@@ -6228,7 +6228,7 @@ resources:
           unauthenticated: !GetAtt UnauthedClientRole.Arn
 ```
 
-## 95 Update schema to return Kinesis Firehose stream name
+## 95 Update schema to return Kinesis Firehose stream name & 96 Add unauthenticated GraphQL operations
 
 Add the query and the type to `schema.api.graphql`.
 
@@ -6269,7 +6269,7 @@ substitutions:
 
 ```
 
-## 96 Add unauthenticated GraphQL operations
+## 
 
 
 

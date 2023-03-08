@@ -6269,11 +6269,15 @@ substitutions:
 
 ```
 
-## 102 Configure AppSync logging
+## 102 Configure AppSync logging & 103 Implement sampling for resolver logs
 
 ```yaml
 # serverless.yml
 
+plugins:
+
+  # (103) Implement sampling for resolver logs
+  - serverless-plugin-ifelse
 
 custom:
   
@@ -6281,7 +6285,51 @@ custom:
   appSyncLogLevel:
     default: ALL
     prod: ERROR
+    
+  # [103] Implement sampling for resolver logs\
+  serverlessIfElse:
+    - If: '"${self:custom.stage}" == "prod"'
+      ElseExclude:
+        - functions.setResolverLogLevelToAll
+        - functions.setResolverLogLevelToError
 
+functions:
+
+  # [103] Implement sampling for resolver logs
+  setResolverLogLevelToAll:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(6 * * * ? *) # 6 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ALL
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToAll
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
+  setResolverLogLevelToError:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(12 * * * ? *) # 12 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ERROR
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToErr
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
 
 resources:
 	Resources:
@@ -6310,8 +6358,6 @@ resources:
                     - logs:PutLogEvents
                   Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 ```
-
-
 
 ```yaml
 # serverless.appsync-api.yml

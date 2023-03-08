@@ -9,6 +9,8 @@ plugins:
   - serverless-export-env # (6) integration test
   - serverless-prune-plugin # fixes Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn # not needed as of 78
+  # (103) Implement sampling for resolver logs
+  - serverless-plugin-ifelse
 
 provider:
   name: aws
@@ -74,6 +76,13 @@ custom:
   appSyncLogLevel:
     default: ALL
     prod: ERROR
+
+  # [103] Implement sampling for resolver logs\
+  serverlessIfElse:
+    - If: '"${self:custom.stage}" == "prod"'
+      ElseExclude:
+        - functions.setResolverLogLevelToAll
+        - functions.setResolverLogLevelToError
 
 functions:
   # (4.1) Add a functions block for the lambda trigger function
@@ -410,6 +419,42 @@ functions:
   firehoseTransformer:
     handler: functions/firehose-transformer.handler
     timeout: 61 # must set this timeout to avoid a console warning
+
+  # [103] Implement sampling for resolver logs
+  setResolverLogLevelToAll:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(6 * * * ? *) # 6 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ALL
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToAll
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
+  setResolverLogLevelToError:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(12 * * * ? *) # 12 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ERROR
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToErr
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
 
 resources:
   Resources:

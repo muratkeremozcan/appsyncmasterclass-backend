@@ -6269,7 +6269,105 @@ substitutions:
 
 ```
 
-## 
+## 102 Configure AppSync logging & 103 Implement sampling for resolver logs
+
+```yaml
+# serverless.yml
+
+plugins:
+
+  # (103) Implement sampling for resolver logs
+  - serverless-plugin-ifelse
+
+custom:
+  
+  # (102.0) add a custom log level
+  appSyncLogLevel:
+    default: ALL
+    prod: ERROR
+    
+  # [103] Implement sampling for resolver logs\
+  serverlessIfElse:
+    - If: '"${self:custom.stage}" == "prod"'
+      ElseExclude:
+        - functions.setResolverLogLevelToAll
+        - functions.setResolverLogLevelToError
+
+functions:
+
+  # [103] Implement sampling for resolver logs
+  setResolverLogLevelToAll:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(6 * * * ? *) # 6 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ALL
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToAll
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
+  setResolverLogLevelToError:
+    handler: functions/set-resolver-log-level.handler
+    events:
+      - schedule: cron(12 * * * ? *) # 12 mins past the hour every hour
+    environment:
+      APPSYNC_API_ID: !GetAtt GraphQlApi.ApiId
+      FIELD_LOG_LEVEL: ERROR
+    iamRoleStatementsName: ${self:service}-${self:custom.stage}-setLogLevelToErr
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - appsync:GetGraphqlApi
+          - appsync:UpdateGraphqlApi
+        Resource: !Ref GraphQlApi
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt AppSyncLoggingServiceRole.Arn
+
+resources:
+	Resources:
+	
+    # (102.1) add the AppSync logging role
+    AppSyncLoggingServiceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        Path: /service-role/
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+```
+
+```yaml
+# serverless.appsync-api.yml
+
+# (102.2) add logConfig to the AppSync API using the custom role we created
+logConfig:
+  loggingRoleArn: !GetAtt AppSyncLoggingServiceRole.Arn
+  level: ${self:custom.appSyncLogLevel.${self:custom.stage}, self:custom.appSyncLogLevel.default}
+  excludeVerboseContent: false
+```
 
 
 

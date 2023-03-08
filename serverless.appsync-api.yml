@@ -13,6 +13,15 @@ userPoolConfig:
   awsRegion: eu-west-1 # make sure this matches provider/region value in serverless.yml file
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
+
+# (102.2) add logConfig to the AppSync API using the custom role we created
+logConfig:
+  loggingRoleArn: !GetAtt AppSyncLoggingServiceRole.Arn
+  level:
+    ${self:custom.appSyncLogLevel.${self:custom.stage},
+    self:custom.appSyncLogLevel.default}
+  excludeVerboseContent: false
+
 additionalAuthenticationProviders:
   - authenticationType: AWS_IAM
 

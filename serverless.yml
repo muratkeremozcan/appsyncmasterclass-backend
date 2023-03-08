@@ -55,19 +55,25 @@ custom:
   custom:
     stage: ${self:custom.stage, 'dev'}
 
-# [89] Per resolver caching
-# AWS X-ray shows lots of redundant requests for user profile. Although they are
-# in parallel, the DDB queries cost. We can cache some of these requests,
-# especially nested queries, to reduce costs. We decide on what to cache based on
-# this stream of data.
+  # [89] Per resolver caching
+  # AWS X-ray shows lots of redundant requests for user profile. Although they are
+  # in parallel, the DDB queries cost. We can cache some of these requests,
+  # especially nested queries, to reduce costs. We decide on what to cache based on
+  # this stream of data.
 
-# (89.0) define caching in serverless.yml
-# appSyncCaching:
-#   default:
-#   prod:
-#     behavior: PER_RESOLVER_CACHING
-#     ttl: 3600
-#     type: T2_SMALL # you pay for it so keep it small
+  # (89.0) define caching in serverless.yml
+  # appSyncCaching:
+  #   default:
+  #   prod:
+  #     behavior: PER_RESOLVER_CACHING
+  #     ttl: 3600
+  #     type: T2_SMALL # you pay for it so keep it small
+
+  # [102] Configure AppSync logging
+  # (102.0) add a custom log level
+  appSyncLogLevel:
+    default: ALL
+    prod: ERROR
 
 functions:
   # (4.1) Add a functions block for the lambda trigger function
@@ -935,6 +941,30 @@ resources:
         Roles:
           authenticated: !GetAtt AuthedClientRole.Arn
           unauthenticated: !GetAtt UnauthedClientRole.Arn
+
+    # (102.1) add the AppSync logging role
+    AppSyncLoggingServiceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        Path: /service-role/
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 
   Outputs:
     # (6) add AWS_REGION as an env var

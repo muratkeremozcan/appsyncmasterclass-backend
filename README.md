@@ -6269,7 +6269,59 @@ substitutions:
 
 ```
 
-## 
+## 102 Configure AppSync logging
+
+```yaml
+# serverless.yml
+
+
+custom:
+  
+  # (102.0) add a custom log level
+  appSyncLogLevel:
+    default: ALL
+    prod: ERROR
+
+
+resources:
+	Resources:
+	
+    # (102.1) add the AppSync logging role
+    AppSyncLoggingServiceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        Path: /service-role/
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+```
+
+
+
+```yaml
+# serverless.appsync-api.yml
+
+# (102.2) add logConfig to the AppSync API using the custom role we created
+logConfig:
+  loggingRoleArn: !GetAtt AppSyncLoggingServiceRole.Arn
+  level: ${self:custom.appSyncLogLevel.${self:custom.stage}, self:custom.appSyncLogLevel.default}
+  excludeVerboseContent: false
+```
 
 
 

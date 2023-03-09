@@ -16,6 +16,18 @@ provider:
   name: aws
   runtime: nodejs12.x
   region: eu-west-1
+  # [105] Configure Xray tracing
+  # (105.0) add tracing to to provider
+  tracing:
+    lambda: true
+    apiGateway: false
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - xray:PutTraceSegments
+        - xray:PutTelemetryRecords
+      Resource: '*'
+
   versionFunctions: false # avoids Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # can also do automatic pruning https://github.com/claygregory/serverless-prune-plugin#automatic-pruning, but we really don't need versions here...
 
@@ -420,7 +432,7 @@ functions:
     handler: functions/firehose-transformer.handler
     timeout: 61 # must set this timeout to avoid a console warning
 
-  # [103] Implement sampling for resolver logs
+  # (103) Implement sampling for resolver logs
   setResolverLogLevelToAll:
     handler: functions/set-resolver-log-level.handler
     events:

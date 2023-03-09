@@ -6369,13 +6369,55 @@ logConfig:
   excludeVerboseContent: false
 ```
 
+## 105 Xray
 
+Install `aws-xray-sdk-core`.
 
+(105.0) add tracing & role to provider.
 
+(105.1) add a custom property for `serverless-iam-roles-per-function`.
 
+(105.2)  enable Xray in appsync api.
 
+(105.3) enable X-Ray in the lambda.
 
+```yaml
+# serverless.yml
 
+provider:
+ 
+  # [105] Configure Xray tracing
+  # (105.0) add tracing & role to provider
+  tracing:
+    lambda: true
+    apiGateway: false
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - xray:PutTraceSegments
+        - xray:PutTelemetryRecords
+      Resource: '*'
+      
+custom:
+  # (105.1) add a custom property for `serverless-iam-roles-per-function`
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+```
+
+```yaml
+# serverless.appsync-api.yml
+
+# (105.2) enable Xray in appsync api 
+xrayEnabled: true
+```
+
+```js
+// functions/get-tweet-creator.js
+const XRay = require('aws-xray-sdk-core') // (105.3) enable X-Ray in the lambda
+const DynamoDB = require('aws-sdk/clients/dynamodb')
+const DocumentClient = new DynamoDB.DocumentClient()
+XRay.captureAWSClient(DocumentClient.service) // (105.3) enable X-Ray in the lambda
+```
 
 
 

@@ -6476,7 +6476,7 @@ Get a Lumigo token. Lumigo has a nice tutorial that quickly integrates with your
 
 ![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/jth7bgeq8ph5ona7cddk.png)
 
-![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/lzmqyuli7hzztv3d9nzo.png)
+![parameter-store](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5kw6i7pof3corrzt9p8j.png)
 
 
 

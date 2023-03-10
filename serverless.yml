@@ -11,6 +11,7 @@ plugins:
   - serverless-prune-plugin # fixes Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn # not needed as of 78
   # (103) Implement sampling for resolver logs
+  - serverless-layers # [79] serverless-layers
   - serverless-plugin-ifelse
   - serverless-lumigo # (110.1) add it to plugins
 
@@ -46,6 +47,7 @@ package:
     - package.json
     - '**/test-helpers/**'
     - '**/__tests__/**'
+    - '**/.vscode/**'
 
 custom:
   # (105.1) add a custom property for `serverless-iam-roles-per-function`

@@ -22,6 +22,9 @@ logConfig:
     self:custom.appSyncLogLevel.default}
   excludeVerboseContent: false
 
+# (105.2) enable Xray in appsync api
+xrayEnabled: true
+
 additionalAuthenticationProviders:
   - authenticationType: AWS_IAM
 

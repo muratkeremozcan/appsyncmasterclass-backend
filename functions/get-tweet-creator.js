@@ -1,6 +1,8 @@
 const _ = require('lodash')
+const XRay = require('aws-xray-sdk-core') // (105.3) enable X-Ray in the lambda
 const DynamoDB = require('aws-sdk/clients/dynamodb')
 const DocumentClient = new DynamoDB.DocumentClient()
+XRay.captureAWSClient(DocumentClient.service) // (105.3) enable X-Ray in the lambda
 
 const {USERS_TABLE} = process.env
 

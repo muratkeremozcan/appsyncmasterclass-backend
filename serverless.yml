@@ -11,13 +11,14 @@ plugins:
   # - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn # not needed as of 78
   # (103) Implement sampling for resolver logs
   - serverless-plugin-ifelse
+  - serverless-lumigo # (110.1) add it to plugins
 
 provider:
   name: aws
   runtime: nodejs12.x
   region: eu-west-1
   # [105] Configure Xray tracing
-  # (105.0) add tracing to to provider
+  # (105.0) add tracing & role to provider
   tracing:
     lambda: true
     apiGateway: false
@@ -46,6 +47,10 @@ package:
     - '**/__tests__/**'
 
 custom:
+  # (105.1) add a custom property for `serverless-iam-roles-per-function`
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+
   # (6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)
   region: ${opt:region, self:provider.region}
   # (4.0) Environment is dev, unless we pass in a stage override; npm run sls -- -s prod
@@ -95,6 +100,10 @@ custom:
       ElseExclude:
         - functions.setResolverLogLevelToAll
         - functions.setResolverLogLevelToError
+
+  lumigo:
+    token: ${ssm:/${self:custom.stage}/lumigo-token~true}
+    skipInstallNodeTracer: true
 
 functions:
   # (4.1) Add a functions block for the lambda trigger function

@@ -6379,7 +6379,7 @@ Install `aws-xray-sdk-core`.
 
 (105.2)  enable Xray in appsync api.
 
-(105.3) enable X-Ray in the lambda.
+(105.3) enable X-Ray in the lambda for instrumentation purposes.
 
 ```yaml
 # serverless.yml
@@ -6419,23 +6419,64 @@ const DocumentClient = new DynamoDB.DocumentClient()
 XRay.captureAWSClient(DocumentClient.service) // (105.3) enable X-Ray in the lambda
 ```
 
+X-ray pro: cost effective insight into AppSync requests, especially if you mainly use VTL templates.
+
+X-ray cons (TL,DR; bad devex):
+
+* Requires lots of manual instrumentation to be useful in the lambdas
+* Doesn't capture request response payload
+* Doesn't show lambda logs with the timeline
+* Hard to find problems
+* No alerting
+* Limited to HTTP ( no TCP )
+* Doesn't support streams
+
+### Yan's observability strategy
+
+![Yan strat](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/p06m8dkky7yuuhw16g7t.png)
+
+Lumbago doesn't need instrumentation, and captures everything.
+However if there are complex non-IO busyness logic that doesn't involve calling another API, Lumigo cannot capture that so we use custom log messages.
+
+![Yan strat 2](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/bu8wmnkcoflj6oer67h6.png)
+
+Using Cloudwatch for metrics & alerts because copying metrics to another system would add cost and delay to triggering alerts. Ingesting alerts into DataDog adds 5-10 minutes to receiving them.
+
+![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ips9mewx75usdni2u8w4.png)
 
 
 
+### 110 Lumigo
+
+`serverless-lumigo` -> devDependencies
+
+`@lumigo/tracer` -> dependencies
 
 
 
+```yaml
+# serverless.yml
 
+plugins:
+  - serverless-appsync-plugin
+  - serverless-iam-roles-per-function
+  - serverless-export-env
+  - serverless-layers
+  - serverless-plugin-ifelse
+  - serverless-lumigo # (110.1) add it to plugins
+  
+custom:
+  lumigo:
+    token: ${ssm:/${self:custom.stage}/lumigo-token~true}
+    skipInstallNodeTracer: true # we might be using serverless layers
 
+```
 
+Get a Lumigo token. Lumigo has a nice tutorial that quickly integrates with your AWS account. Add the token to your SSM parameter store
 
+![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/jth7bgeq8ph5ona7cddk.png)
 
-
-
-
-
-
-
+![parameter-store](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5kw6i7pof3corrzt9p8j.png)
 
 
 

@@ -8,7 +8,7 @@ After so, you may need to renew the authorization config periodically with the
 CLI command. Once authorized, you deploy and can run e2e tests.
 
 ```bash
-# needs node 16
+# needs node 1
 nvm use
 npm i # may need force
 

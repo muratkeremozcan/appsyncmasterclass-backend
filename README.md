@@ -6467,7 +6467,7 @@ plugins:
   
 custom:
   lumigo:
-    token: ${ssm:/${self:custom.stage}/lumigo-token~true}
+    token: ${ssm:/backend/${self:custom.stage}/lumigo-token}
     skipInstallNodeTracer: true # we might be using serverless layers
 
 ```

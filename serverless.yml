@@ -103,7 +103,7 @@ custom:
         - functions.setResolverLogLevelToError
 
   lumigo:
-    token: ${ssm:/${self:custom.stage}/lumigo-token}
+    token: ${ssm:/backend/${self:custom.stage}/lumigo-token}
     skipInstallNodeTracer: true
 
 functions:

@@ -1,6 +1,7 @@
 app: backend
 service: backend
 frameworkVersion: '2'
+variablesResolutionMode: 20210326
 
 # [1] exclude `package.json` files from being bundled.
 plugins:
@@ -102,7 +103,7 @@ custom:
         - functions.setResolverLogLevelToError
 
   lumigo:
-    token: ${ssm:/${self:custom.stage}/lumigo-token~true}
+    token: ${ssm:/${self:custom.stage}/lumigo-token}
     skipInstallNodeTracer: true
 
 functions:

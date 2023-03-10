@@ -6467,7 +6467,7 @@ plugins:
   
 custom:
   lumigo:
-    token: ${ssm:/backend/${self:custom.stage}/lumigo-token}
+    token: ${ssm:/appsyncmasterclass/${self:custom.stage}/lumigo-token}
     skipInstallNodeTracer: true # we might be using serverless layers
 
 ```
@@ -6476,7 +6476,7 @@ Get a Lumigo token. Lumigo has a nice tutorial that quickly integrates with your
 
 ![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/jth7bgeq8ph5ona7cddk.png)
 
-![parameter-store](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5kw6i7pof3corrzt9p8j.png)
+![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/lzmqyuli7hzztv3d9nzo.png)
 
 
 

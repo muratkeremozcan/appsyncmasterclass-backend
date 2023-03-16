@@ -18,15 +18,16 @@ provider:
   region: eu-west-1
   # [105] Configure Xray tracing
   # (105.0) add tracing to to provider
-  tracing:
-    lambda: true
-    apiGateway: false
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - xray:PutTraceSegments
-        - xray:PutTelemetryRecords
-      Resource: '*'
+  # disabled Xray because of cost alerts
+  # tracing:
+  #   lambda: true
+  #   apiGateway: false
+  # iamRoleStatements:
+  #   - Effect: Allow
+  #     Action:
+  #       - xray:PutTraceSegments
+  #       - xray:PutTelemetryRecords
+  #     Resource: '*'
 
   versionFunctions: false # avoids Code storage limit exceeded error https://github.com/muratkeremozcan/appsyncmasterclass-backend/actions/runs/4303926516/jobs/7504249742#step:8:49
   # can also do automatic pruning https://github.com/claygregory/serverless-prune-plugin#automatic-pruning, but we really don't need versions here...

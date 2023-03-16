@@ -429,10 +429,9 @@ functions:
         Resource: !GetAtt UsersTable.Arn
 
   # (93.1) define the lambda function
-  # disabled Kinesis Firehose because of cost alerts
-  # firehoseTransformer:
-  #   handler: functions/firehose-transformer.handler
-  #   timeout: 61 # must set this timeout to avoid a console warning
+  firehoseTransformer:
+    handler: functions/firehose-transformer.handler
+    timeout: 61 # must set this timeout to avoid a console warning
 
   # (103) Implement sampling for resolver logs
   setResolverLogLevelToAll:

@@ -1,6 +1,11 @@
 module.exports = {
   root: true,
-  extends: ['eslint:recommended', 'plugin:prettier/recommended'],
+  plugins: ['cypress', 'chai-friendly', 'no-only-tests'],
+  extends: [
+    'eslint:recommended',
+    'plugin:prettier/recommended',
+    'plugin:cypress/recommended',
+  ],
   env: {
     es6: true,
     amd: true,

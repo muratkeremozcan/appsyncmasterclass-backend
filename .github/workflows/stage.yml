@@ -5,6 +5,10 @@ on:
     tags: ['*']
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     # The type of runner that the job will run on
@@ -68,6 +72,7 @@ jobs:
         uses: cypress-io/github-action@v5.6.1
         with:
           browser: chrome
+          install: false
           # if you want to enable parallelization
           # record: true
           # parallel: true

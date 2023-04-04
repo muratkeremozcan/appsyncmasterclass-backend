@@ -66,14 +66,14 @@ jobs:
           npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
 
       # IF YOU DON'T WANT TO RUN OUT OF COGNITO USER LIMIT WHILE WORKING ON CYPRESS TESTS..
-      - name:
-          jest tests
-          # if you want to use the ci role, move this to below
-          # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
-          # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
-          # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
-          # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
-        run: npm t
+      # - name:
+      #     jest tests
+      #     # if you want to use the ci role, move this to below
+      #     # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
+      #     # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
+      #     # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
+      #     # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
+      #   run: npm t
 
       - name: Cypress e2e tests 🧪
         uses: cypress-io/github-action@v5.6.1

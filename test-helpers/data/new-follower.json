@@ -10,10 +10,10 @@
         "ApproximateCreationDateTime": 1606944127,
         "Keys": "****",
         "NewImage": {
-          "createdAt": { "S": "2020-12-02T21:22:07.137Z" },
-          "sk": { "S": "FOLLOWS_9cac0f28-579a-466f-9f5a-f8a2374f0214" },
-          "otherUserId": { "S": "9cac0f28-579a-466f-9f5a-f8a2374f0214" },
-          "userId": { "S": "659103c5-04a6-48d1-8652-884b30259f92" }
+          "createdAt": {"S": "2020-12-02T21:22:07.137Z"},
+          "sk": {"S": "FOLLOWS_9cac0f28-579a-466f-9f5a-f8a2374f0214"},
+          "otherUserId": {"S": "9cac0f28-579a-466f-9f5a-f8a2374f0214"},
+          "userId": {"S": "659103c5-04a6-48d1-8652-884b30259f92"}
         },
         "SequenceNumber": "182390800000000004758093833",
         "SizeBytes": 256,

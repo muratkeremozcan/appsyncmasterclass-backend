@@ -24,11 +24,12 @@ jobs:
         with:
           node-version: '16'
 
-      - name: install
-        # run: npm ci --force
-        run: npm ci --force
+      - name: Install dependencies
+        uses: cypress-io/github-action@v5.6.1
+        with:
+          runTests: false
 
-      - name: install AWS CLI
+      - name: Install AWS CLI
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
@@ -36,6 +37,9 @@ jobs:
 
           rm awscliv2.zip
           rm -r ./aws
+
+      - name: Lint
+        run: npm run lint
 
       - name: Get branch name
         id: branch-name
@@ -56,6 +60,7 @@ jobs:
         run: |
           npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
 
+      # IF YOU DON'T WANT TO RUN OUT OF COGNITO USER LIMIT WHILE WORKING ON CYPRESS TESTS...
       - name:
           jest tests
           # if you want to use the ci role, move this to below
@@ -64,6 +69,20 @@ jobs:
           # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
           # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
         run: npm t
+
+      - name: Cypress e2e tests 🧪
+        uses: cypress-io/github-action@v5.6.1
+        with:
+          browser: chrome
+          # if you want to enable parallelization
+          # record: true
+          # parallel: true
+          # group: e2e-tests
+          # tag: e2e-tests
+        env:
+          # if you want to enable parallelization
+          # CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
         run: |

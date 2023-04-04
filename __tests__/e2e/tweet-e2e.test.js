@@ -424,8 +424,7 @@ describe('e2e test for tweet', () => {
       })
 
       describe('[53] [56] user B tweets', () => {
-        // let tweetBResp
-
+        let tweetBResp
         beforeAll(async () => {
           const getMyTimelineRespA = await graphQLQuery(
             userA.accessToken,
@@ -439,8 +438,8 @@ describe('e2e test for tweet', () => {
           )
           // 1 tweet so far, and userB's tweet should show up
 
-          // const text = chance.string({length: 16})
-          // tweetBResp = await graphQLQuery(userB.accessToken, tweet, {text})
+          const text = chance.string({length: 16})
+          tweetBResp = await graphQLQuery(userB.accessToken, tweet, {text})
         })
 
         it("userB's tweet should appear on userA's timeline", async () => {

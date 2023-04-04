@@ -35,6 +35,7 @@
     "axios": "1.2.2",
     "cy-spok": "^1.6.1",
     "cypress": "^12.9.0",
+    "cypress-map": "^1.14.1",
     "dotenv": "^16.0.3",
     "eslint": "8.31.0",
     "eslint-config-prettier": "8.6.0",

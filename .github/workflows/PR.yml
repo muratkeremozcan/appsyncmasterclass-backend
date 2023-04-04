@@ -61,7 +61,7 @@ jobs:
         run: |
           npm run sls export-env -- -s ${{ steps.branch-name.outputs.current_branch }}
 
-      # IF YOU DON'T WANT TO RUN OUT OF COGNITO USER LIMIT WHILE WORKING ON CYPRESS TESTS...
+      # IF YOU DON'T WANT TO RUN OUT OF COGNITO USER LIMIT WHILE WORKING ON CYPRESS TESTS..
       # - name:
       #     jest tests
       #     # if you want to use the ci role, move this to below

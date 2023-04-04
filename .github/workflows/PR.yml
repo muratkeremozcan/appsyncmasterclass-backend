@@ -27,6 +27,7 @@ jobs:
       - name: Install dependencies
         uses: cypress-io/github-action@v5.6.1
         with:
+          install-command: npm ci --force
           runTests: false
 
       - name: Install AWS CLI

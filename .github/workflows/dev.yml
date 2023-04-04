@@ -25,8 +25,11 @@ jobs:
         with:
           node-version: '16'
 
-      - name: install
-        run: npm ci --force
+      - name: Install dependencies
+        uses: cypress-io/github-action@v5.6.1
+        with:
+          install-command: npm ci --force
+          runTests: false
 
       - name: install AWS CLI
         run: |
@@ -51,11 +54,26 @@ jobs:
       - name: export env vars
         run: npm run export:env
 
-      - name:
-          jest tests
-          # if you want to use the ci role, move this to below
-          # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
-          # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
-          # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
-          # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
-        run: npm t
+      # no need for integration and unit tests on dev, they get covered on PRs
+      # - name:
+      #     jest tests
+      #     # if you want to use the ci role, move this to below
+      #     # CREDS=`aws sts assume-role --role-arn arn:aws:iam::${{ secrets.DEV_ACCOUNT_ID }}:role/ci-role --role-session-name=ci_user`
+      #     # export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r '.Credentials.AccessKeyId'`
+      #     # export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r '.Credentials.SecretAccessKey'`
+      #     # export AWS_SESSION_TOKEN=`echo $CREDS | jq -r '.Credentials.SessionToken'`
+      #   run: npm t
+
+      - name: Cypress e2e tests 🧪
+        uses: cypress-io/github-action@v5.6.1
+        with:
+          browser: chrome
+          # if you want to enable parallelization
+          # record: true
+          # parallel: true
+          # group: e2e-tests
+          # tag: e2e-tests
+        env:
+          # if you want to enable parallelization
+          # CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

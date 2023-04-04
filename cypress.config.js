@@ -3,6 +3,7 @@ const {defineConfig} = require('cypress')
 require('dotenv').config()
 
 module.exports = defineConfig({
+  fixturesFolder: false,
   env: {
     ...process.env,
   },

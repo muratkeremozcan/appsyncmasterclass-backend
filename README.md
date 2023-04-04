@@ -35,7 +35,7 @@ npm run sls -- package
 
 # you ran into CodeStorage limit exceeded error (too many lambda versions)
 # prune the last n versions
-npm run sls -- prune -n 2
+npm run sls -- prune -n 2 
 ```
 
 ### Working on a branch
@@ -217,7 +217,7 @@ resources:
 > # Environment is dev, unless we pass in a stage override
 > stage: ${opt:stage, self:provider.stage}
 > appSync:
->   - ${file(serverless.appsync-api.yml)}
+>     - ${file(serverless.appsync-api.yml)}
 > ```
 
 _(4.1)_ Add a functions block for the lambda trigger function
@@ -5540,20 +5540,13 @@ afterAll(() => {
 
 ## 79 Serverless-layers to reduce package size
 
-Cons: trouble with devDeps & testing. Trouble with versioning when dealing with
-changes in the layers (no semantic ver). Limited to 5 layers per lambda.
+Cons: trouble with devDeps & testing. Trouble with versioning when dealing with changes in the layers (no semantic ver). Limited to 5 layers per lambda.
 
-Pro: may be useful for things that don't change like FFMpeg, and / or not
-available via npm, and very large.
+Pro: may be useful for things that don't change like FFMpeg, and / or not available via npm, and very large.
 
-`serverless-layers` is a handy npm plugin for optimization. Only uploads
-dependencies if they have changed. You take your dependencies from
-`package.json`, put them into a layer, and publish that layer to your account.
-The benefit is not having to upload the same artifacts over and over.
+`serverless-layers` is a handy npm plugin for optimization. Only uploads dependencies if they have changed. You take your dependencies from `package.json`, put them into a layer, and publish that layer to your account. The benefit is not having to upload the same artifacts over and over.
 
-Add it under plugins, create a custom variable `serverless-layers` >
-`layersDeploymentBucket`. Create a custom bucket and specify it as a
-`layersDeploymentBucket` which is a property of the plugin.
+Add it under plugins, create a custom variable `serverless-layers` > `layersDeploymentBucket`. Create a custom bucket and specify it as a `layersDeploymentBucket` which is a property of the plugin.
 
 ![s3-parameter](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/05o8vwdw0rwon37mk85h.png)
 
@@ -5563,18 +5556,19 @@ Add it under plugins, create a custom variable `serverless-layers` >
 plugins:
   - serverless-appsync-plugin
   - serverless-iam-roles-per-function
-  - serverless-export-env
+  - serverless-export-env 
   - serverless-layers # [79] serverless-layers
 
 custom:
   serverless-layers:
     # in the same format as parameter we created in S3
     layersDeploymentBucket: ${ssm:/appsyncmasterclass/${self:custom.stage}/layer-deployment-bucket}
+
 ```
 
-> I did not do this because I have to install with `--registry` modifier . This
-> one requires me to login to company network and install from the company's
-> registry. Which would be ok, but the CI will not work in that case.
+> I did not do this because I have to install with `--registry` modifier . This one requires me to login to company network and install from the company's registry. Which would be ok, but the CI will not work in that case.
+
+
 
 ### 80 e2e for subs (doesn't work in CI...)
 
@@ -5585,7 +5579,7 @@ custom:
 ```yaml
 # schema.api.graphql
 
-type: Query{
+type: Query{ 
   # [81] Support direct messages in the GraphQL schema
   listConversations(limit: Int!, nextToken: String): ConversationsPage!
 
@@ -5628,11 +5622,8 @@ type MessagesPage {
 
 ## 82 Implement sendDriectMessage mutation
 
-- Add the lambda function to `serverless.yml` (82.0) (we are also adding new
-  tables here under resources)
-- Add the mapping template (GQL query) to `serverless.appsync.yml` and the
-  dataSources (82.1) (a data source for the lambda, and datasources for the new
-  tables )
+- Add the lambda function to `serverless.yml` (82.0) (we are also adding new tables here under resources)
+- Add the mapping template (GQL query) to `serverless.appsync.yml` and the dataSources (82.1) (a data source for the lambda, and datasources for the new tables )
 - Add the JS for the lambda function. (82.2)
 
 ```yaml
@@ -5653,10 +5644,10 @@ functions:
       - Effect: Allow
         Action: dynamodb:UpdateItem
         Resource: !GetAtt ConversationsTable.Arn
-
+        
 resources:
 	Resources:
-
+	
 	# (82.0.1) add the new tables needed for conversations
     ConversationsTable:
       Type: AWS::DynamoDB::Table
@@ -5712,24 +5703,26 @@ resources:
             Value: direct-messages-table
 ```
 
+
+
 ```yaml
 # serverless.appsync-api.yml
 
 mappingTemplates:
-
+	
 	# (82.1) add a mapping template for the sendDirectMessage mutation
 	- type: Mutation
     field: sendDirectMessage
     dataSource: sendDirectMessageFunction
     request: false
     response: false
-
-
+    
+    
   # (82.1.2) add a nested field for Conversation.otherUser
   - type: Conversation
     field: otherUser
     dataSource: usersTable
-
+    
 dataSources:
 
   # (82.1) add dataSources for the newly created tables : ConversationsTable and DirectMessagesTable
@@ -5758,6 +5751,7 @@ Add a nested field for listConversations. Add the vtl files...
 # serverless.appsync-api.yml
 
 mappingTemplates:
+
   - type: Query
     field: listConversations
     dataSource: conversationsTable
@@ -5765,22 +5759,29 @@ mappingTemplates:
 
 ## 84 Implement getDirectMessages query
 
+
+
 ```yaml
 # serverless.appsync-api.yml
 
 mappingTemplates:
+ 
   # (84.0) add the query
   - type: Query
     field: getDirectMessages
-    dataSource:
-
+    dataSource: 
+    
   # (84.1) add a nested field for Message.from
   - type: Message
     field: from
     dataSource: usersTable
 ```
 
+
+
 ## 85 Support notifyDMed in the GraphQL schema
+
+ 
 
 ```yaml
 # serverless.appsync-api.yml
@@ -5864,6 +5865,7 @@ functions:
 # serverless.appsync-api.yml
 
 mappingTemplates:
+
   # (86.1) Add the mapping template (GQL mutation) to `serverless.appsync.yml`
   - type: Mutation
     field: notifyDMed
@@ -5872,34 +5874,32 @@ mappingTemplates:
 
 (86.2) Add the JS for the lambda function; `functions/notify-dmed.js`.
 
+
+
 ## 89 Per Resolver Caching
 
 ![appsync-caching](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/dpi19fwzqn9z84zohqkv.png)
 
-AWS X-ray shows lots of redundant requests for user profile. Although they are
-in parallel, the DDB queries cost. We can cache some of these requests,
-especially nested queries, to reduce costs. We decide on what to cache based on
-this stream of data.
+AWS X-ray shows lots of redundant requests for user profile. Although they are in parallel, the DDB queries cost. We can cache some of these requests, especially nested queries, to reduce costs. We decide on what to cache based on this stream of data.
 
 ![Aws-xray](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/usuyv508ygw76fah9e9y.png)
 
-(89.0) define caching in serverless.yml. We pay for caching, so we do not want
-to enable it for every environment.
+(89.0) define caching in serverless.yml. We pay for caching, so we do not want to enable it for every environment.
 
 ```yaml
 # serverless.yml
 
-provider: #
-package: #
-custom: #
+  provider: #
+  package: #
+  custom: # 
 
-# (89.0) define caching in serverless.yml
-appSyncCaching:
-  default:
-  prod: # only enable caching for production
-    behavior: PER_RESOLVER_CACHING
-    ttl: 3600
-    type: T2_SMALL
+  # (89.0) define caching in serverless.yml
+  appSyncCaching:
+    default:
+    prod: # only enable caching for production
+      behavior: PER_RESOLVER_CACHING
+      ttl: 3600
+      type: T2_SMALL
 ```
 
 We pay for caching, so we do not need it in every resolver.
@@ -5923,7 +5923,8 @@ mappingTemplates:
       keys:
         - $context.arguments.screenName
       ttl: 300
-
+     
+      
   # NESTED FIELDS
   - type: Tweet
     field: profile
@@ -5933,7 +5934,7 @@ mappingTemplates:
         - $context.identity.username
         - $context.source.creator
       ttl: 300
-
+      
   - type: Retweet
     field: profile
     dataSource: usersTable
@@ -5944,7 +5945,7 @@ mappingTemplates:
         - $context.identity.username
         - $context.source.creator
       ttl: 300
-
+      
   - type: Reply
     field: profile
     dataSource: usersTable
@@ -5955,7 +5956,7 @@ mappingTemplates:
         - $context.identity.username
         - $context.source.creator
       ttl: 300
-
+      
   - type: Reply
     field: inReplyToUsers
     dataSource: usersTable
@@ -5970,17 +5971,15 @@ This is all commented out because I don't want to pay for it!
 
 ## 90, 91 BatchInvoke to reduce the umber of lambda invocations
 
-Certain concurrent lambda calls can be expensive and reach a regional limit.
-AppSync has support for BatchInvoke; instead of calling a lambda for each item
-in an array, we can batch multiple items for an invocation.
+Certain concurrent lambda calls can be expensive and reach a regional limit. AppSync has support for BatchInvoke; instead of calling a lambda for each item in an array, we can batch multiple items for an invocation.
 
 ![batch invoke](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/dgtzurt1gy7bgaf2uxge.png)
 
 Like the usual:
 
 - Add the lambda function to `serverless.yml` (90.0)
-- Modify the mapping templates `serverless.appsync.yml` and add the dataSource
-  (90.1)
+- Modify the mapping templates `serverless.appsync.yml` and add the
+  dataSource (90.1)
 - Add the JS for the lambda function. (90.2)
 
 ```yaml
@@ -6002,14 +6001,15 @@ functions:
 # serverless.appsync-api.yml
 
 mappingTemplates:
+
   - type: Tweet
     field: profile
     # dataSource: usersTable
     # (90.1) modify the mapping template for nested field to use batchInvoke
     dataSource: getTweetCreatorFunction
-    request: Tweet.profile.batchInvoke.request.vtl
+    request: Tweet.profile.batchInvoke.request.vtl 
     response: Tweet.profile.batchInvoke.response.vtl
-
+    
   - type: Retweet
     field: profile
     # dataSource: usersTable
@@ -6031,6 +6031,7 @@ mappingTemplates:
     response: Tweet.profile.batchInvoke.response.vtl
 
 dataSources:
+
   # (92.1) add a data source for the lambda function
   - type: AWS_LAMBDA
     name: getTweetCreatorFunction
@@ -6042,8 +6043,7 @@ Add the JS for the lambda (90.2), check out `functions/get-tweet-creator.js`.
 
 ## 92 AWS Kinesis - analyze data streams
 
-People used to use an API gateway + lambda, but the recent approach is using
-Cognito Identity Pool.
+People used to use an API gateway + lambda, but the recent approach is using Cognito Identity Pool.
 
 ![Kinesis-1](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xpue8id1y9o7az5589a7.png)
 
@@ -6051,11 +6051,11 @@ Cognito Identity Pool.
 
 ![Kinesis-3](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z4f77xlvk6xqg6mh6vtq.png)
 
+
+
 ## 93 Configure Kinesis Firehose & 94 Configure Cognito Identity Pool and IAM
 
-(93.0) use a lambda to transform the data into a Kinesis Firehose stream; it
-comes as a JSON object but not formatted line by line. Check out
-`functions/firehose-transformer.js`.
+(93.0) use a lambda to transform the data into a Kinesis Firehose stream; it comes as a JSON object but not formatted line by line. Check out `functions/firehose-transformer.js`.
 
 (93.1) Define the lambda function at `serverless.yml`.
 
@@ -6065,14 +6065,14 @@ comes as a JSON object but not formatted line by line. Check out
 # serverless.yml
 
 functions:
-  ##
+  ## 
   firehoseTransformer:
     handler: functions/firehose-transformer.handler
     timeout: 61 # must set this timeout to avoid a console warning
-
+    
 resources:
 	Resources:
-
+	
     # (93.2) Define all the resources Kinesis Firehose
     # S3 bucket, without any public access
     AnalyticsBucket:
@@ -6156,7 +6156,7 @@ resources:
                     - lambda:GetFunctionConfiguration
                   Resource: !GetAtt FirehoseTransformerLambdaFunction.Arn
 
-    # [94] Configure Cognito Identity Pool and IAM role
+    # [94] Configure Cognito Identity Pool and IAM role              
 		IdentityPool:
       Type: AWS::Cognito::IdentityPool
       Properties:
@@ -6238,7 +6238,7 @@ Add the query and the type to `schema.api.graphql`.
 type Query {
   # (95.0) add the query, (96.0) add tags for unauthenticated GQL ops
   getAnalyticsConfig: AnalyticsConfig
-  @aws_iam @aws_cognito_user_pools
+  @aws_iam @aws_cognito_user_pools 
 }
 
 # (95.1) add the type
@@ -6254,17 +6254,17 @@ Add the mapping template and the substitutions.
 ```yaml
 # serverless.appsync-api.yml
 
-mappingTemplates:
+mappingTemplates: 
 
 # (95.2) add the mapping template
 - type: Query
     field: getAnalyticsConfig
     dataSource: none
-
-
+    
+    
 substitutions:
   # (95.3) add the substitutions for the firehose stream and identity pool
-  FirehoseStreamName: !Ref FirehoseStream
+  FirehoseStreamName: !Ref FirehoseStream 
   IdentityPoolId: !Ref IdentityPool
 
 ```
@@ -6280,12 +6280,12 @@ plugins:
   - serverless-plugin-ifelse
 
 custom:
-
+  
   # (102.0) add a custom log level
   appSyncLogLevel:
     default: ALL
     prod: ERROR
-
+    
   # [103] Implement sampling for resolver logs\
   serverlessIfElse:
     - If: '"${self:custom.stage}" == "prod"'
@@ -6333,7 +6333,7 @@ functions:
 
 resources:
 	Resources:
-
+	
     # (102.1) add the AppSync logging role
     AppSyncLoggingServiceRole:
       Type: AWS::IAM::Role
@@ -6365,9 +6365,7 @@ resources:
 # (102.2) add logConfig to the AppSync API using the custom role we created
 logConfig:
   loggingRoleArn: !GetAtt AppSyncLoggingServiceRole.Arn
-  level:
-    ${self:custom.appSyncLogLevel.${self:custom.stage},
-    self:custom.appSyncLogLevel.default}
+  level: ${self:custom.appSyncLogLevel.${self:custom.stage}, self:custom.appSyncLogLevel.default}
   excludeVerboseContent: false
 ```
 
@@ -6379,7 +6377,7 @@ Install `aws-xray-sdk-core`.
 
 (105.1) add a custom property for `serverless-iam-roles-per-function`.
 
-(105.2) enable Xray in appsync api.
+(105.2)  enable Xray in appsync api.
 
 (105.3) enable X-Ray in the lambda for instrumentation purposes.
 
@@ -6387,6 +6385,7 @@ Install `aws-xray-sdk-core`.
 # serverless.yml
 
 provider:
+ 
   # [105] Configure Xray tracing
   # (105.0) add tracing & role to provider
   tracing:
@@ -6398,7 +6397,7 @@ provider:
         - xray:PutTraceSegments
         - xray:PutTelemetryRecords
       Resource: '*'
-
+      
 custom:
   # (105.1) add a custom property for `serverless-iam-roles-per-function`
   serverless-iam-roles-per-function:
@@ -6408,7 +6407,7 @@ custom:
 ```yaml
 # serverless.appsync-api.yml
 
-# (105.2) enable Xray in appsync api
+# (105.2) enable Xray in appsync api 
 xrayEnabled: true
 ```
 
@@ -6420,34 +6419,32 @@ const DocumentClient = new DynamoDB.DocumentClient()
 XRay.captureAWSClient(DocumentClient.service) // (105.3) enable X-Ray in the lambda
 ```
 
-X-ray pro: cost effective insight into AppSync requests, especially if you
-mainly use VTL templates.
+X-ray pro: cost effective insight into AppSync requests, especially if you mainly use VTL templates.
 
 X-ray cons (TL,DR; bad devex):
 
-- Requires lots of manual instrumentation to be useful in the lambdas
-- Doesn't capture request response payload
-- Doesn't show lambda logs with the timeline
-- Hard to find problems
-- No alerting
-- Limited to HTTP ( no TCP )
-- Doesn't support streams
+* Requires lots of manual instrumentation to be useful in the lambdas
+* Doesn't capture request response payload
+* Doesn't show lambda logs with the timeline
+* Hard to find problems
+* No alerting
+* Limited to HTTP ( no TCP )
+* Doesn't support streams
 
 ### Yan's observability strategy
 
 ![Yan strat](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/p06m8dkky7yuuhw16g7t.png)
 
-Lumbago doesn't need instrumentation, and captures everything. However if there
-are complex non-IO busyness logic that doesn't involve calling another API,
-Lumigo cannot capture that so we use custom log messages.
+Lumbago doesn't need instrumentation, and captures everything.
+However if there are complex non-IO busyness logic that doesn't involve calling another API, Lumigo cannot capture that so we use custom log messages.
 
 ![Yan strat 2](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/bu8wmnkcoflj6oer67h6.png)
 
-Using Cloudwatch for metrics & alerts because copying metrics to another system
-would add cost and delay to triggering alerts. Ingesting alerts into DataDog
-adds 5-10 minutes to receiving them.
+Using Cloudwatch for metrics & alerts because copying metrics to another system would add cost and delay to triggering alerts. Ingesting alerts into DataDog adds 5-10 minutes to receiving them.
 
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ips9mewx75usdni2u8w4.png)
+
+
 
 ### 110 Lumigo
 
@@ -6465,16 +6462,63 @@ plugins:
   - serverless-layers
   - serverless-plugin-ifelse
   - serverless-lumigo # (110.1) add it to plugins
-
+  
 custom:
   lumigo:
     token: ${ssm:/appsyncmasterclass/${self:custom.stage}/lumigo-token}
     skipInstallNodeTracer: true # we might be using serverless layers
+
 ```
 
-Get a Lumigo token. Lumigo has a nice tutorial that quickly integrates with your
-AWS account. Add the token to your SSM parameter store
+Get a Lumigo token. Lumigo has a nice tutorial that quickly integrates with your AWS account. Add the token to your SSM parameter store
 
 ![lumigo-token](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/jth7bgeq8ph5ona7cddk.png)
 
 ![parameter-store](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5kw6i7pof3corrzt9p8j.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

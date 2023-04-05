@@ -45,6 +45,7 @@ package:
     - package.json
     - '**/test-helpers/**'
     - '**/__tests__/**'
+    - '**/cypress/**'
 
 custom:
   # (6) add AWS_REGION as an env var (use region from CLI command override, otherwise provider:region:)

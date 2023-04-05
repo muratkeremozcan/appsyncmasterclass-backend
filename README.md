@@ -24,6 +24,10 @@ npm run export:env
 # test (unit, integration and e2e)
 npm t
 
+# test with Cypress (e2e)
+npm run cy:open
+npm run cy:run
+
 # lint
 npm run lint
 

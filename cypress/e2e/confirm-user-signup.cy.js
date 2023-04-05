@@ -11,7 +11,10 @@ describe('When a user signs up', () => {
           spok({
             id: username,
             name,
-            createdAt: spok.string,
+            createdAt: s =>
+              expect(s).to.match(
+                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d(?:\.\d+)?Z?/g,
+              ),
             followersCount: 0,
             followingCount: 0,
             tweetsCount: 0,

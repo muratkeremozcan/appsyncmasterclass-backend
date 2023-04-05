@@ -2,17 +2,17 @@ require('dotenv').config()
 const AWS = require('aws-sdk')
 const DynamoDB = new AWS.DynamoDB.DocumentClient()
 
-const ddbGetUser = username =>
+const ddbGetUser = (username, TableName = process.env.USERS_TABLE) =>
   DynamoDB.get({
-    TableName: process.env.USERS_TABLE,
+    TableName,
     Key: {
       id: username,
     },
   }).promise()
 
-const ddbDeleteUser = username =>
+const ddbDeleteUser = (username, TableName = process.env.USERS_TABLE) =>
   DynamoDB.delete({
-    TableName: process.env.USERS_TABLE,
+    TableName,
     Key: {
       id: username,
     },

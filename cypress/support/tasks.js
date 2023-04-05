@@ -4,8 +4,8 @@ const {
   signInUser,
   cleanUpUser,
 } = require('../../test-helpers/cognito')
-const {ddbGetUser, ddbDeleteUser} = require('./tasks/ddb')
-const {cognitoDeleteUser} = require('./tasks/cognito')
+const {ddbGetUser, ddbDeleteUser} = require('../../test-helpers/tasks/ddb')
+const {cognitoDeleteUser} = require('../../test-helpers/tasks/cognito')
 
 function tasks(on) {
   on('task', {

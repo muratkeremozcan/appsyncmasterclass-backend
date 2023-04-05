@@ -5626,7 +5626,7 @@ type MessagesPage {
 
 ```
 
-## 82 Implement sendDriectMessage mutation
+## 82 Implement sendDirectMessage mutation
 
 - Add the lambda function to `serverless.yml` (82.0) (we are also adding new
   tables here under resources)

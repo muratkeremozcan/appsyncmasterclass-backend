@@ -2,11 +2,14 @@ require('dotenv').config()
 const AWS = require('aws-sdk')
 const cognito = new AWS.CognitoIdentityServiceProvider()
 
-const cognitoDeleteUser = username =>
+const cognitoDeleteUser = (
+  Username,
+  UserPoolId = process.env.COGNITO_USER_POOL_ID,
+) =>
   cognito
     .adminDeleteUser({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: username,
+      UserPoolId,
+      Username,
     })
     .promise()
 

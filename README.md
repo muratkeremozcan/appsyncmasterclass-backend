@@ -24,6 +24,10 @@ npm run export:env
 # test (unit, integration and e2e)
 npm t
 
+# test with Cypress (e2e)
+npm run cy:open
+npm run cy:run
+
 # lint
 npm run lint
 
@@ -5626,7 +5630,7 @@ type MessagesPage {
 
 ```
 
-## 82 Implement sendDriectMessage mutation
+## 82 Implement sendDirectMessage mutation
 
 - Add the lambda function to `serverless.yml` (82.0) (we are also adding new
   tables here under resources)

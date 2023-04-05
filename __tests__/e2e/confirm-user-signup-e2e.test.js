@@ -4,31 +4,25 @@
 // - As a result we should see a DynamoDB table entry, confirm it.
 require('dotenv').config()
 const {signUpUser} = require('../../test-helpers/cognito')
-const AWS = require('aws-sdk')
+const {ddbDeleteUser, ddbGetUser} = require('../../test-helpers/tasks/ddb')
+const {cognitoDeleteUser} = require('../../test-helpers/tasks/cognito')
 
 describe('When a user signs up', () => {
   it("The user's profile should be saved in DynamoDB", async () => {
     // this time we are creating and signing up a user from scratch
     // it will cause a lambda handler trigger
-    const {name, username, cognito, userPoolId} = await signUpUser()
+    const {name, username} = await signUpUser()
 
     // instead of creating a mock event and feeding it to the handler
     // we did a real sign up, which caused a write to DynamoDB
     // checking DDB is the same as the integration test
     // we need DynamoDB.DocumentClient to read from DynamoDB
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
     console.log(
       `looking for user [${username}] in table [${process.env.USERS_TABLE}]`,
     )
-    const resp = await DynamoDB.get({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: username,
-      },
-    }).promise()
-    const ddbUser = resp.Item //?
+    const {Item: ddbUser} = await ddbGetUser(username)
 
-    // the assertion is exactly the same as before
+    // the assertion is exactly the same as the integration test
     expect(ddbUser).toMatchObject({
       id: username,
       name,
@@ -45,19 +39,9 @@ describe('When a user signs up', () => {
     expect(ddbUser.screenName).toContain(lastName)
 
     // clean up the DDB user
-    await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: username,
-      },
-    }).promise()
+    ddbDeleteUser(username)
 
     // with e2e, we also have to clean up the Cognito user
-    await cognito
-      .adminDeleteUser({
-        UserPoolId: userPoolId,
-        Username: username,
-      })
-      .promise()
+    cognitoDeleteUser(username)
   })
 })

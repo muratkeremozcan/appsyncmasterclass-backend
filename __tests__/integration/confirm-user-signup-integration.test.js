@@ -5,8 +5,8 @@
 require('dotenv').config()
 const handler = require('../../functions/confirm-user-signup').handler
 const {generateUser} = require('../../test-helpers/cognito')
-const AWS = require('aws-sdk')
 const chance = require('chance').Chance()
+const {ddbDeleteUser, ddbGetUser} = require('../../test-helpers/tasks/ddb')
 
 /**
  * Generates an event object that can be used to test the lambda function
@@ -48,17 +48,10 @@ describe('When confirmUserSignup runs', () => {
 
     // the handler creates a write to DynamoDB
     // we need DynamoDB.DocumentClient to read from DynamoDB
-    const DynamoDB = new AWS.DynamoDB.DocumentClient()
     console.log(
       `looking for user [${username}] in table [${process.env.USERS_TABLE}]`,
     )
-    const resp = await DynamoDB.get({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: username,
-      },
-    }).promise()
-    const ddbUser = resp.Item //?
+    const {Item: ddbUser} = await ddbGetUser(username)
 
     expect(ddbUser).toMatchObject({
       id: username,
@@ -76,11 +69,6 @@ describe('When confirmUserSignup runs', () => {
     expect(ddbUser.screenName).toContain(lastName)
 
     // clean up the DDB user
-    await DynamoDB.delete({
-      TableName: process.env.USERS_TABLE,
-      Key: {
-        id: username,
-      },
-    }).promise()
+    ddbDeleteUser(username)
   })
 })

@@ -10,3 +10,7 @@ serverless.manifest.json
 .serverless/manifest.json
 .DS_Store
 coverage
+
+# cypress
+cypress/screenshots
+cypress/videos

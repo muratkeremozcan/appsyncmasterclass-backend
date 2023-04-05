@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 const {defineConfig} = require('cypress')
+const tasks = require('./cypress/support/tasks')
 require('dotenv').config()
 
 module.exports = defineConfig({
@@ -8,6 +9,10 @@ module.exports = defineConfig({
     ...process.env,
   },
   e2e: {
-    setupNodeEvents(on, config) {},
+    setupNodeEvents(on, config) {
+      tasks(on)
+
+      return config
+    },
   },
 })

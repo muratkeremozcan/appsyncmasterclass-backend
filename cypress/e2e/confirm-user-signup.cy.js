@@ -1,4 +1,3 @@
-import 'cypress-map'
 import spok from 'cy-spok'
 
 describe('When a user signs up', () => {
@@ -22,9 +21,9 @@ describe('When a user signs up', () => {
           }),
         )
 
-      cy.task('ddbDeleteUser', username).print()
+      cy.task('ddbDeleteUser', username)
 
-      cy.task('cognitoDeleteUser', username).print()
+      cy.task('cognitoDeleteUser', username)
     })
   })
 })

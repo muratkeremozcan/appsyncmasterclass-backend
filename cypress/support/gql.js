@@ -24,9 +24,6 @@ registerFragment('replyFields', replyFragment)
 // using their registered keys.
 // The retrieved fragments are then included in the query as needed (usedFragments).
 
-console.log(registerFragment('replyFields', replyFragment))
-console.table(fragments)
-
 /** recursively searches for all the fragment names used in the given query and returns them as a generator
  * extracts the names of all the fragments used in a given GraphQL query and any nested fragments used within those fragments.*/
 function* findUsedFragments(query, usedFragments = new Set()) {

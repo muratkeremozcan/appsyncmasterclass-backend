@@ -51,4 +51,10 @@ describe('Given an authenticated user', () => {
       .its('editMyProfile')
       .should(spok({id, name: newName, ...matchProfile}))
   })
+
+  after(() => {
+    cy.task('ddbDeleteUser', id)
+
+    cy.task('cognitoDeleteUser', id)
+  })
 })

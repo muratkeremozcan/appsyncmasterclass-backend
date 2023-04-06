@@ -3,6 +3,7 @@ const {
   signUpUser,
   signInUser,
   cleanUpUser,
+  authorizeUser,
 } = require('../../test-helpers/cognito')
 const {ddbGetUser, ddbDeleteUser} = require('../../test-helpers/tasks/ddb')
 const {cognitoDeleteUser} = require('../../test-helpers/tasks/cognito')
@@ -13,6 +14,7 @@ function tasks(on) {
     signUpUser,
     signInUser,
     cleanUpUser,
+    authorizeUser,
     ddbGetUser,
     ddbDeleteUser,
     cognitoDeleteUser,

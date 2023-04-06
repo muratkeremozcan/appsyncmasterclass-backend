@@ -69,16 +69,13 @@ const signUpUser = async () => {
   }
 }
 
-/**
- * Signs up a user, signs in that user and returns an authenticated user
- * @returns {Object} - {username, name, email, idToken, accessToken}
- */
-const signInUser = async () => {
-  const {name, email, password, username, cognito, clientId, userPoolId} =
-    await signUpUser()
-
-  // sign in a user with username and password
-  const auth = await cognito
+const authorizeUser = async ({
+  username,
+  password,
+  clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID,
+}) => {
+  const cognito = new AWS.CognitoIdentityServiceProvider()
+  return cognito
     .initiateAuth({
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: clientId,
@@ -88,6 +85,20 @@ const signInUser = async () => {
       },
     })
     .promise()
+}
+
+/**
+ * Signs up a user, signs in that user and returns an authenticated user
+ * @returns {Object} - {username, name, email, idToken, accessToken}
+ */
+const signInUser = async () => {
+  const {name, email, password, username, cognito, clientId, userPoolId} =
+    await signUpUser()
+
+  // authorize the user
+  const {
+    AuthenticationResult: {IdToken, AccessToken},
+  } = await authorizeUser({username, password, clientId})
 
   return {
     username,
@@ -95,8 +106,8 @@ const signInUser = async () => {
     email,
     userPoolId,
     cognito,
-    idToken: auth.AuthenticationResult.IdToken,
-    accessToken: auth.AuthenticationResult.AccessToken,
+    idToken: IdToken,
+    accessToken: AccessToken,
   }
 }
 
@@ -122,4 +133,5 @@ module.exports = {
   signUpUser,
   signInUser,
   cleanUpUser,
+  authorizeUser,
 }

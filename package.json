@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/muratkeremozcan/appsyncmasterclass-backend#readme",
   "devDependencies": {
+    "@cypress/skip-test": "2.6.1",
     "@types/jest": "29.2.5",
     "amplify-appsync-simulator": "1.23.8",
     "amplify-velocity-template": "1.3.4",

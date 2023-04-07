@@ -11,6 +11,7 @@ plugins:
   # - serverless-manifest-plugin # [10] get API_URL from CognitoUserPoolArn # not needed as of 78
   # (103) Implement sampling for resolver logs
   - serverless-plugin-ifelse
+  - serverless-s3-remover # force removes s3 bucket when removing the stack, even though the bucket may not be empty
 
 provider:
   name: aws

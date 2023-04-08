@@ -9,9 +9,6 @@ const deleteS3Item = signedUrl => {
     .split('s3-accelerate.amazonaws.com/')[1]
     .split('?')[0]
 
-  console.log({S3BucketObjectKey})
-  console.log(process.env.BUCKET_NAME)
-
   const input = {
     Bucket: process.env.BUCKET_NAME,
     Key: S3BucketObjectKey, // required

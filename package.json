@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/muratkeremozcan/appsyncmasterclass-backend#readme",
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.309.0",
     "@cypress/skip-test": "2.6.1",
     "@types/jest": "29.2.5",
     "amplify-appsync-simulator": "1.23.8",
@@ -54,7 +55,6 @@
     "serverless-prune-plugin": "2.0.2"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.309.0",
     "@middy/core": "1.5.2",
     "@middy/ssm": "1.5.2",
     "algoliasearch": "4.8.5",

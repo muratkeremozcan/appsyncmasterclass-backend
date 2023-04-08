@@ -40,6 +40,7 @@ provider:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
 
 package:
+  excludeDevDependencies: true
   exclude:
     - package-lock.json
     - package.json

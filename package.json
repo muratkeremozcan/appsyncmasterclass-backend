@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/muratkeremozcan/appsyncmasterclass-backend#readme",
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.309.0",
     "@cypress/skip-test": "2.6.1",
     "@types/jest": "29.2.5",
     "amplify-appsync-simulator": "1.23.8",

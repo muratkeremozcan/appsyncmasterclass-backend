@@ -1,41 +1,22 @@
-const AWS = require('aws-sdk')
+// the original s3 delete bucket kept giving circular reference error
+// when wrapped in cy.task
+// even working with json-cycle library, and applying it on the arguments didn't work
+// decided to use another aws library for the task
+const {S3Client, DeleteObjectCommand} = require('@aws-sdk/client-s3')
 
 const deleteS3Item = signedUrl => {
   const S3BucketObjectKey = signedUrl
     .split('s3-accelerate.amazonaws.com/')[1]
     .split('?')[0]
 
-  console.log({S3BucketObjectKey})
-  console.log(process.env.BUCKET_NAME)
-
-  const params = {
+  const input = {
     Bucket: process.env.BUCKET_NAME,
-    Delete: {
-      Objects: [
-        {
-          Key: S3BucketObjectKey, // required
-        },
-      ],
-    },
+    Key: S3BucketObjectKey, // required
   }
+  const client = new S3Client({region: process.env.AWS_REGION})
 
-  const s3 = new AWS.S3()
-  return s3.deleteObject(params)
-
-  // , function (err, data) {
-  //   if (err) console.log(err, err.stack) // an error occurred
-  //   else {
-  // console.log(data) // successful response
-  // expect(data).toEqual({
-  //   Deleted: [
-  //     {
-  //       Key: S3BucketObjectKey,
-  //     },
-  //   ],
-  //   Errors: [],
-  // })
-  //   }
-  // })
+  const command = new DeleteObjectCommand(input)
+  return client.send(command)
 }
 
 module.exports = {deleteS3Item}

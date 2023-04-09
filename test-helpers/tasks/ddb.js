@@ -18,4 +18,28 @@ const ddbDeleteUser = (username, TableName = process.env.USERS_TABLE) =>
     },
   }).promise()
 
-module.exports = {ddbGetUser, ddbDeleteUser}
+const ddbDeleteTweetAndTimeline = async (
+  tweetId,
+  userId,
+  tweetsTable = process.env.TWEETS_TABLE,
+  timelinesTable = process.env.TIMELINES_TABLE,
+) => {
+  console.log(tweetId)
+  console.log(userId)
+  await DynamoDB.delete({
+    TableName: tweetsTable,
+    Key: {
+      id: tweetId,
+    },
+  }).promise()
+
+  return await DynamoDB.delete({
+    TableName: timelinesTable,
+    Key: {
+      userId,
+      tweetId,
+    },
+  }).promise()
+}
+
+module.exports = {ddbGetUser, ddbDeleteUser, ddbDeleteTweetAndTimeline}

@@ -9,28 +9,13 @@ const chance = require('chance').Chance()
 describe('e2e test for tweet', () => {
   let token, tweetAResp
   const text = chance.string({length: 16})
-  // let userAId
-
-  // before(() => {
-  //   cy.task('signInUser').then(({username, idToken}) => {
-  //     userAId = username
-  //     token = idToken
-
-  //     cy.gql({
-  //       token,
-  //       query: tweet,
-  //       variables: {text},
-  //     }).then(tResp => {
-  //       tweetAResp = tResp
-  //     })
-  //   })
-  // })
-  const userAId = '2dd25fa2-5d3d-42f0-9891-94482d468081'
-  const password = 'Password-1'
+  let userAId
 
   before(() => {
-    cy.getToken(userAId, password).then(t => {
-      token = t // used later...
+    cy.task('signInUser').then(({username, idToken}) => {
+      userAId = username
+      token = idToken
+
       cy.gql({
         token,
         query: tweet,

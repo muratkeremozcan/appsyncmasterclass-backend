@@ -49,8 +49,6 @@ describe('Given an authenticated user', () => {
   })
 
   after(() => {
-    cy.task('ddbDeleteUser', id)
-
-    cy.task('cognitoDeleteUser', id)
+    cy.cleanupUser(id)
   })
 })

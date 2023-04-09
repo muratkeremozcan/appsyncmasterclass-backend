@@ -47,13 +47,10 @@ function* findUsedFragments(query, usedFragments = new Set()) {
  * @param {string} query The GraphQL query string.
  * @returns {string} The name of the query or mutation.
  */
-const getQueryName = query =>
-  query
-    .trim()
-    .substring(
-      query.match(/^(query|mutation)\s+/i)[0].length,
-      query.indexOf('('),
-    )
+const getQueryName = query => {
+  const matches = query.match(/^(query|mutation)\s+([\w-]+)/i)
+  return matches ? matches[2] : ''
+}
 
 /**
 

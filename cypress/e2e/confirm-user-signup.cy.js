@@ -24,9 +24,7 @@ describe('When a user signs up', () => {
           }),
         )
 
-      cy.task('ddbDeleteUser', username)
-
-      cy.task('cognitoDeleteUser', username)
+      cy.cleanupUser(username)
     })
   })
 })

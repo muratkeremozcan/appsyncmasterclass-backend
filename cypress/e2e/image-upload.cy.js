@@ -13,8 +13,8 @@ describe('getUploadUrl and upload an image', () => {
   })
 
   it('should get an S3 url and upload an image', () => {
-    const extension = '.jpeg'
-    const contentType = 'image/jpeg'
+    const extension = '.png'
+    const contentType = 'image/png'
     const urlRegex = new RegExp(
       `https://${Cypress.env(
         'BUCKET_NAME',
@@ -25,14 +25,13 @@ describe('getUploadUrl and upload an image', () => {
     cy.gql({
       token,
       query: getImageUploadUrl,
-      variable: {extension, contentType},
+      variables: {extension, contentType},
     })
-      .its('getImageUploadUrl')
       .should('match', urlRegex)
       .then(signedUrl => {
         cy.log('**read the image**')
         cy.readFile(
-          path.join(__dirname, '../../test-helpers/data/logo.jpeg'),
+          path.join(__dirname, '../../test-helpers/data/logo.png'),
         ).then(fileToUpload => {
           cy.log('**upload the image**')
           cy.api({
@@ -61,8 +60,6 @@ describe('getUploadUrl and upload an image', () => {
   })
 
   after(() => {
-    cy.task('ddbDeleteUser', id)
-
-    cy.task('cognitoDeleteUser', id)
+    cy.cleanupUser(id)
   })
 })

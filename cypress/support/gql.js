@@ -42,11 +42,35 @@ function* findUsedFragments(query, usedFragments = new Set()) {
   }
 }
 
+/**
+ * Extracts the name of a GraphQL query or mutation from a query string.
+ * @param {string} query The GraphQL query string.
+ * @returns {string} The name of the query or mutation.
+ */
+const getQueryName = query =>
+  query
+    .trim()
+    .substring(
+      query.match(/^(query|mutation)\s+/i)[0].length,
+      query.indexOf('('),
+    )
+
+/**
+
+The gql function sends a GraphQL query or mutation to a specified API URL with the provided token, query, and variables.
+@param {Object} options - An object containing the following parameters:
+@param {string} options.token - The token to use for authorization.
+@param {string} options.query - The GraphQL query or mutation string.
+@param {Object} [options.variables] - The variables to include in the query or mutation.
+@param {string} [options.url=Cypress.env('API_URL')] - The URL of the GraphQL API to send the query or mutation to.
+@returns {Object} A Cypress promise that resolves to the data returned by the GraphQL query or mutation.
+*/
 const gql = ({
   token,
   query,
   variables = {},
   url = Cypress.env('API_URL'),
+  checkError = false,
 } = {}) => {
   const headers = {}
   if (token) {
@@ -58,8 +82,8 @@ const gql = ({
     name => fragments[name],
   )
 
-  return cy
-    .api({
+  const postResp = () =>
+    cy.api({
       method: 'POST',
       url,
       headers,
@@ -68,7 +92,10 @@ const gql = ({
         variables: JSON.stringify(variables),
       },
     })
-    .its('body.data')
+
+  return checkError
+    ? postResp().its('body.errors.0')
+    : postResp().its('body.data').its(getQueryName(query))
 }
 
 export default gql

@@ -35,9 +35,7 @@ describe('Given an authenticated user', () => {
   }
 
   it('The user can fetch his profile with getMyProfile', () => {
-    cy.gql({token, query: getMyProfile})
-      .its('getMyProfile')
-      .should(spok({id, ...matchProfile}))
+    cy.gql({token, query: getMyProfile}).should(spok({id, ...matchProfile}))
   })
 
   it('The user can edit their profile with editMyProfile', () => {
@@ -47,9 +45,7 @@ describe('Given an authenticated user', () => {
       token,
       query: editMyProfile,
       variables: {input: {name: newName}},
-    })
-      .its('editMyProfile')
-      .should(spok({id, name: newName, ...matchProfile}))
+    }).should(spok({id, name: newName, ...matchProfile}))
   })
 
   after(() => {

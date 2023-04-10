@@ -67,7 +67,7 @@ const gql = ({
   query,
   variables = {},
   url = Cypress.env('API_URL'),
-  checkError = false,
+  expectError = false,
 } = {}) => {
   const headers = {}
   if (token) {
@@ -88,9 +88,10 @@ const gql = ({
         query: [query, ...usedFragments].join('\n'),
         variables: JSON.stringify(variables),
       },
+      bodyEncoding: 'utf8',
     })
 
-  return checkError
+  return expectError
     ? postResp().its('body.errors.0')
     : postResp().its('body.data').its(getQueryName(query))
 }

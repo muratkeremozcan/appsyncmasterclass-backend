@@ -6,6 +6,8 @@ const {
   like,
   unlike,
   getLikes,
+  retweet,
+  unretweet,
 } = require('../../test-helpers/queries-and-mutations')
 const chance = require('chance').Chance()
 
@@ -45,6 +47,30 @@ describe('e2e test for tweet', () => {
   //   })
   // })
 
+  const gqlGetTweets = () =>
+    cy.gql({
+      token,
+      query: getTweets,
+      variables: {
+        userId: userAId,
+        limit: 25,
+        nextToken: null,
+      },
+    })
+
+  const tweetLiked = () => gqlGetTweets().its('tweets.0.liked')
+
+  const gqlGetLikes = () =>
+    cy.gql({
+      token,
+      query: getLikes,
+      variables: {
+        userId: userAId,
+        limit: 25,
+        nextToken: null,
+      },
+    })
+
   it('[19] mutation; should check the content of the response', () => {
     cy.wrap(tweetAResp).should(
       spok({
@@ -58,15 +84,7 @@ describe('e2e test for tweet', () => {
   })
 
   it('[22] getTweets query', () => {
-    cy.gql({
-      token,
-      query: getTweets,
-      variables: {
-        userId: userAId,
-        limit: 25,
-        nextToken: null,
-      },
-    }).should(
+    gqlGetTweets().should(
       spok({
         nextToken: n => n === null || typeof n === 'string',
         tweets: arr => arr.length > 0,
@@ -121,91 +139,136 @@ describe('e2e test for tweet', () => {
       .should('eq', 'max limit is 25')
   })
 
-  describe('[29] [33] [31] like, getLikes, unlike', () => {
-    // note: like + unlike and check is just one flow
-    // in Jest , we want to make things easier to diagnose when they fail
-    // that's why we use minimal it blocks and rely on hooks for test state
-    // with Cypress we don't need any of that, we shape the it block per the flow
+  // note: like + unlike and check is just one flow
+  // in Jest , we want to make things easier to diagnose when they fail
+  // that's why we use minimal it blocks and rely on hooks for test state
+  // with Cypress we don't need any of that, we shape the it block per the flow
 
-    const tweetLiked = () =>
-      cy
-        .gql({
-          token,
-          query: getTweets,
-          variables: {
-            userId: userAId,
-            limit: 25,
-            nextToken: null,
-          },
-        })
-        .its('tweets.0.liked')
+  it('[29] like mutation, [31] unlike mutation, [33] getLikes query should update the tweet to liked / unliked and check it', () => {
+    cy.gql({
+      token,
+      query: like,
+      variables: {tweetId: tweetAResp.id},
+    })
+    tweetLiked().should('eq', true)
 
-    const gqlGetLikes = () =>
-      cy.gql({
-        token,
-        query: getLikes,
-        variables: {
-          userId: userAId,
-          limit: 25,
-          nextToken: null,
-        },
-      })
+    cy.log('**cannot like the same tweet twice**')
+    cy.gql({
+      token,
+      query: like,
+      variables: {tweetId: tweetAResp.id},
+      expectError: true,
+    })
+      .its('message')
+      .should('eq', 'DynamoDB transaction error')
 
-    it('[29] like mutation, [31] unlike mutation, [33] getLikes query should update the tweet to liked / unliked and check it', () => {
-      cy.gql({
-        token,
-        query: like,
-        variables: {tweetId: tweetAResp.id},
-      })
-      tweetLiked().should('eq', true)
-
-      cy.log('**cannot like the same tweet twice**')
-      cy.gql({
-        token,
-        query: like,
-        variables: {tweetId: tweetAResp.id},
-        expectError: true,
-      })
-        .its('message')
-        .should('eq', 'DynamoDB transaction error')
-
-      cy.log('**getLikes should show the liked tweet**')
-      gqlGetLikes()
-        .should(
-          spok({
-            tweets: arr => arr.length > 0,
-          }),
-        )
-        .its('tweets.0')
-        .should(
-          spok({
-            ...tweetAResp,
-            liked: true,
-            likes: 1,
-            profile: {
-              ...tweetAResp.profile,
-              likesCounts: 1,
-            },
-          }),
-        )
-
-      cy.log('**unlike**')
-      cy.gql({
-        token,
-        query: unlike,
-        variables: {
-          tweetId: tweetAResp.id,
-        },
-      })
-      tweetLiked().should('eq', false)
-
-      cy.log('**getLikes should be empty**')
-      gqlGetLikes().should(
+    cy.log('**getLikes should show the liked tweet**')
+    gqlGetLikes()
+      .should(
         spok({
-          tweets: [],
+          tweets: arr => arr.length > 0,
         }),
       )
+      .its('tweets.0')
+      .should(
+        spok({
+          ...tweetAResp,
+          liked: true,
+          likes: 1,
+          profile: {
+            ...tweetAResp.profile,
+            likesCounts: 1,
+          },
+        }),
+      )
+
+    cy.log('**unlike**')
+    cy.gql({
+      token,
+      query: unlike,
+      variables: {
+        tweetId: tweetAResp.id,
+      },
     })
+    tweetLiked().should('eq', false)
+
+    cy.log('**getLikes should be empty**')
+    gqlGetLikes().should(
+      spok({
+        tweets: [],
+      }),
+    )
+  })
+
+  it('[38] retweet: should see the retweet when calling getTweets', () => {
+    cy.gql({
+      token,
+      query: retweet,
+      variables: {
+        tweetId: tweetAResp.id,
+      },
+    })
+
+    gqlGetTweets()
+      .its('tweets')
+      .should('have.length', 2)
+      .should(
+        spok([
+          {
+            profile: {
+              id: userAId,
+              tweetsCount: 2,
+            },
+            retweetOf: {
+              ...tweetAResp,
+              retweets: 1,
+              profile: {
+                id: userAId,
+                tweetsCount: 2,
+              },
+            },
+          },
+          {
+            profile: {
+              id: userAId,
+              tweetsCount: 2,
+            },
+            retweets: 1,
+          },
+        ]),
+      )
+    cy.log('**should not see the retweet when calling getMyTimeline**')
+    cy.gql({
+      token,
+      query: getMyTimeline,
+      variables: {userId: userAId, limit: 25, nextToken: null},
+    })
+      .its('tweets')
+      .should('have.length', 1)
+
+    cy.log('**[41] Should not see the retweet upon unRetweeting**')
+    cy.gql({
+      token,
+      query: unretweet,
+      variables: {
+        tweetId: tweetAResp.id,
+      },
+    })
+
+    gqlGetTweets()
+      .its('tweets')
+      .should('have.length', 1)
+      .its('0')
+      .should(
+        spok({
+          ...tweetAResp,
+          retweets: 0,
+          profile: {
+            id: userAId,
+            tweetsCount: 1,
+          },
+        }),
+      )
   })
 
   after(() => {

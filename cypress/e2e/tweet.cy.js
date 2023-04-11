@@ -8,18 +8,18 @@ const {
   getLikes,
   retweet,
   unretweet,
+  reply,
 } = require('../../test-helpers/queries-and-mutations')
 const chance = require('chance').Chance()
 
 describe('e2e test for tweet', () => {
-  let token, tweetAResp
+  let token, tweetAResp, userAId, userBId, userBsReply, userBToken
   const text = chance.string({length: 16})
-  let userAId
 
   before(() => {
-    cy.task('signInUser').then(({username, idToken}) => {
+    cy.task('signInUser').then(({username, accessToken}) => {
       userAId = username
-      token = idToken
+      token = accessToken
 
       cy.gql({
         token,
@@ -28,6 +28,11 @@ describe('e2e test for tweet', () => {
       }).then(tResp => {
         tweetAResp = tResp
       })
+    })
+
+    cy.task('signInUser').then(({username, accessToken}) => {
+      userBId = username
+      userBToken = accessToken
     })
   })
 
@@ -71,6 +76,13 @@ describe('e2e test for tweet', () => {
       },
     })
 
+  const gqlGetMyTimeline = () =>
+    cy.gql({
+      token,
+      query: getMyTimeline,
+      variables: {userId: userAId, limit: 25, nextToken: null},
+    })
+
   it('[19] mutation; should check the content of the response', () => {
     cy.wrap(tweetAResp).should(
       spok({
@@ -107,14 +119,7 @@ describe('e2e test for tweet', () => {
   })
 
   it('[24] getTimeline query', () => {
-    cy.gql({
-      token,
-      query: getMyTimeline,
-      variables: {
-        limit: 25,
-        nextToken: null,
-      },
-    })
+    gqlGetMyTimeline()
       .should(
         spok({
           nextToken: n => n === null || typeof n === 'string',
@@ -238,13 +243,7 @@ describe('e2e test for tweet', () => {
         ]),
       )
     cy.log('**should not see the retweet when calling getMyTimeline**')
-    cy.gql({
-      token,
-      query: getMyTimeline,
-      variables: {userId: userAId, limit: 25, nextToken: null},
-    })
-      .its('tweets')
-      .should('have.length', 1)
+    gqlGetMyTimeline().its('tweets').should('have.length', 1)
 
     cy.log('**[41] Should not see the retweet upon unRetweeting**')
     cy.gql({
@@ -271,8 +270,50 @@ describe('e2e test for tweet', () => {
       )
   })
 
+  it("[46] reply: userB replies to signedInUser's tweet", () => {
+    cy.log('**userB should see the reply when calling getTweets**')
+    cy.gql({
+      token: userBToken,
+      query: reply,
+      variables: {
+        tweetId: tweetAResp.id,
+        text: chance.string({length: 16}),
+      },
+    }).then(replyResp => {
+      userBsReply = replyResp
+    })
+    gqlGetTweets()
+      .its('tweets.0')
+      .should(
+        spok({
+          profile: {
+            id: spok.string,
+            tweetsCount: spok.number,
+          },
+        }),
+      )
+
+    cy.log('**userB should not see the reply when calling getMyTimeline**')
+    cy.gql({
+      token: userBToken,
+      query: getMyTimeline,
+      variables: {userId: userAId, limit: 25, nextToken: null},
+    })
+      .its('tweets.0')
+      .should(
+        spok({
+          profile: {
+            id: userBId,
+            tweetsCount: 1,
+          },
+        }),
+      )
+  })
+
   after(() => {
     cy.cleanupTweet(tweetAResp.id, userAId)
     cy.cleanupUser(userAId)
+    // need to clean userB's reply to userA's tweet
+    cy.task('ddbDeleteTweet', userBsReply.id)
   })
 })

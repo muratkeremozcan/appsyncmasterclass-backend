@@ -8,6 +8,7 @@ const {
 const {
   ddbGetUser,
   ddbDeleteUser,
+  ddbDeleteTweet,
   ddbDeleteTweetAndTimeline,
 } = require('../../test-helpers/tasks/ddb')
 const {cognitoDeleteUser} = require('../../test-helpers/tasks/cognito')
@@ -35,6 +36,7 @@ function tasks(on) {
     cleanUpTweet,
     cognitoDeleteUser,
     deleteS3Item,
+    ddbDeleteTweet,
   })
 }
 

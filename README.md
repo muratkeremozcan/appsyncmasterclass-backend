@@ -295,6 +295,8 @@ Integration is the same cost, and more value than unit. Covers the business
 logic + DynamoDB
 interaction.![integration-described](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/irn19obybd4dfs9bni74.png)
 
+![unit-vs-integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/crbcm5ty9a340idos5ce.png)
+
 There are things integration tests cannot cover, but they are still a good bang
 for the
 buck.![integration](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/gtkxvl1yh7fqwahptxfa.png)

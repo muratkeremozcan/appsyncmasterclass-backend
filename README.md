@@ -18,6 +18,9 @@ npm run sls -- config credentials --provider aws --key <yourAWSAccessKeyId> --se
 # deploy
 npm run deploy
 
+# deploy 1 function
+npm run deploy -- -f <functionName>
+
 # export env vars to .env file
 npm run export:env
 

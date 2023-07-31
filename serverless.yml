@@ -14,7 +14,7 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs16.x
   region: eu-west-1
   # [105] Configure Xray tracing
   # (105.0) add tracing to to provider

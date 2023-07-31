@@ -136,11 +136,8 @@ const signInUser = async () => {
   // an object with AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY.
   const cognito = new CognitoIdentityProviderClient()
 
-  const userPoolId = process.env.cognito_user_pool_id
-  // const clientId = process.env.cognito_server_client_id // replaced with the below as of SNS & EventBridge in e2e tests > Capture CloudFormation outputs in .env file
-  const clientId =
-    process.env.CognitoUserPoolServerClientId ||
-    process.env.cognito_server_client_id
+  const userPoolId = process.env.COGNITO_USER_POOL_ID
+  const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
 
   const firstName = chance.first({nationality: 'en'})
   const lastName = chance.last({nationality: 'en'})

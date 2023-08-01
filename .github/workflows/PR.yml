@@ -89,6 +89,7 @@ jobs:
           # CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
-        run: |
-          npm run sls -- remove -s ${{ steps.branch-name.outputs.current_branch }}
+      # instead, use the PR-stack-removed job
+      # - name: Remove stack ${{ steps.branch-name.outputs.current_branch }}
+      #   run: |
+      #     npm run sls -- remove -s ${{ steps.branch-name.outputs.current_branch }}

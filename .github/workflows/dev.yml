@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '0 12 1 * *'
 
 concurrency:
   group: ${{ github.head_ref || github.ref }}
